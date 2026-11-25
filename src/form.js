@@ -93,6 +93,7 @@ async function doSignIn() {
   try {
     await signIn();
     renderSignin();
+    if (!$('ca-result').hidden && $('ca-result').classList.contains('error')) showMsg($('ca-result'), null); // xóa báo lỗi đăng nhập cũ
     return true;
   } catch (e) {
     showMsg(currentMsgBox(), 'error', signinError(e));
@@ -375,6 +376,7 @@ function changedText(rowNumber, d) {
 // Lỗi: nói rõ đã ghi hay chưa; không tự thử lại
 // ---------------------------------------------------------------------------------------------
 function handleError(box, e, phase) {
+  renderSignin(); // lỗi 401 / hết hạn làm mất token: cập nhật dòng "Đã đăng nhập"
   const keep = ' Dữ liệu trong form vẫn giữ nguyên.';
   const uncertain = phase === 'write' && ['TIMEOUT', 'NETWORK', 'OFFLINE'].includes(e.code);
   if (uncertain) {
@@ -426,6 +428,7 @@ async function checkPending() {
     showMsg(box, 'error', `Đã kiểm tra: dòng ${rowNumber} có dữ liệu khác với cả bản cũ lẫn bản vừa gửi (có thể bị sửa từ nơi khác). Chưa làm gì thêm. Bấm "Tải lại dữ liệu" và kiểm tra Sheet.`, [['reload', 'Tải lại dữ liệu']]);
   } catch (e) {
     setBusy(false);
+    renderSignin();
     showMsg(box, 'error', `Chưa đọc lại được Sheet (${e.message}). Thử bấm "Kiểm tra trong Sheet" lần nữa khi có mạng.`, [['check', 'Kiểm tra trong Sheet'], ...(e.code === 'HTTP_401' || e.code === 'TOKEN_EXPIRED' || e.code === 'NO_TOKEN' ? [['signin', 'Đăng nhập lại']] : [])]);
   }
 }
