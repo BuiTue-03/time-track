@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thời gian học</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>Thời gian học</h1>
+    <p class="muted" id="today-line"></p>
+  </div>
+  <div class="top-right">
+    <span class="muted" id="updated"></span>
+    <button id="reload" type="button">Tải lại</button>
+  </div>
+</header>
+<p class="notice" id="notice" hidden></p>
+
+<main>
+  <section id="state-loading" class="state"><p>Đang tải dữ liệu từ Google Sheet…</p></section>
+  <section id="state-error" class="state" hidden>
+    <p><b>Chưa tải được dữ liệu.</b> <span id="error-msg"></span></p>
+    <button id="retry" type="button">Tải lại</button>
+  </section>
+  <section id="state-empty" class="state" hidden><p>Chưa có dữ liệu: tab "Ca học" chưa có dòng nào.</p></section>
+
+  <div id="state-ready" hidden>
+    <p class="muted" id="totals"></p>
+    <details class="issues" id="issues" hidden></details>
+
+    <div class="grid two">
+      <section class="card"><h2>Tuần này</h2><div id="this-week"></div></section>
+      <section class="card"><h2>Tháng này</h2><div id="this-month"></div></section>
+    </div>
+
+    <section class="card">
+      <h2>Tổng giờ theo tuần</h2>
+      <div id="a1" class="chart-box"></div>
+      <p class="muted" id="a1-note"></p>
+    </section>
+
+    <div class="grid two">
+      <section class="card">
+        <h2>Lịch học theo ngày</h2>
+        <p class="muted">Mỗi hàng là 1 tuần (thứ Tư → thứ Ba). Di chuột vào ô để xem chi tiết.</p>
+        <div id="a4" class="chart-box"></div>
+        <div id="a4-legend" class="legend"></div>
+      </section>
+      <section class="card">
+        <h2>Tỷ lệ theo hoạt động</h2>
+        <div id="a3" class="chart-box"></div>
+        <div id="a3-legend"></div>
+      </section>
+    </div>
+
+    <div class="grid two">
+      <section class="card"><h2>Xếp hạng tuần</h2><div id="rank-weeks"></div></section>
+      <section class="card"><h2>Xếp hạng theo thứ</h2><div id="rank-weekdays"></div></section>
+    </div>
+
+    <section class="card">
+      <h2>Chủ đề và nhóm trong tuần</h2>
+      <label class="select">Chọn tuần <select id="week-select"></select></label>
+      <div id="rank-topics"></div>
+    </section>
+  </div>
+</main>
+<footer class="muted">Chỉ đọc: app không ghi gì vào Google Sheet.</footer>
+<script type="module" src="src/app.js"></script>
+</body>
+</html>
