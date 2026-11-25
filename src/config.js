@@ -12,7 +12,7 @@ export const SPREADSHEET_ID = '1zriocN3E8uU2DZz5WijM5VEfWxGij59ZBwo8PX4C4Yo';
 export const ALLOW_WRITE_TO_REAL_SHEET = false;
 
 // OAuth Client ID (loại "Web application") lấy ở Google Cloud Console. Công khai được, không có secret.
-export const OAUTH_CLIENT_ID = '';
+export const OAUTH_CLIENT_ID = '43851592632-pdk237396uq8v7a9tmrf5v90sfl1p9re.apps.googleusercontent.com';
 
 // Quyền xin Google: đọc/ghi Google Sheets.
 export const OAUTH_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
