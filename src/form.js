@@ -26,6 +26,8 @@ let listWeek = null;     // tuần đang xem trong danh sách ca
 let editing = null;      // { mode: 'add'|'edit', original, snapshot, rowNumber }
 let busy = false;        // đang gửi -> chặn bấm đúp
 let pending = null;      // lần ghi "chưa chắc đã lưu": { kind, rowNumber, sent, snapshot }
+let lastDeleted = null;  // ca vừa xóa, để "Hoàn tác" trong 5 phút: { session, rowNumber, values, until } — CHỈ trong bộ nhớ trang
+const UNDO_MS = 5 * 60 * 1000;
 
 export function initForm(appApi, { enabled, disabledReason }) {
   app = appApi;
@@ -56,6 +58,10 @@ export function initForm(appApi, { enabled, disabledReason }) {
   $('del-cancel').addEventListener('click', () => $('del-dialog').close());
   $('del-ok').addEventListener('click', () => doDelete());
   $('ca-msg').addEventListener('click', e => {
+    const b = e.target.closest('button[data-do]');
+    if (b) actions[b.dataset.do]?.();
+  });
+  $('ca-result').addEventListener('click', e => {
     const b = e.target.closest('button[data-do]');
     if (b) actions[b.dataset.do]?.();
   });
@@ -433,7 +439,53 @@ async function checkPending() {
   }
 }
 
+// ---------------------------------------------------------------------------------------------
+// Hoàn tác xóa (trong 5 phút, cùng phiên trang): ghi lại đúng giá trị cũ vào đúng dòng cũ,
+// chỉ khi dòng đó vẫn trống và luật tuần hiện tại vẫn cho xóa (= cho khôi phục) ca này.
+// ---------------------------------------------------------------------------------------------
+let undoTimer = null;
+function showUndo(rowNumber) {
+  showMsg($('ca-result'), 'ok', `Đã xóa nội dung dòng ${rowNumber} (cột A–F; công thức G–K vẫn giữ). Số liệu đã làm mới. Có thể hoàn tác trong 5 phút, nếu chưa tải lại trang.`, [['undo', 'Hoàn tác']]);
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(() => {
+    if (!lastDeleted) return;
+    lastDeleted = null;
+    const b = $('ca-result').querySelector('button[data-do=undo]');
+    if (b) showMsg($('ca-result'), 'info', `Đã hết 5 phút, không hoàn tác được việc xóa dòng ${rowNumber} từ app nữa (vẫn lấy lại được bằng lịch sử phiên bản của Sheet).`);
+  }, UNDO_MS);
+}
+async function undoDelete() {
+  const box = $('ca-result');
+  if (busy) return;
+  if (!lastDeleted || Date.now() > lastDeleted.until) { lastDeleted = null; return showMsg(box, 'error', 'Đã hết thời gian hoàn tác (5 phút).'); }
+  const { session, rowNumber, values } = lastDeleted;
+  const why = checkDelete(session, currentToday()); // tuần đã chuyển trạng thái thì không khôi phục
+  if (why.length) { lastDeleted = null; return showMsg(box, 'error', `Không hoàn tác được: ${why[0]}`); }
+  setBusy(true);
+  if (!hasValidToken()) {
+    showMsg(box, 'info', 'Cần đăng nhập Google để hoàn tác.', [['undo', 'Hoàn tác']]);
+    if (!(await doSignIn())) { setBusy(false); return; }
+  }
+  try {
+    pending = null;
+    await writeRow(rowNumber, values, { mustBeEmpty: true }); // dòng đã bị dùng cho ca khác -> lỗi NOT_EMPTY, không ghi đè
+    const back = await readRowAF(rowNumber);
+    const rv = verifyReadback(values, back.raw, back.formatted);
+    lastDeleted = null; clearTimeout(undoTimer);
+    await app.reload();
+    setBusy(false);
+    showMsg(box, rv.ok ? 'ok' : 'error', rv.ok ? `Đã hoàn tác: dòng ${rowNumber} có lại ca cũ. Số liệu đã làm mới.` : `Đã gửi lệnh hoàn tác nhưng đọc lại không khớp: ${rv.errors.join('; ')}. Hãy mở Sheet kiểm tra dòng ${rowNumber}.`);
+  } catch (e) {
+    setBusy(false);
+    renderSignin();
+    if (e.code === 'NOT_EMPTY') { lastDeleted = null; return showMsg(box, 'error', `Không hoàn tác được: dòng ${rowNumber} đã có dữ liệu khác (có thể vừa thêm ca mới). App không ghi đè. Nếu cần, hãy thêm lại ca cũ bằng form.`); }
+    if (['TIMEOUT', 'NETWORK', 'OFFLINE'].includes(e.code)) return showMsg(box, 'warn', `Chưa chắc đã hoàn tác: ${e.message}. App không tự gửi lại. Bấm "Tải lại" ở đầu trang để xem dòng ${rowNumber} đã có lại chưa trước khi thử tiếp.`, [['undo', 'Hoàn tác']]);
+    showMsg(box, 'error', `Chưa hoàn tác được: ${e.message}.`, [['undo', 'Hoàn tác'], ...(['HTTP_401', 'TOKEN_EXPIRED', 'NO_TOKEN'].includes(e.code) ? [['signin', 'Đăng nhập lại']] : [])]);
+  }
+}
+
 const actions = {
+  undo: undoDelete,
   check: checkPending,
   signin: () => doSignIn().then(ok => ok && showMsg(currentMsgBox(), 'info', 'Đã đăng nhập lại. Bấm Lưu (hoặc Xóa) lần nữa.')),
   reload: async () => { pending = null; $('f-dialog').open && $('f-dialog').close(); $('del-dialog').open && $('del-dialog').close(); editing = null; await app.reload(); },
@@ -485,11 +537,14 @@ async function doDelete() {
     const back = await readRowAF(s.rowNumber);
     if (!isEmptyRow(back.raw)) throw err('READBACK', `Đã gửi lệnh xóa nhưng dòng ${s.rowNumber} đọc lại vẫn còn dữ liệu. Hãy mở Sheet kiểm tra.`);
     pending = null;
+    // Giữ bản sao dòng vừa xóa trong bộ nhớ trang để Hoàn tác (tải lại trang là mất)
+    lastDeleted = { session: s, rowNumber: s.rowNumber, values: editing.snapshot.slice(0, 6).map(v => v ?? ''), until: Date.now() + UNDO_MS };
+    while (lastDeleted.values.length < 6) lastDeleted.values.push('');
     await app.reload();
     setBusy(false);
     $('del-dialog').close();
     editing = null;
-    showMsg($('ca-result'), 'ok', `Đã xóa nội dung dòng ${s.rowNumber} (cột A–F; công thức G–K vẫn giữ). Số liệu đã làm mới.`);
+    showUndo(s.rowNumber);
   } catch (e) {
     setBusy(false);
     if (e.code === 'CHANGED') return showMsg(box, 'error', e.message + ' Bấm "Tải lại dữ liệu".', [['reload', 'Tải lại dữ liệu']]);
