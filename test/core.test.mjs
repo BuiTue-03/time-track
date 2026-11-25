@@ -96,6 +96,20 @@ test('ca đang mở (chưa có giờ kết thúc): không tính phút, đếm ri
   assert.equal(s.rowsWithTime, 1);
   assert.equal(s.days[D(2026, 11, 25)].studyDay, true); // theo mục 6 (xem "Quyết định chưa chốt")
 });
+test('ngày CHỈ có ca đang mở: 0 phút nhưng vẫn là "ngày có học" (mục 6, Oriana chốt ở L3)', () => {
+  // Đây là ca biên của mâu thuẫn mục 6 / mục 7: mục 7 (streak, L6) đòi ≥1 ca có giờ đầy đủ -> có thể khác.
+  const { sessions, issues } = parse([[D(2026, 11, 24), H(8), H(9), 'JP - Từ vựng', 'Ôn tập'], [D(2026, 11, 25), H(12, 15), null, 'JP - Từ vựng', 'Nhờ AI']]);
+  assert.equal(issues.length, 0);
+  const s = computeStats(sessions, D(2026, 11, 25));
+  const day = s.days[D(2026, 11, 25)];
+  assert.equal(day.min, 0);
+  assert.equal(day.count, 0);   // không có ca nào có thời lượng
+  assert.equal(day.open, 1);
+  assert.equal(day.studyDay, true);
+  assert.equal(s.studyDays, 2);
+  assert.equal(s.totalMin, 60);
+  assert.equal(s.weeks.at(-1).studyDays, 1); // tuần 6 (25/11) có 1 ngày có học dù 0 phút
+});
 test('dòng bị xóa nội dung A–E: bỏ qua', () => {
   const { sessions, issues } = parse([[null, null, null, null, null], ['', '', '', '', '', 'ghi chú sót'], [D(2026, 11, 25), H(8), H(9), 'JP - Từ vựng', 'Ôn tập']]);
   assert.equal(sessions.length, 1);
