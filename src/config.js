@@ -4,12 +4,15 @@
 // Sheet thật — chỉ dùng để nhận diện và CHẶN ghi nhầm trong giai đoạn thử.
 export const REAL_SPREADSHEET_ID = '1WXuns_F3bjQf7A6ZnG8PsryLsf6AAmDw3IQ3U8Bbf4o';
 
-// Sheet mà app sẽ GHI vào. Giai đoạn L2: bản thử nghiệm. Cuối L2 đổi dòng này sang REAL_SPREADSHEET_ID.
-export const SPREADSHEET_ID = '1zriocN3E8uU2DZz5WijM5VEfWxGij59ZBwo8PX4C4Yo';
+// Bản sao thử nghiệm (L2–L4 Phần C). Giữ lại để thử sau này: muốn thử, đổi SPREADSHEET_ID về TEST_SPREADSHEET_ID.
+export const TEST_SPREADSHEET_ID = '1zriocN3E8uU2DZz5WijM5VEfWxGij59ZBwo8PX4C4Yo';
 
-// Khóa an toàn: khi còn false, code ghi sẽ từ chối nếu SPREADSHEET_ID trùng Sheet thật.
-// Chỉ bật true khi Oriana quyết định chuyển sang Sheet thật.
-export const ALLOW_WRITE_TO_REAL_SHEET = false;
+// Sheet mà app ĐỌC và GHI. Từ L4 Phần D (25/11/2026, Oriana gõ "OK GHI THẬT" sau khi đặt tên phiên bản Sheet thật): Sheet thật.
+export const SPREADSHEET_ID = REAL_SPREADSHEET_ID;
+
+// Khóa an toàn: khi false, code ghi sẽ từ chối nếu SPREADSHEET_ID trùng Sheet thật.
+// Bật true ở L4 Phần D theo câu "OK GHI THẬT" của Oriana (25/11/2026).
+export const ALLOW_WRITE_TO_REAL_SHEET = true;
 
 // OAuth Client ID (loại "Web application") lấy ở Google Cloud Console. Công khai được, không có secret.
 export const OAUTH_CLIENT_ID = '43851592632-pdk237396uq8v7a9tmrf5v90sfl1p9re.apps.googleusercontent.com';

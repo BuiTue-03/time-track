@@ -8,9 +8,9 @@ import { LAST_FORMULA_ROW, ALLOW_WRITE_TO_REAL_SHEET, SPREADSHEET_ID, REAL_SPREA
 const H = (h, m = 0) => (h * 60 + m) / 1440;
 const throwsRange = fn => assert.throws(fn, e => e.code === 'RANGE');
 
-test('khóa an toàn: chưa bật ghi Sheet thật, đang trỏ bản thử', () => {
-  assert.equal(ALLOW_WRITE_TO_REAL_SHEET, false);
-  assert.notEqual(SPREADSHEET_ID, REAL_SPREADSHEET_ID);
+test('cấu hình ghi: từ L4 Phần D ghi Sheet thật (Oriana cho phép 25/11/2026); giới hạn dòng giữ 1002', () => {
+  assert.equal(SPREADSHEET_ID, REAL_SPREADSHEET_ID);
+  assert.equal(ALLOW_WRITE_TO_REAL_SHEET, true);
   assert.equal(LAST_FORMULA_ROW, 1002);
 });
 

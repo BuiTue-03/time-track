@@ -23,10 +23,10 @@ const $ = id => document.getElementById(id);
 const VIEW_REAL = params.get('nguon') === 'that';
 const DATA_SHEET_ID = VIEW_REAL ? REAL_SPREADSHEET_ID : SPREADSHEET_ID;
 const WRITES_REAL = SPREADSHEET_ID === REAL_SPREADSHEET_ID;
-const FORM_ENABLED = !USE_FIXTURE && !TODAY_OVERRIDE && DATA_SHEET_ID === SPREADSHEET_ID && (!WRITES_REAL || ALLOW_WRITE_TO_REAL_SHEET);
+const FORM_ENABLED = !USE_FIXTURE && !TODAY_OVERRIDE && !VIEW_REAL && DATA_SHEET_ID === SPREADSHEET_ID && (!WRITES_REAL || ALLOW_WRITE_TO_REAL_SHEET);
 const FORM_DISABLED_REASON = USE_FIXTURE ? 'Đang xem dữ liệu mẫu: tắt form để không ghi nhầm.'
   : TODAY_OVERRIDE ? 'Đang giả lập ngày hôm nay: tắt form để không ghi nhầm.'
-  : DATA_SHEET_ID !== SPREADSHEET_ID ? 'Đang xem Sheet thật ở chế độ chỉ đọc. Form chỉ chạy khi app đọc và ghi cùng một Sheet.'
+  : VIEW_REAL ? 'Đang xem Sheet thật ở chế độ chỉ đọc (?nguon=that). Mở trang không có ?nguon=that để thêm, sửa, xóa.'
   : 'Khóa an toàn đang bật: app trỏ vào Sheet thật nhưng chưa cho phép ghi.';
 
 // Banner cố định: luôn cho thấy app đang ghi vào đâu
