@@ -4,6 +4,7 @@ import {
   SPREADSHEET_ID, REAL_SPREADSHEET_ID, ALLOW_WRITE_TO_REAL_SHEET,
   OAUTH_CLIENT_ID, OAUTH_SCOPE, SHEET_CA_HOC, LAST_FORMULA_ROW,
 } from './config.js';
+import { buildWriteRange, assertWriteRange, findFirstEmptyRow as pickEmptyRow } from './write-core.js';
 
 const API = 'https://sheets.googleapis.com/v4/spreadsheets';
 let token = null;        // { access_token, expiresAt } — chỉ trong bộ nhớ
@@ -69,7 +70,6 @@ function assertWritable() {
   if (SPREADSHEET_ID === REAL_SPREADSHEET_ID && !ALLOW_WRITE_TO_REAL_SHEET)
     throw err('GUARD', 'Đang trỏ vào Sheet THẬT mà ALLOW_WRITE_TO_REAL_SHEET = false. Đã chặn ghi.');
 }
-const rng = a1 => encodeURIComponent(`'${SHEET_CA_HOC}'!${a1}`);
 
 // ---------- 3. Đọc ----------
 // UNFORMATTED_VALUE + SERIAL_NUMBER: ngày/giờ trả về dạng số serial, không phụ thuộc cách hiển thị (dd/mm hay mm/dd).
@@ -78,15 +78,10 @@ export async function readRange(a1, sheet = SHEET_CA_HOC, render = 'UNFORMATTED_
   return j.values ?? [];
 }
 
-// Tìm dòng trống đầu tiên của A:F (cả 6 ô đều trống), trong khoảng 2..1002.
-// API cắt bỏ các dòng trống ở CUỐI, nên nếu không thấy lỗ trống ở giữa thì dòng trống = số dòng đã trả + 2.
+// Tìm dòng trống đầu tiên của A:F (cả 6 ô đều trống), trong khoảng 2..1002. Logic nằm ở write-core.js
+// (test được); ở đây chỉ đọc dữ liệu. Trả về { row, emptyLeft, warning }; hết dòng -> lỗi FULL.
 export async function findFirstEmptyRow() {
-  const rows = await readRange(`A2:F${LAST_FORMULA_ROW}`);
-  let idx = rows.findIndex(r => !r || r.every(v => v === '' || v === null || v === undefined));
-  if (idx === -1) idx = rows.length;
-  const rowNumber = idx + 2;
-  if (rowNumber > LAST_FORMULA_ROW) throw err('FULL', `Hết dòng có công thức (đã tới ${LAST_FORMULA_ROW})`);
-  return rowNumber;
+  return pickEmptyRow(await readRange(`A2:F${LAST_FORMULA_ROW}`));
 }
 
 // ---------- 4. Ghi / sửa / xóa ----------
@@ -96,19 +91,22 @@ export async function findFirstEmptyRow() {
 // Không dùng USER_ENTERED vì khi đó Google phân tích chuỗi theo locale của file (vi_VN), dễ lẫn dd/mm và mm/dd.
 export async function writeRow(rowNumber, values, { mustBeEmpty = true } = {}) {
   assertWritable();
-  if (rowNumber < 2 || rowNumber > LAST_FORMULA_ROW) throw err('RANGE', `Dòng ${rowNumber} ngoài khoảng 2..${LAST_FORMULA_ROW}`);
+  const a1 = buildWriteRange(rowNumber); // hàm DUY NHẤT dựng range ghi: chỉ A:F, dòng 2..1002
   if (mustBeEmpty) {
     // Kiểm tra lại ngay trước khi ghi, phòng trường hợp dòng vừa được điền ở nơi khác
     const cur = (await readRange(`A${rowNumber}:F${rowNumber}`))[0] ?? [];
     if (cur.some(v => v !== '' && v != null)) throw err('NOT_EMPTY', `Dòng ${rowNumber} không còn trống, không ghi đè`);
   }
-  return api('PUT', `/values/${rng(`A${rowNumber}:F${rowNumber}`)}?valueInputOption=RAW`, { values: [values] });
+  if (!Array.isArray(values) || values.length !== 6) throw err('DATA', 'Một dòng phải có đúng 6 ô A–F');
+  assertWriteRange(a1);
+  return api('PUT', `/values/${encodeURIComponent(a1)}?valueInputOption=RAW`, { values: [values] });
 }
 
 // "Xóa" = xóa NỘI DUNG A:F của dòng (values:clear). Không xóa hàng, nên công thức G–K, định dạng và
 // data validation của ô vẫn giữ nguyên.
 export async function clearRow(rowNumber) {
   assertWritable();
-  if (rowNumber < 2 || rowNumber > LAST_FORMULA_ROW) throw err('RANGE', `Dòng ${rowNumber} ngoài khoảng 2..${LAST_FORMULA_ROW}`);
-  return api('POST', `/values/${rng(`A${rowNumber}:F${rowNumber}`)}:clear`, {});
+  const a1 = buildWriteRange(rowNumber);
+  assertWriteRange(a1);
+  return api('POST', `/values/${encodeURIComponent(a1)}:clear`, {});
 }

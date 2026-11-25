@@ -146,7 +146,7 @@ $('main').onclick = async () => {
     // 0) Chuẩn bị: bảng Chủ đề (để biết nhóm mong đợi) và ảnh chụp Tổng hợp tuần trước khi ghi
     const topics = new Map((await step('Đọc tab Chủ đề', () => readRange('A2:B64', 'Chủ đề'))).map(r => [r[0], r[1]]));
     const before = await step('Ảnh chụp Tổng hợp tuần (trước)', summary);
-    const row = await step('Tìm dòng trống đầu tiên A:F', findFirstEmptyRow);
+    const { row } = await step('Tìm dòng trống đầu tiên A:F', findFirstEmptyRow);
     detail(`Dòng trống đầu tiên: ${row}`);
 
     const date = todaySerial(), wk = weekNo(date);
