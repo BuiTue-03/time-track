@@ -1,0 +1,26 @@
+# Bí mật: KHÔNG BAO GIỜ commit (repo public)
+.env
+.env.*
+*.pem
+*.key
+credentials*.json
+client_secret*.json
+token*.json
+secrets/
+
+# Phụ thuộc và bản build
+node_modules/
+dist/
+build/
+.cache/
+
+# Dữ liệu tải về khi chạy thử (dữ liệu thật chỉ ở Google Sheet)
+data-local/
+*.xlsx
+
+# Hệ điều hành / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
