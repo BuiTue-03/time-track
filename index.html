@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Thời gian học</title>
 <link rel="stylesheet" href="styles.css">
+<script src="https://accounts.google.com/gsi/client" async></script>
 </head>
 <body>
+<div class="banner" id="banner" hidden></div>
 <header class="top">
   <div>
     <h1>Thời gian học</h1>
@@ -29,6 +31,20 @@
 
   <div id="state-ready" hidden>
     <p class="muted" id="totals"></p>
+
+    <section class="card" id="ca-card" hidden>
+      <h2>Ca học: thêm, sửa, xóa</h2>
+      <p class="muted" id="ca-disabled" hidden></p>
+      <div id="ca-tools">
+        <div class="signin"><span class="muted" id="ca-signin-state"></span> <button type="button" id="ca-signin">Đăng nhập Google</button></div>
+        <div class="msg" id="ca-result" hidden></div>
+        <label class="select">Tuần <select id="ca-week"></select></label>
+        <div class="strip" id="ca-strip"></div>
+        <p><button type="button" class="primary" id="ca-add">+ Thêm ca</button></p>
+        <p class="why" id="ca-add-why" hidden></p>
+        <div id="ca-list"></div>
+      </div>
+    </section>
     <details class="issues" id="issues" hidden></details>
 
     <div class="grid two">
@@ -68,7 +84,45 @@
     </section>
   </div>
 </main>
-<footer class="muted">Chỉ đọc: app không ghi gì vào Google Sheet.</footer>
+<dialog id="f-dialog" aria-labelledby="f-title">
+  <form id="ca-form" novalidate>
+    <h3 id="f-title">Thêm ca học</h3>
+    <div class="strip" id="f-strip"></div>
+    <label>Ngày <span class="muted" id="f-date-hint"></span>
+      <input type="text" id="f-date" inputmode="numeric" placeholder="dd/mm/yyyy" autocomplete="off" required></label>
+    <div class="row2">
+      <label>Bắt đầu <span class="muted">(24 giờ)</span> <input type="text" id="f-start" inputmode="numeric" placeholder="hh:mm" autocomplete="off"></label>
+      <label>Kết thúc <span class="muted">(để trống nếu chưa xong)</span> <input type="text" id="f-end" inputmode="numeric" placeholder="hh:mm" autocomplete="off"></label>
+    </div>
+    <p class="muted" id="f-dur"></p>
+    <p class="why" id="f-time-why" hidden></p>
+    <label>Chủ đề <select id="f-topic"></select></label>
+    <label>Hoạt động <select id="f-activity"></select></label>
+    <label class="check"><input type="checkbox" id="f-offset"> Đây là ca ghi bù <span class="muted" id="f-offset-why"></span></label>
+    <label>Ghi chú (tùy chọn) <textarea id="f-note" rows="2"></textarea></label>
+    <p class="muted" id="f-note-preview"></p>
+    <ul class="errors" id="f-errors"></ul>
+    <ul class="warnings" id="f-warnings"></ul>
+    <div class="msg" id="ca-msg" hidden></div>
+    <div class="actions">
+      <button type="button" id="f-cancel">Đóng</button>
+      <button type="submit" class="primary" id="f-save">Lưu</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="del-dialog" aria-labelledby="del-title">
+  <h3 id="del-title">Xóa ca này?</h3>
+  <p id="del-what"></p>
+  <p><b>Xóa nội dung dòng, không thể khôi phục từ app.</b> App xóa nội dung cột A–F của dòng này; công thức cột G–K giữ nguyên. Muốn lấy lại, phải mở lịch sử phiên bản (Version history) của Sheet.</p>
+  <div class="msg" id="del-msg" hidden></div>
+  <div class="actions">
+    <button type="button" id="del-cancel">Không xóa</button>
+    <button type="button" class="danger" id="del-ok">Xóa nội dung dòng</button>
+  </div>
+</dialog>
+
+<footer class="muted" id="footer"></footer>
 <script type="module" src="src/app.js"></script>
 </body>
 </html>

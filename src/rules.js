@@ -86,23 +86,28 @@ export function permissions(status, { isOffset = false } = {}) {
 // ---------------------------------------------------------------------------------------------
 // 4. Đổi chữ từ form -> serial
 // ---------------------------------------------------------------------------------------------
-// <input type="date"> trả "2026-11-25". Trả về serial (số nguyên) hoặc null.
+// Ô ngày nhập chữ "dd/mm/yyyy" (ví dụ 25/11/2026; chấp nhận cả 5/1/2026 và dạng máy "2026-11-25").
+// Dùng ô chữ thay vì ô lịch của trình duyệt vì ô lịch hiển thị theo ngôn ngữ máy (có máy hiện mm/dd/yyyy, 12 giờ AM/PM).
+// Trả về serial (số nguyên) hoặc null nếu sai.
 export function parseDateInput(s) {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s ?? '');
-  if (!m) return null;
-  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
-  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
-  // Dựng lại bằng core để không phụ thuộc Date; kiểm tra ngày hợp lệ (31/11 -> sai)
-  return serialFromParts(y, mo, d);
+  const t = (s ?? '').trim();
+  let m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(t);
+  if (m) return serialFromParts(Number(m[3]), Number(m[2]), Number(m[1]));
+  m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t);
+  if (m) return serialFromParts(Number(m[1]), Number(m[2]), Number(m[3]));
+  return null;
 }
 function serialFromParts(y, m, d) {
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
   const s = serialFromYMD(y, m, d);
   const back = ymdFromSerial(s);
   return back.y === y && back.m === m && back.d === d ? s : null;
 }
-// <input type="time"> trả "08:40" (24h). Trả về phần của ngày (08:40 = 520/1440) hoặc null.
+// Ô giờ nhập chữ 24 giờ "hh:mm" (08:40, 8:40; chấp nhận cả "8.40" và "0840").
+// Trả về phần của ngày (08:40 = 520/1440) hoặc null.
 export function parseTimeInput(s) {
-  const m = /^(\d{1,2}):(\d{2})$/.exec(s ?? '');
+  const t = (s ?? '').trim();
+  const m = /^(\d{1,2})[:.h](\d{2})$/.exec(t) ?? /^(\d{2})(\d{2})$/.exec(t);
   if (!m) return null;
   const h = Number(m[1]), mi = Number(m[2]);
   if (h > 23 || mi > 59) return null;
@@ -163,6 +168,9 @@ export function validateRow(input, ctx) {
   if (activity && !ACTIVITIES.includes(activity)) errors.push(`Hoạt động "${activity}" không có trong danh sách.`);
 
   // --- Giờ
+  if (Number.isNaN(start)) errors.push('Giờ bắt đầu chưa đúng dạng hh:mm (24 giờ, ví dụ 08:40).');
+  if (Number.isNaN(end)) errors.push('Giờ kết thúc chưa đúng dạng hh:mm (24 giờ, ví dụ 21:15).');
+  if (Number.isNaN(start) || Number.isNaN(end)) return { errors, warnings };
   const hasStart = typeof start === 'number', hasEnd = typeof end === 'number';
   if (!hasStart && hasEnd) errors.push('Có giờ kết thúc thì phải có giờ bắt đầu.');
   if (!hasStart && !hasEnd && !notStudy) errors.push('Chưa nhập giờ bắt đầu.');

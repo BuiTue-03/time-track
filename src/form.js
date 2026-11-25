@@ -1,0 +1,497 @@
+// form.js — Giao diện thêm / sửa / xóa ca học (L4) và quy trình ghi an toàn vào Google Sheet.
+// Luật nằm ở rules.js (thuần, có test); phần ghi thuần ở write-core.js; gọi Google ở sheets-write.js.
+// Ở đây chỉ: vẽ danh sách ca + form, đọc dữ liệu form, chạy các bước ghi theo thứ tự và báo kết quả.
+// Không lưu gì vào localStorage / IndexedDB: dữ liệu form chỉ nằm trong bộ nhớ trang.
+import { WEEK_STATUS, ACTIVITIES, CATEGORIES, weekNo, weekStart, weekEnd, fmtDate, todaySerial, durationMin } from './core.js';
+import {
+  permissions, weekStatusOfDate, validateRow, checkDelete, splitNote, composeNote, isOffsetNote,
+  parseDateInput, parseTimeInput, fmtTime, nowFraction, MSG_FINAL, OFFSET_LABEL,
+} from './rules.js';
+import { serializeRow, snapshotCompare, verifyReadback, isEmptyRow } from './write-core.js';
+import {
+  signIn, hasValidToken, tokenInfo, readHeaders, readRowAF, findFirstEmptyRow, writeRow, clearRow,
+} from './sheets-write.js';
+import { esc } from './charts.js';
+
+const $ = id => document.getElementById(id);
+const ymdInput = s => fmtDate(s); // ô ngày là ô chữ dd/mm/yyyy
+const timeInput = f => (typeof f === 'number' ? fmtTime(f % 1) : '');
+const err = (code, message, extra) => Object.assign(new Error(message), { code, ...extra });
+
+// ---------------------------------------------------------------------------------------------
+// Trạng thái của phần form (chỉ trong bộ nhớ)
+// ---------------------------------------------------------------------------------------------
+let app = null;          // { getModel(), reload() } do app.js cung cấp
+let listWeek = null;     // tuần đang xem trong danh sách ca
+let editing = null;      // { mode: 'add'|'edit', original, snapshot, rowNumber }
+let busy = false;        // đang gửi -> chặn bấm đúp
+let pending = null;      // lần ghi "chưa chắc đã lưu": { kind, rowNumber, sent, snapshot }
+
+export function initForm(appApi, { enabled, disabledReason }) {
+  app = appApi;
+  $('ca-card').hidden = false;
+  if (!enabled) {
+    $('ca-disabled').hidden = false;
+    $('ca-disabled').textContent = disabledReason;
+    $('ca-tools').hidden = true;
+    return;
+  }
+  $('ca-signin').addEventListener('click', () => doSignIn());
+  $('ca-week').addEventListener('change', e => { listWeek = Number(e.target.value); renderList(); });
+  $('ca-add').addEventListener('click', () => openForm({ mode: 'add' }));
+  $('ca-list').addEventListener('click', e => {
+    const b = e.target.closest('button[data-act]');
+    if (!b || b.disabled) return;
+    const s = app.getModel().sessions.find(x => x.rowNumber === Number(b.dataset.row));
+    if (!s) return;
+    if (b.dataset.act === 'edit') openForm({ mode: 'edit', original: s });
+    if (b.dataset.act === 'finish') openForm({ mode: 'edit', original: s, finish: true });
+    if (b.dataset.act === 'delete') openDelete(s);
+  });
+  const f = $('ca-form');
+  f.addEventListener('input', refreshForm);
+  f.addEventListener('change', refreshForm);
+  f.addEventListener('submit', e => { e.preventDefault(); save(); });
+  $('f-cancel').addEventListener('click', () => closeForm());
+  $('del-cancel').addEventListener('click', () => $('del-dialog').close());
+  $('del-ok').addEventListener('click', () => doDelete());
+  $('ca-msg').addEventListener('click', e => {
+    const b = e.target.closest('button[data-do]');
+    if (b) actions[b.dataset.do]?.();
+  });
+  $('del-msg').addEventListener('click', e => {
+    const b = e.target.closest('button[data-do]');
+    if (b) actions[b.dataset.do]?.();
+  });
+  setInterval(renderSignin, 30_000);
+}
+
+// Gọi mỗi lần app.js tải xong dữ liệu
+export function onModel() {
+  if (!app || $('ca-tools').hidden) return;
+  const m = app.getModel();
+  const cur = weekNo(m.stats.today);
+  if (listWeek === null || listWeek > cur) listWeek = cur;
+  $('ca-week').innerHTML = m.stats.weeks.slice().reverse()
+    .map(w => `<option value="${w.week}" ${w.week === listWeek ? 'selected' : ''}>Tuần ${w.week} (${fmtDate(w.start).slice(0, 5)}–${fmtDate(w.end)}) · ${w.status}</option>`).join('');
+  renderSignin();
+  renderList();
+}
+
+// ---------------------------------------------------------------------------------------------
+// Đăng nhập
+// ---------------------------------------------------------------------------------------------
+function renderSignin() {
+  const t = tokenInfo();
+  const ok = hasValidToken();
+  $('ca-signin-state').textContent = ok
+    ? `Đã đăng nhập Google · còn khoảng ${Math.max(1, Math.round(t.secondsLeft / 60))} phút`
+    : 'Chưa đăng nhập Google: cần đăng nhập để lưu (xem và tải số liệu thì không cần).';
+  $('ca-signin').textContent = ok ? 'Đăng nhập lại' : 'Đăng nhập Google';
+}
+async function doSignIn() {
+  try {
+    await signIn();
+    renderSignin();
+    return true;
+  } catch (e) {
+    showMsg(currentMsgBox(), 'error', signinError(e));
+    return false;
+  }
+}
+function signinError(e) {
+  if (e.code === 'POPUP_popup_closed') return 'Cửa sổ đăng nhập Google đã bị đóng trước khi xong. Chưa ghi gì; dữ liệu form vẫn giữ. Bấm "Đăng nhập Google" để thử lại.';
+  if (e.code === 'POPUP_popup_failed_to_open') return 'Trình duyệt chặn cửa sổ đăng nhập Google. Hãy cho phép cửa sổ bật lên (popup) cho trang này rồi bấm lại.';
+  if (e.code === 'AUTH_access_denied') return 'Bạn đã từ chối cấp quyền cho app. Chưa ghi gì.';
+  if (e.code === 'AUTH_SCOPE') return 'Bạn chưa tick quyền chỉnh sửa Google Sheets khi đăng nhập. Bấm đăng nhập lại và tick ô đó.';
+  return `Đăng nhập Google chưa được: ${e.message}`;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Danh sách ca của 1 tuần, kèm nút Sửa / Xóa / Kết thúc ca và lý do khi bị khóa
+// ---------------------------------------------------------------------------------------------
+function renderList() {
+  const m = app.getModel();
+  const today = m.stats.today;
+  const w = m.stats.weeks.find(x => x.week === listWeek);
+  const status = w.status;
+  const pAdd = permissions(status);
+  // Dải trạng thái tuần
+  const rule = {
+    [WEEK_STATUS.CURRENT]: 'Thêm, sửa, xóa được mọi trường (ngày phải nằm trong tuần này, không sau hôm nay).',
+    [WEEK_STATUS.PROVISIONAL]: `Chỉ thêm được ca ghi bù (tự gắn nhãn ${OFFSET_LABEL}). Ca thường: chỉ sửa chủ đề, hoạt động, ghi chú. Ca ghi bù: sửa, xóa mọi trường.`,
+    [WEEK_STATUS.FINAL]: MSG_FINAL,
+  }[status] ?? '';
+  $('ca-strip').className = `strip s-${statusKey(status)}`;
+  $('ca-strip').innerHTML = `<b>Tuần ${w.week} · ${status}</b> <span>${esc(rule)}</span>`;
+  // Nút thêm
+  const canAdd = pAdd.canAdd || pAdd.canAddBu;
+  $('ca-add').disabled = !canAdd;
+  $('ca-add').textContent = pAdd.canAdd ? '+ Thêm ca' : '+ Thêm ca ghi bù';
+  $('ca-add-why').textContent = canAdd ? '' : pAdd.reasons.canAddBu;
+  $('ca-add-why').hidden = canAdd;
+
+  const list = m.sessions.filter(s => s.date >= w.start && s.date <= w.end).sort((a, b) => a.date - b.date || (a.start ?? 0) - (b.start ?? 0) || a.rowNumber - b.rowNumber);
+  if (!list.length) { $('ca-list').innerHTML = '<p class="muted">Tuần này chưa có ca nào.</p>'; return; }
+  $('ca-list').innerHTML = list.map(s => {
+    const off = isOffsetNote(s.note);
+    const p = permissions(status, { isOffset: off });
+    const note = splitNote(s.note).text;
+    const time = s.start === null ? 'không có giờ' : `${fmtTime(s.start)}–${s.end === null ? '…' : fmtTime(s.end)}`;
+    const why = [];
+    if (!p.canEdit) why.push(p.reasons.canEdit);
+    else if (!p.canEditTime) why.push(p.reasons.canEditTime);
+    if (p.canEdit && !p.canDelete) why.push(p.reasons.canDelete);
+    const uniqueWhy = [...new Set(why)].filter(x => !(status === WEEK_STATUS.FINAL && x === MSG_FINAL));
+    const canFinish = s.open && status === WEEK_STATUS.CURRENT;
+    return `<div class="ca-row">
+      <div class="ca-main"><b>${fmtDate(s.date).slice(0, 5)}</b> · ${time}${s.duration !== null ? ` <span class="muted">(${s.duration} phút)</span>` : ''}
+        ${off ? '<span class="tag">ghi bù</span>' : ''}${s.open ? '<span class="tag">đang mở</span>' : ''}
+        <div>${esc(s.topic ?? '')}${s.activity ? ` · ${esc(s.activity)}` : ''}</div>
+        ${note ? `<div class="muted">${esc(note)}</div>` : ''}
+        <div class="muted">dòng ${s.rowNumber}</div></div>
+      <div class="ca-btns">
+        ${canFinish ? `<button type="button" data-act="finish" data-row="${s.rowNumber}">Kết thúc ca</button>` : ''}
+        <button type="button" data-act="edit" data-row="${s.rowNumber}" ${p.canEdit ? '' : 'disabled'}>Sửa</button>
+        <button type="button" data-act="delete" data-row="${s.rowNumber}" ${p.canDelete ? '' : 'disabled'}>Xóa</button>
+      </div>
+      ${uniqueWhy.length ? `<p class="why">${uniqueWhy.map(esc).join(' ')}</p>` : ''}
+    </div>`;
+  }).join('');
+}
+const statusKey = s => ({ [WEEK_STATUS.CURRENT]: 'cur', [WEEK_STATUS.PROVISIONAL]: 'prov', [WEEK_STATUS.FINAL]: 'final' }[s] ?? 'final');
+
+// ---------------------------------------------------------------------------------------------
+// Form thêm / sửa
+// ---------------------------------------------------------------------------------------------
+function fillTopics(selected) {
+  const m = app.getModel();
+  const groups = {};
+  for (const [t, c] of m.topics) (groups[c] ??= []).push(t);
+  const order = [...CATEGORIES, ...Object.keys(groups).filter(c => !CATEGORIES.includes(c))];
+  let h = '<option value="">— chọn chủ đề —</option>';
+  for (const c of order) if (groups[c]) h += `<optgroup label="${esc(c)}">${groups[c].map(t => `<option ${t === selected ? 'selected' : ''}>${esc(t)}</option>`).join('')}</optgroup>`;
+  if (selected && !m.topics.has(selected)) h += `<option selected>${esc(selected)}</option>`; // chủ đề cũ không còn trong bảng
+  $('f-topic').innerHTML = h;
+  $('f-activity').innerHTML = '<option value="">— chọn hoạt động —</option>' + ACTIVITIES.map(a => `<option>${a}</option>`).join('');
+}
+
+function openForm({ mode, original = null, finish = false }) {
+  if (busy) return;
+  const m = app.getModel();
+  const today = currentToday();
+  pending = null;
+  editing = { mode, original, rowNumber: original?.rowNumber ?? null, snapshot: original ? [...original.raw] : null };
+  fillTopics(original?.topic ?? '');
+  $('f-title').textContent = mode === 'add' ? 'Thêm ca học' : `Sửa ca · dòng ${original.rowNumber}`;
+  const wk = m.stats.weeks.find(w => w.week === listWeek);
+  if (mode === 'add') {
+    // Mặc định: tuần đang xem. Tuần Đang diễn ra -> hôm nay; Tạm chốt -> ngày cuối của tuần đó.
+    const d = wk.status === WEEK_STATUS.CURRENT ? today : wk.end;
+    $('f-date').value = ymdInput(d);
+    $('f-start').value = ''; $('f-end').value = '';
+    $('f-activity').value = ''; $('f-note').value = '';
+    $('f-offset').checked = wk.status === WEEK_STATUS.PROVISIONAL;
+  } else {
+    const { isOffset, text } = splitNote(original.note);
+    $('f-date').value = ymdInput(original.date);
+    $('f-start').value = timeInput(original.start);
+    $('f-end').value = finish ? fmtTime(nowFraction()) : timeInput(original.end);
+    $('f-activity').value = original.activity ?? '';
+    $('f-note').value = text;
+    $('f-offset').checked = isOffset;
+  }
+  // Gợi ý khoảng ngày hợp lệ: trong tuần của ca (sửa) / tuần đang xem (thêm), không sau hôm nay
+  const w = mode === 'add' ? wk.week : weekNo(original.date);
+  $('f-date-hint').textContent = `dd/mm/yyyy, từ ${fmtDate(weekStart(w))} đến ${fmtDate(Math.min(weekEnd(w), today))}`;
+  showMsg($('ca-msg'), null);
+  setBusy(false);
+  refreshForm();
+  $('f-dialog').showModal();
+  if (finish) $('f-end').focus();
+}
+function closeForm() {
+  if (busy) return; // đang gửi thì không đóng, tránh mất kết quả
+  $('f-dialog').close();
+  editing = null; pending = null;
+}
+const currentToday = () => todaySerial(); // luôn là hôm nay thật (giờ VN); form bị tắt khi giả lập ngày
+
+// Đọc form -> input của validateRow
+function readForm() {
+  return {
+    date: parseDateInput($('f-date').value),
+    start: timeField('f-start'),
+    end: timeField('f-end'),
+    topic: $('f-topic').value,
+    activity: $('f-activity').value,
+    noteText: $('f-note').value,
+    isOffset: $('f-offset').checked,
+  };
+}
+// Ô giờ: trống -> null; gõ sai -> NaN (để báo lỗi "không hợp lệ" thay vì coi như trống)
+function timeField(id) {
+  const v = $(id).value.trim();
+  if (!v) return null;
+  return parseTimeInput(v) ?? NaN;
+}
+function context() {
+  const m = app.getModel();
+  return {
+    mode: editing.mode, original: editing.original, today: currentToday(), nowFrac: nowFraction(),
+    topics: m.topics, sessions: m.sessions, headers: m.headers,
+  };
+}
+
+// Cập nhật dải trạng thái tuần, khóa trường, xem trước ghi chú, lỗi/cảnh báo mỗi khi gõ
+function refreshForm() {
+  if (!editing) return;
+  const input = readForm();
+  const today = currentToday();
+  const date = input.date ?? editing.original?.date ?? today;
+  const status = weekStatusOfDate(editing.mode === 'edit' ? editing.original.date : date, today);
+  const isOff = editing.mode === 'edit' ? isOffsetNote(editing.original.note) : input.isOffset;
+  const p = permissions(status, { isOffset: isOff });
+  // Dải trạng thái tuần ngay trên form
+  $('f-strip').className = `strip s-${statusKey(status)}`;
+  $('f-strip').innerHTML = `<b>Tuần ${weekNo(date)} · ${status}</b> ` + esc(
+    status === WEEK_STATUS.FINAL ? MSG_FINAL
+      : status === WEEK_STATUS.PROVISIONAL
+        ? (editing.mode === 'add' ? `Tuần tạm chốt: ca thêm vào là ca ghi bù, tự gắn nhãn ${OFFSET_LABEL}.` : (isOff ? 'Ca ghi bù: sửa được mọi trường, ngày phải trong tuần này.' : p.reasons.canEditTime))
+        : 'Tuần đang diễn ra: sửa được mọi trường.');
+  // Khóa ngày/giờ khi không được sửa giờ (ca thường ở tuần Tạm chốt), kèm lý do
+  const lockTime = editing.mode === 'edit' && !p.canEditTime;
+  for (const id of ['f-date', 'f-start', 'f-end']) $(id).disabled = lockTime;
+  $('f-time-why').hidden = !lockTime;
+  $('f-time-why').textContent = lockTime ? p.reasons.canEditTime : '';
+  // Ô tick ghi bù: thêm ở tuần Tạm chốt -> bắt buộc; khi sửa -> không đổi được (Q6a)
+  const addProv = editing.mode === 'add' && weekStatusOfDate(date, today) === WEEK_STATUS.PROVISIONAL;
+  if (addProv) $('f-offset').checked = true;
+  $('f-offset').disabled = editing.mode === 'edit' || addProv;
+  $('f-offset-why').textContent = editing.mode === 'edit'
+    ? 'Khi sửa ca không đổi được nhãn ghi bù. Muốn ghi bù, hãy thêm ca mới.'
+    : addProv ? 'Tuần tạm chốt chỉ nhận ca ghi bù.' : 'Không bắt buộc ở tuần đang diễn ra.';
+  // Xem trước đúng nội dung cột F sẽ lưu
+  const note = composeNote($('f-offset').checked, input.noteText);
+  $('f-note-preview').innerHTML = `Ô "Ghi chú" (cột F) sẽ lưu: <code>${note ? esc(note) : '(trống)'}</code>`;
+  // Thời lượng
+  const dur = durationMin(input.start, input.end);
+  $('f-dur').textContent = dur === null ? (input.start !== null && input.end === null ? 'Chưa có giờ kết thúc: lưu thành ca đang mở (không tính phút).' : '') : `Thời lượng: ${dur} phút`;
+  // Lỗi / cảnh báo
+  const v = validateRow(readFormForValidate(input), context());
+  $('f-errors').innerHTML = v.errors.map(e => `<li>${esc(e)}</li>`).join('');
+  $('f-warnings').innerHTML = v.warnings.map(e => `<li>${esc(e)}</li>`).join('');
+  $('f-save').disabled = busy || v.errors.length > 0;
+  return v;
+}
+// Trường bị khóa (disabled) vẫn lấy giá trị gốc
+function readFormForValidate(input) {
+  if (editing.mode === 'edit' && $('f-date').disabled) {
+    const o = editing.original;
+    return { ...input, date: o.date, start: o.start, end: o.end };
+  }
+  return input;
+}
+
+function setBusy(b) {
+  busy = b;
+  $('f-save').disabled = b;
+  $('f-cancel').disabled = b;
+  $('del-ok').disabled = b;
+  $('del-cancel').disabled = b;
+  $('f-save').textContent = b ? 'Đang lưu…' : 'Lưu';
+  $('del-ok').textContent = b ? 'Đang xóa…' : 'Xóa nội dung dòng';
+}
+
+// ---------------------------------------------------------------------------------------------
+// Lưu: các bước theo thứ tự, mỗi bước có thể dừng mà không mất dữ liệu form
+// ---------------------------------------------------------------------------------------------
+async function save() {
+  if (busy || !editing) return; // chống bấm đúp
+  const box = $('ca-msg');
+  // 1. Kiểm tra lại với "hôm nay" và giờ hiện tại ngay lúc bấm (Q2)
+  const v = refreshForm();
+  if (v.errors.length) return;
+  setBusy(true); // khóa NGAY, trước mọi bước chờ (kể cả chờ đăng nhập), để bấm đúp không chạy 2 lần
+  if (!hasValidToken()) {
+    showMsg(box, 'info', 'Cần đăng nhập Google trước khi lưu. Cửa sổ đăng nhập sẽ mở; dữ liệu form vẫn giữ.');
+    if (!(await doSignIn())) { setBusy(false); refreshForm(); return; }
+  }
+  const input = readFormForValidate(readForm());
+  const sent = serializeRow(input);
+  let phase = 'read', rowNumber = editing.rowNumber;
+  try {
+    // 2. Tiêu đề cột vẫn đúng
+    const headers = await readHeaders();
+    app.getModel().headers = headers;
+    const v2 = validateRow(input, context());
+    if (v2.errors.length) throw err('RULE', v2.errors.join(' '));
+    let lowWarning = null;
+    if (editing.mode === 'add') {
+      // 3a. Tìm dòng trống (trong 2..1002); writeRow tự kiểm tra lại dòng còn trống ngay trước khi ghi
+      const r = await findFirstEmptyRow();
+      rowNumber = r.row; lowWarning = r.warning;
+    } else {
+      // 3b. Sửa: dòng trong Sheet phải giống ảnh chụp lúc mở form
+      const cur = await readRowAF(rowNumber);
+      const d = snapshotCompare(editing.snapshot, cur.raw);
+      if (!d.same) throw err('CHANGED', changedText(rowNumber, d));
+    }
+    // 4. Ghi
+    phase = 'write';
+    pending = { kind: editing.mode, rowNumber, sent, snapshot: editing.snapshot };
+    await writeRow(rowNumber, sent, { mustBeEmpty: editing.mode === 'add' });
+    // 5. Đọc lại và đối chiếu
+    phase = 'verify';
+    await finishWrite(box, rowNumber, sent, lowWarning);
+  } catch (e) {
+    setBusy(false);
+    handleError(box, e, phase);
+    refreshForm();
+  }
+}
+
+async function finishWrite(box, rowNumber, sent, lowWarning) {
+  const back = await readRowAF(rowNumber);
+  const rv = verifyReadback(sent, back.raw, back.formatted);
+  if (!rv.ok) throw err('READBACK', `Đã gửi lệnh ghi nhưng dòng ${rowNumber} đọc lại không khớp: ${rv.errors.join('; ')}. Hãy mở Sheet kiểm tra dòng này.`);
+  pending = null;
+  await app.reload();
+  const seen = app.getModel().sessions.find(s => s.rowNumber === rowNumber);
+  const extra = [...rv.warnings, lowWarning].filter(Boolean);
+  if (!seen) extra.push('Số liệu trên trang chưa thấy dòng mới (Sheet có thể cập nhật chậm vài giây). Bấm "Tải lại" ở đầu trang sau ít giây.');
+  setBusy(false);
+  $('f-dialog').close();
+  editing = null;
+  showMsg($('ca-result'), extra.length ? 'warn' : 'ok', `Đã lưu vào dòng ${rowNumber} và đọc lại thấy đúng. Số liệu đã làm mới.` + (extra.length ? ' ' + extra.join(' ') : ''));
+}
+
+function changedText(rowNumber, d) {
+  const cols = d.diffs.map(x => `cột ${x.col}: lúc mở form là ${JSON.stringify(x.before)}, bây giờ là ${JSON.stringify(x.after)}`).join('; ');
+  return `Dòng ${rowNumber} đã bị thay đổi ở nơi khác kể từ lúc app tải dữ liệu (${cols}). Chưa ghi gì.`;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Lỗi: nói rõ đã ghi hay chưa; không tự thử lại
+// ---------------------------------------------------------------------------------------------
+function handleError(box, e, phase) {
+  const keep = ' Dữ liệu trong form vẫn giữ nguyên.';
+  const uncertain = phase === 'write' && ['TIMEOUT', 'NETWORK', 'OFFLINE'].includes(e.code);
+  if (uncertain) {
+    return showMsg(box, 'warn', `Chưa chắc đã lưu: ${e.message}. App KHÔNG tự gửi lại. Bấm "Kiểm tra trong Sheet" để app đọc lại dòng ${pending.rowNumber} xem ca đã vào chưa.`,
+      [['check', 'Kiểm tra trong Sheet']]);
+  }
+  if (phase === 'verify' && e.code !== 'READBACK') {
+    return showMsg(box, 'warn', `Lệnh ghi đã được Google nhận, nhưng bước đọc lại bị lỗi (${e.message}). Bấm "Kiểm tra trong Sheet".`, [['check', 'Kiểm tra trong Sheet']]);
+  }
+  pending = phase === 'write' ? pending : null;
+  switch (e.code) {
+    case 'NO_TOKEN': case 'TOKEN_EXPIRED': case 'HTTP_401':
+      return showMsg(box, 'error', `Phiên đăng nhập Google đã hết hạn hoặc bị thu hồi. ${phase === 'write' ? 'Lệnh ghi bị Google từ chối nên chưa ghi gì.' : 'Chưa ghi gì.'} Bấm "Đăng nhập lại", rồi bấm Lưu lần nữa.` + keep, [['signin', 'Đăng nhập lại']]);
+    case 'CHANGED':
+      return showMsg(box, 'error', e.message + ' Bấm "Tải lại dữ liệu" để xem bản mới nhất rồi mở form lại.', [['reload', 'Tải lại dữ liệu']]);
+    case 'NOT_EMPTY':
+      return showMsg(box, 'error', `${e.message} (có thể vừa được ghi từ thiết bị khác). Chưa ghi gì. Bấm Lưu lần nữa để app tìm dòng trống khác.` + keep);
+    case 'FULL': case 'GUARD': case 'RANGE': case 'RULE': case 'READBACK':
+      return showMsg(box, 'error', e.message + (e.code === 'READBACK' ? '' : keep));
+    case 'OFFLINE': case 'NETWORK': case 'TIMEOUT':
+      return showMsg(box, 'error', `Không liên lạc được Google trước khi ghi (${e.message}). Chưa ghi gì. Kiểm tra mạng rồi bấm Lưu lần nữa.` + keep);
+    default:
+      return showMsg(box, 'error', `Google báo lỗi: ${e.message}. ${phase === 'write' ? 'Hãy bấm "Kiểm tra trong Sheet".' : 'Chưa ghi gì.'}` + keep, phase === 'write' ? [['check', 'Kiểm tra trong Sheet']] : []);
+  }
+}
+
+// Sau "chưa chắc đã lưu": chỉ ĐỌC lại dòng, rồi cho người dùng chọn
+async function checkPending() {
+  if (!pending || busy) return;
+  const box = currentMsgBox();
+  const { kind, rowNumber, sent, snapshot } = pending;
+  setBusy(true);
+  try {
+    const cur = await readRowAF(rowNumber);
+    setBusy(false);
+    const target = kind === 'delete' ? [] : sent;
+    if (snapshotCompare(target, cur.raw).same) {
+      pending = null;
+      if (kind === 'delete') { $('del-dialog').close(); await app.reload(); return showMsg($('ca-result'), 'ok', `Đã kiểm tra: nội dung dòng ${rowNumber} đã được xóa. Số liệu đã làm mới.`); }
+      setBusy(true);
+      return await finishWrite(box, rowNumber, sent, null);
+    }
+    const notSaved = kind === 'add' ? isEmptyRow(cur.raw) : snapshotCompare(snapshot, cur.raw).same;
+    if (notSaved) {
+      pending = null;
+      return showMsg(box, 'info', `Đã kiểm tra: dòng ${rowNumber} CHƯA thay đổi, tức là chưa lưu. ${kind === 'delete' ? 'Bấm "Xóa nội dung dòng" nếu vẫn muốn xóa.' : 'Dữ liệu form vẫn còn; bấm Lưu nếu muốn gửi lại.'}`);
+    }
+    pending = null;
+    showMsg(box, 'error', `Đã kiểm tra: dòng ${rowNumber} có dữ liệu khác với cả bản cũ lẫn bản vừa gửi (có thể bị sửa từ nơi khác). Chưa làm gì thêm. Bấm "Tải lại dữ liệu" và kiểm tra Sheet.`, [['reload', 'Tải lại dữ liệu']]);
+  } catch (e) {
+    setBusy(false);
+    showMsg(box, 'error', `Chưa đọc lại được Sheet (${e.message}). Thử bấm "Kiểm tra trong Sheet" lần nữa khi có mạng.`, [['check', 'Kiểm tra trong Sheet'], ...(e.code === 'HTTP_401' || e.code === 'TOKEN_EXPIRED' || e.code === 'NO_TOKEN' ? [['signin', 'Đăng nhập lại']] : [])]);
+  }
+}
+
+const actions = {
+  check: checkPending,
+  signin: () => doSignIn().then(ok => ok && showMsg(currentMsgBox(), 'info', 'Đã đăng nhập lại. Bấm Lưu (hoặc Xóa) lần nữa.')),
+  reload: async () => { pending = null; $('f-dialog').open && $('f-dialog').close(); $('del-dialog').open && $('del-dialog').close(); editing = null; await app.reload(); },
+};
+const currentMsgBox = () => ($('del-dialog').open ? $('del-msg') : $('f-dialog').open ? $('ca-msg') : $('ca-result'));
+
+function showMsg(box, kind, text, buttons = []) {
+  if (!kind) { box.hidden = true; box.innerHTML = ''; return; }
+  box.hidden = false;
+  box.className = `msg ${kind}`;
+  box.innerHTML = `<p>${esc(text)}</p>` + buttons.map(([k, label]) => `<button type="button" data-do="${k}">${esc(label)}</button>`).join(' ');
+}
+
+// ---------------------------------------------------------------------------------------------
+// Xóa: hộp xác nhận ghi rõ ca nào; "xóa" = xóa nội dung A:F, không xóa hàng
+// ---------------------------------------------------------------------------------------------
+function openDelete(s) {
+  if (busy) return;
+  const e = checkDelete(s, currentToday());
+  if (e.length) return showMsg($('ca-result'), 'error', e[0]);
+  editing = { mode: 'delete', original: s, rowNumber: s.rowNumber, snapshot: [...s.raw] };
+  pending = null;
+  const time = s.start === null ? 'không có giờ' : `${fmtTime(s.start)}–${s.end === null ? '…' : fmtTime(s.end)}`;
+  $('del-what').innerHTML = `<b>${fmtDate(s.date)} · ${time}</b><br>${esc(s.topic ?? '')}${s.activity ? ` · ${esc(s.activity)}` : ''}<br><span class="muted">dòng ${s.rowNumber}</span>`;
+  showMsg($('del-msg'), null);
+  setBusy(false);
+  $('del-dialog').showModal();
+}
+async function doDelete() {
+  if (busy || editing?.mode !== 'delete') return;
+  const box = $('del-msg');
+  const s = editing.original;
+  const e0 = checkDelete(s, currentToday()); // tính lại lúc bấm
+  if (e0.length) return showMsg(box, 'error', e0[0]);
+  setBusy(true); // khóa ngay, kể cả trong lúc chờ đăng nhập
+  if (!hasValidToken()) {
+    showMsg(box, 'info', 'Cần đăng nhập Google trước khi xóa.');
+    if (!(await doSignIn())) { setBusy(false); return; }
+  }
+  let phase = 'read';
+  try {
+    const cur = await readRowAF(s.rowNumber);
+    const d = snapshotCompare(editing.snapshot, cur.raw);
+    if (!d.same) throw err('CHANGED', changedText(s.rowNumber, d));
+    phase = 'write';
+    pending = { kind: 'delete', rowNumber: s.rowNumber, sent: [], snapshot: editing.snapshot };
+    await clearRow(s.rowNumber);
+    phase = 'verify';
+    const back = await readRowAF(s.rowNumber);
+    if (!isEmptyRow(back.raw)) throw err('READBACK', `Đã gửi lệnh xóa nhưng dòng ${s.rowNumber} đọc lại vẫn còn dữ liệu. Hãy mở Sheet kiểm tra.`);
+    pending = null;
+    await app.reload();
+    setBusy(false);
+    $('del-dialog').close();
+    editing = null;
+    showMsg($('ca-result'), 'ok', `Đã xóa nội dung dòng ${s.rowNumber} (cột A–F; công thức G–K vẫn giữ). Số liệu đã làm mới.`);
+  } catch (e) {
+    setBusy(false);
+    if (e.code === 'CHANGED') return showMsg(box, 'error', e.message + ' Bấm "Tải lại dữ liệu".', [['reload', 'Tải lại dữ liệu']]);
+    if (phase !== 'read' && ['TIMEOUT', 'NETWORK', 'OFFLINE'].includes(e.code) || (phase === 'verify' && e.code !== 'READBACK'))
+      return showMsg(box, 'warn', `Chưa chắc đã xóa: ${e.message}. App KHÔNG tự gửi lại. Bấm "Kiểm tra trong Sheet".`, [['check', 'Kiểm tra trong Sheet']]);
+    handleError(box, e, phase === 'verify' ? 'done' : phase);
+  }
+}

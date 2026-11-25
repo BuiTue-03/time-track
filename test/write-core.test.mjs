@@ -55,11 +55,12 @@ test('verifyReadback: thô khớp + hiển thị khớp -> ok; hiển thị mm/d
 });
 
 // ---------- B5 ----------
-test('snapshotCompare: trống = trống, số so tới ~0,01 giây, chuỗi nguyên văn', () => {
+test('snapshotCompare: trống = trống, số so tới ~0,4 giây, chuỗi nguyên văn', () => {
   const s = [D(2026, 11, 25), H(8), H(9), 'JP', 'Ôn tập', ''];
   assert.ok(snapshotCompare(s, [...s]).same);
   assert.ok(snapshotCompare(s, s.slice(0, 5)).same);               // Google bỏ ô trống ở cuối
   assert.ok(snapshotCompare(s, [s[0], s[1] + 1e-12, ...s.slice(2)]).same);
+  assert.ok(!snapshotCompare(s, [s[0], s[1] + 1 / 1440, ...s.slice(2)]).same); // lệch 1 phút: khác
   const d = snapshotCompare(s, [s[0], s[1], H(9, 30), 'JP', 'Ôn tập', 'sửa ngoài']);
   assert.equal(d.same, false);
   assert.deepEqual(d.diffs.map(x => x.col), ['C', 'F']);

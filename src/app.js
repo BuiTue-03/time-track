@@ -1,7 +1,11 @@
-// app.js — Phần hiển thị (chỉ đọc). Đọc Sheet bằng gviz -> tính bằng core.js/insights.js -> vẽ ra trang.
-// KHÔNG ghi gì vào Sheet, không OAuth.
+// app.js — Phần hiển thị. Đọc Sheet bằng gviz -> tính bằng core.js/insights.js -> vẽ ra trang.
+// L4: thêm form thêm/sửa/xóa (form.js). App đọc số liệu từ CHÍNH Sheet mà nó ghi vào (config.SPREADSHEET_ID),
+// để số dòng và số liệu luôn cùng một Sheet. Không lưu số liệu vào localStorage/IndexedDB/service worker:
+// mỗi lần tải là đọc mới từ Sheet (fetch cache: 'no-store').
 import { buildModel, todaySerial, serialFromYMD, weekNo, WEEK_STATUS, fmtDate } from './core.js';
 import { gvizUrl, parseGvizText, TAB_SESSIONS, TAB_TOPICS } from './gviz.js';
+import { SPREADSHEET_ID, REAL_SPREADSHEET_ID, ALLOW_WRITE_TO_REAL_SHEET } from './config.js';
+import { initForm, onModel } from './form.js';
 import { rankWeeks, weeklyAverage, breakdown, rankWeekdays, compareWeeks, compareMonths, forecastWeek } from './insights.js';
 import { weeklyBars, activityBar, heatmap, HEAT_BINS, activityColorVar, installTooltip, esc } from './charts.js';
 import {
@@ -15,6 +19,27 @@ const params = new URLSearchParams(location.search);
 const USE_FIXTURE = params.get('nguon') === 'mau';
 const TODAY_OVERRIDE = /^\d{4}-\d{2}-\d{2}$/.test(params.get('homnay') ?? '') ? params.get('homnay') : null;
 const $ = id => document.getElementById(id);
+// Sheet để ĐỌC: mặc định = Sheet app ghi vào. ?nguon=that -> xem Sheet thật, chỉ đọc (tắt form nếu đang ghi bản thử).
+const VIEW_REAL = params.get('nguon') === 'that';
+const DATA_SHEET_ID = VIEW_REAL ? REAL_SPREADSHEET_ID : SPREADSHEET_ID;
+const WRITES_REAL = SPREADSHEET_ID === REAL_SPREADSHEET_ID;
+const FORM_ENABLED = !USE_FIXTURE && !TODAY_OVERRIDE && DATA_SHEET_ID === SPREADSHEET_ID && (!WRITES_REAL || ALLOW_WRITE_TO_REAL_SHEET);
+const FORM_DISABLED_REASON = USE_FIXTURE ? 'Đang xem dữ liệu mẫu: tắt form để không ghi nhầm.'
+  : TODAY_OVERRIDE ? 'Đang giả lập ngày hôm nay: tắt form để không ghi nhầm.'
+  : DATA_SHEET_ID !== SPREADSHEET_ID ? 'Đang xem Sheet thật ở chế độ chỉ đọc. Form chỉ chạy khi app đọc và ghi cùng một Sheet.'
+  : 'Khóa an toàn đang bật: app trỏ vào Sheet thật nhưng chưa cho phép ghi.';
+
+// Banner cố định: luôn cho thấy app đang ghi vào đâu
+function renderBanner() {
+  const b = $('banner');
+  b.hidden = false;
+  if (WRITES_REAL && ALLOW_WRITE_TO_REAL_SHEET && !VIEW_REAL) { b.className = 'banner real'; b.textContent = 'ĐANG GHI VÀO SHEET THẬT'; }
+  else if (VIEW_REAL) { b.className = 'banner view'; b.textContent = 'Đang xem Sheet thật · chỉ đọc, không ghi'; }
+  else { b.className = 'banner test'; b.textContent = 'BẢN THỬ NGHIỆM — không ghi vào Sheet thật'; }
+  $('footer').textContent = FORM_ENABLED
+    ? (WRITES_REAL ? 'Form ghi vào Sheet thật (chỉ cột A–F của tab Ca học).' : 'Form ghi vào BẢN THỬ NGHIỆM của Sheet (chỉ cột A–F của tab Ca học). Số liệu trên trang là của bản thử.')
+    : 'Chỉ đọc: app không ghi gì vào Google Sheet.';
+}
 
 // ---------- Tải dữ liệu, có thời gian chờ 8 giây ----------
 async function fetchText(url) {
@@ -35,7 +60,7 @@ async function loadRaw() {
     const fx = JSON.parse(await fetchText('test/fixtures/sheet-to-2026-11-23.json'));
     return { caRows: fx.caHoc, cdRows: fx.chuDe, source: 'values', label: `dữ liệu mẫu (chụp ${fx.meta.capturedAt}, đến ${fx.meta.cutoff})` };
   }
-  const [ca, cd] = await Promise.all([fetchText(gvizUrl(TAB_SESSIONS, 'A1:E')), fetchText(gvizUrl(TAB_TOPICS, 'A1:B'))]);
+  const [ca, cd] = await Promise.all([fetchText(gvizUrl(TAB_SESSIONS, 'A1:F', DATA_SHEET_ID)), fetchText(gvizUrl(TAB_TOPICS, 'A1:B', DATA_SHEET_ID))]);
   return { caRows: parseGvizText(ca), cdRows: parseGvizText(cd), source: 'gviz', label: null };
 }
 function today() {
@@ -56,11 +81,13 @@ async function load() {
     const raw = await loadRaw();
     model = buildModel({ ...raw, today: today() });
     model.label = raw.label;
+    model.headers = (raw.caRows[0] ?? []).map(c => (c && typeof c === 'object' && 'v' in c ? c.v : c)); // tiêu đề A1:F1
     $('updated').textContent = `Cập nhật lúc ${clockNow()}`;
     if (!model.sessions.length) { setState('empty'); return; }
     if (selectedWeek === null || selectedWeek > weekNo(model.stats.today)) selectedWeek = weekNo(model.stats.today);
     setState('ready');
     render();
+    onModel();
   } catch (e) {
     setState('error', e.message);
   }
@@ -175,4 +202,6 @@ $('week-select').addEventListener('change', e => { selectedWeek = Number(e.targe
 let rt;
 window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => model && !$('state-ready').hidden && render(), 150); });
 installTooltip(document.body);
+renderBanner();
+initForm({ getModel: () => model, reload: load }, { enabled: FORM_ENABLED, disabledReason: FORM_DISABLED_REASON });
 load();

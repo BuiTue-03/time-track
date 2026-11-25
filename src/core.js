@@ -117,6 +117,7 @@ export function parseSessions(rows, source, topics, cfg = CONFIG) {
     if ([date, start, end, topic, activity].every(v => v === null)) return; // dòng trống / đã xóa nội dung A–E: bỏ qua
     const s = {
       rowNumber, date, start, end,
+      raw: [date, start, end, topic, activity, note], // giá trị thô A–F như Sheet trả về (L4: ảnh chụp dòng trước khi sửa/xóa)
       topic: typeof topic === 'string' ? topic.trim() : topic,
       activity: typeof activity === 'string' ? activity.trim() : activity,
       note: typeof note === 'string' ? note : '',

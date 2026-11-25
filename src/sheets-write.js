@@ -45,19 +45,28 @@ export const forgetToken = () => { token = null; };
 // Mọi lỗi được gắn "code" để trang thử in ra cách xử lý tương ứng.
 function err(code, message, extra) { return Object.assign(new Error(message), { code, ...extra }); }
 
+export const API_TIMEOUT_MS = 8000; // quá 8 giây không có trả lời -> lỗi TIMEOUT (KHÔNG tự thử lại)
+// Token còn dùng được không (chừa 60 giây phòng hết hạn giữa chừng). Token GIS sống khoảng 1 giờ.
+export const hasValidToken = () => !!token && Date.now() < token.expiresAt - 60_000;
+
 async function api(method, path, body) {
-  if (!token) throw err('NO_TOKEN', 'Chưa đăng nhập (hoặc token đã bị xóa)');
-  let r;
+  if (!token) throw err('NO_TOKEN', 'Chưa đăng nhập Google (hoặc đã đăng xuất)');
+  if (!hasValidToken()) { token = null; throw err('TOKEN_EXPIRED', 'Phiên đăng nhập Google đã hết hạn'); }
+  let r, timer;
   try {
-    r = await fetch(`${API}/${SPREADSHEET_ID}${path}`, {
-      method,
+    // Hết giờ chờ: KHÔNG hủy yêu cầu (hủy phía trình duyệt cũng không chắc chặn được việc Google đã ghi),
+    // chỉ báo TIMEOUT để giao diện hỏi lại Sheet xem đã ghi hay chưa.
+    const timeout = new Promise((_, rej) => { timer = setTimeout(() => rej(err('TIMEOUT', `Quá ${API_TIMEOUT_MS / 1000} giây chưa có trả lời từ Google`)), API_TIMEOUT_MS); });
+    r = await Promise.race([fetch(`${API}/${SPREADSHEET_ID}${path}`, {
+      method, cache: 'no-store',
       headers: { Authorization: `Bearer ${token.access_token}`, 'Content-Type': 'application/json' },
       body: body ? JSON.stringify(body) : undefined,
-    });
+    }), timeout]);
   } catch (e) {
+    if (e.code === 'TIMEOUT') throw e;
     // fetch chỉ "throw" khi không tới được máy chủ: mất mạng, DNS, CORS...
     throw err(navigator.onLine ? 'NETWORK' : 'OFFLINE', `Không kết nối được Google (${e.message})`);
-  }
+  } finally { clearTimeout(timer); }
   const j = await r.json().catch(() => ({}));
   if (r.ok) return j;
   const msg = j.error?.message ?? r.statusText;
@@ -83,6 +92,15 @@ export async function readRange(a1, sheet = SHEET_CA_HOC, render = 'UNFORMATTED_
 export async function findFirstEmptyRow() {
   return pickEmptyRow(await readRange(`A2:F${LAST_FORMULA_ROW}`));
 }
+
+// Đọc 1 dòng A:F hai kiểu: raw = giá trị thô (số serial, chuỗi), formatted = chữ Sheet hiển thị.
+export async function readRowAF(rowNumber) {
+  const a1 = buildWriteRange(rowNumber).split('!')[1]; // cùng hàm kiểm tra số dòng
+  const [raw, formatted] = await Promise.all([readRange(a1), readRange(a1, SHEET_CA_HOC, 'FORMATTED_VALUE')]);
+  return { raw: raw[0] ?? [], formatted: formatted[0] ?? [] };
+}
+// Tiêu đề A1:F1 (để chắc Sheet chưa bị đổi cấu trúc trước khi ghi)
+export async function readHeaders() { return (await readRange('A1:F1'))[0] ?? []; }
 
 // ---------- 4. Ghi / sửa / xóa ----------
 // valueInputOption=RAW: Google lưu ĐÚNG giá trị gửi lên, không "đoán" kiểu.

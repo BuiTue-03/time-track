@@ -74,13 +74,14 @@ export function verifyReadback(sent, rawRow, formattedRow) {
 
 // ---------------------------------------------------------------------------------------------
 // B5. So sánh A:F của một dòng (ảnh chụp lúc mở form vs. đọc lại ngay trước khi ghi).
-//   "" / null / undefined / ô thiếu = trống. Số so tới 1e-7 ngày (~0,01 giây). Chuỗi so nguyên văn.
+//   "" / null / undefined / ô thiếu = trống. Số so tới 5e-6 ngày (~0,4 giây: gviz làm tròn giờ tới giây,
+//   còn app chỉ làm việc với phút). Chuỗi so nguyên văn.
 // ---------------------------------------------------------------------------------------------
 const COLS = ['A', 'B', 'C', 'D', 'E', 'F'];
 const empty = v => v === '' || v === null || v === undefined;
 function sameCell(a, b) {
   if (empty(a) && empty(b)) return true;
-  if (typeof a === 'number' && typeof b === 'number') return Math.abs(a - b) < 1e-7;
+  if (typeof a === 'number' && typeof b === 'number') return Math.abs(a - b) < 5e-6;
   return a === b;
 }
 export function snapshotCompare(before, after) {

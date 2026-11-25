@@ -77,9 +77,15 @@ test('nhãn [OFFSET]: ghép, tách, nhận diện', () => {
 
 // ---------- Đổi chữ từ form ----------
 test('parseDateInput / parseTimeInput', () => {
+  assert.equal(parseDateInput('25/11/2026'), TODAY);
+  assert.equal(parseDateInput(' 5/1/2027 '), D(2027, 1, 5));
   assert.equal(parseDateInput('2026-11-25'), TODAY);
-  assert.equal(parseDateInput('2026-11-31'), null);
-  assert.equal(parseDateInput('25/11/2026'), null);
+  assert.equal(parseDateInput('31/11/2026'), null);
+  assert.equal(parseDateInput('11/25/2026'), null); // kiểu Mỹ mm/dd: tháng 25 -> sai
+  assert.equal(parseDateInput('25-11-2026'), null);
+  assert.equal(parseTimeInput('8:40'), 520 / 1440);
+  assert.equal(parseTimeInput('0840'), 520 / 1440);
+  assert.equal(parseTimeInput('8:40 PM'), null);
   assert.equal(parseTimeInput('00:00'), 0);
   assert.equal(parseTimeInput('08:40'), 520 / 1440);
   assert.equal(parseTimeInput('24:00'), null);
@@ -102,6 +108,10 @@ test('ca qua đêm 23:30 -> 00:30: cho phép, cảnh báo; > 10 tiếng thêm c�
   const long = validateRow(row({ start: H(1), end: H(12) }), ctx());
   ok(long);
   assert.ok(long.warnings.some(w => w.includes('hơn 10 tiếng')));
+});
+test('giờ gõ sai dạng: chặn với câu dễ hiểu', () => {
+  assert.ok(validateRow(row({ start: NaN }), ctx()).errors.some(e => e.includes('hh:mm')));
+  assert.ok(validateRow(row({ end: NaN }), ctx()).errors.some(e => e.includes('hh:mm')));
 });
 test('giờ bắt đầu = giờ kết thúc: chặn', () => assert.ok(validateRow(row({ start: H(8), end: H(8) }), ctx()).errors.length));
 test('ngày tương lai và giờ tương lai của hôm nay: chặn', () => {
