@@ -58,6 +58,13 @@ $('cfg').innerHTML = `Sheet đang dùng: <code>${SPREADSHEET_ID}</code> ` +
   `<br>Client ID: ${OAUTH_CLIENT_ID ? '<span class="ok">đã điền</span>' : '<span class="fail">CHƯA điền trong src/config.js</span>'}` +
   `<br>Origin trang: <code>${esc(location.origin)}</code>`;
 
+// ---- Chốt chặn (L4 Phần D): trang thử L2 KHÔNG được chạy vào Sheet thật ----
+if (SPREADSHEET_ID === REAL_SPREADSHEET_ID) {
+  document.querySelectorAll('button').forEach(b => { b.disabled = true; });
+  document.body.insertAdjacentHTML('afterbegin', '<p style="background:#b3261e;color:#fff;padding:8px">Trang thử L2 đã tắt: app đang trỏ vào Sheet THẬT. Muốn dùng lại, đổi SPREADSHEET_ID trong src/config.js về TEST_SPREADSHEET_ID.</p>');
+  throw new Error('Trang thử L2 bị chặn vì đang trỏ vào Sheet thật');
+}
+
 // ---- Bảng kết quả + phần chi tiết (chỉ chứa dữ liệu thử, không bao giờ chứa token) ----
 const log = [];
 const detail = t => { $('detail').textContent += t + '\n'; };
