@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>L1 – Thử đọc Google Sheet</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; max-width: 960px; margin: 0 auto; padding: 16px; background: #fff; color: #111; }
+  table { border-collapse: collapse; margin: 8px 0; } td, th { border: 1px solid #ccc; padding: 4px 8px; text-align: left; }
+  .ok { color: #0a7d2c; } .fail { color: #b3261e; } pre { white-space: pre-wrap; background: #f4f4f4; padding: 8px; }
+</style>
+</head>
+<body>
+<h1>L1 – Thử các cách đọc Google Sheet từ trình duyệt</h1>
+<p>Trang này chỉ ĐỌC Sheet công khai, không ghi gì. Mở trang qua <code>http://</code> hoặc <code>https://</code> (không mở bằng <code>file://</code>, vì trình duyệt chặn nạp module JS từ file).</p>
+<p>API key (không bắt buộc, chỉ để thử cách 4): <input id="key" size="45" placeholder="để trống nếu chưa có"></p>
+<p><button id="run">Chạy thử</button></p>
+<div id="out"></div>
+
+<script type="module">
+import { parseTopics, parseSessions, computeStats, serialFromYMD } from '../src/core.js';
+
+const ID = '1WXuns_F3bjQf7A6ZnG8PsryLsf6AAmDw3IQ3U8Bbf4o';
+const CA = 'Ca học', CD = 'Chủ đề';
+const out = document.getElementById('out');
+const log = html => out.insertAdjacentHTML('beforeend', html);
+const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+
+// ---- Cách 1: Visualization API (gviz) qua fetch — đây là phép thử CORS ----
+// gviz trả về JS dạng "google.visualization.Query.setResponse({...});" nên phải cắt lấy phần JSON.
+async function gvizFetch(sheet, range) {
+  const url = `https://docs.google.com/spreadsheets/d/${ID}/gviz/tq?tqx=out:json&headers=1&sheet=${encodeURIComponent(sheet)}&range=${range}`;
+  const text = await (await fetch(url)).text();
+  return gvizToRows(JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)));
+}
+// Đổi bảng gviz -> mảng 2 chiều; thêm 1 dòng tiêu đề giả vì core.js bỏ qua dòng đầu.
+function gvizToRows(resp) {
+  if (resp.status !== 'ok') throw new Error('gviz lỗi: ' + JSON.stringify(resp.errors));
+  return [resp.table.cols.map(c => ({ v: c.label })), ...resp.table.rows.map(r => r.c.map(c => c ?? null))];
+}
+
+// ---- Cách 2: gviz qua JSONP (thẻ <script>) — không bị CORS chặn, dùng làm phương án dự phòng ----
+function gvizJsonp(sheet, range) {
+  return new Promise((resolve, reject) => {
+    const cb = 'cb' + Math.random().toString(36).slice(2);
+    const s = document.createElement('script');
+    window[cb] = resp => { delete window[cb]; s.remove(); try { resolve(gvizToRows(resp)); } catch (e) { reject(e); } };
+    s.onerror = () => { delete window[cb]; s.remove(); reject(new Error('không tải được script')); };
+    s.src = `https://docs.google.com/spreadsheets/d/${ID}/gviz/tq?tqx=out:json;responseHandler:${cb}&headers=1&sheet=${encodeURIComponent(sheet)}&range=${range}`;
+    document.head.appendChild(s);
+  });
+}
+
+// ---- Cách 3: Xuất CSV — chỉ có chuỗi HIỂN THỊ, không có giá trị thô; chỉ kiểm tra có đọc được không ----
+async function csvFetch(sheet) {
+  const url = `https://docs.google.com/spreadsheets/d/${ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`;
+  const text = await (await fetch(url)).text();
+  return text.split('\n').slice(0, 3).join('\n');
+}
+
+// ---- Cách 4: Sheets API v4 + API key, xin giá trị thô (serial number) ----
+async function apiFetch(sheet, range, key) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${ID}/values/${encodeURIComponent(`'${sheet}'!${range}`)}` +
+    `?valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=SERIAL_NUMBER&key=${encodeURIComponent(key)}`;
+  const r = await fetch(url);
+  const j = await r.json();
+  if (!r.ok) throw new Error(`${r.status}: ${j.error?.message}`);
+  return j.values;
+}
+
+// Tính lại vài số kiểm chứng chính để so với mục 9
+function summary(caRows, cdRows, source) {
+  const { sessions, issues } = parseSessions(caRows, source, parseTopics(cdRows, source));
+  const st = computeStats(sessions, serialFromYMD(2026, 11, 23));
+  const wk = [1, 2, 3, 4, 5].map(k => st.byWeek[k] ?? 0).join('/');
+  const ok = st.rows === 161 && st.totalMin === 6675 && st.studyDays === 29 && wk === '1530/1715/1200/1273/957';
+  return `<span class="${ok ? 'ok' : 'fail'}">${ok ? 'KHỚP' : 'LỆCH'}</span> — dòng ${st.rows}, tổng ${st.totalMin} phút, ngày có học ${st.studyDays}, tuần ${wk}; vấn đề dữ liệu: ${issues.length}`;
+}
+
+async function attempt(name, fn) {
+  try { log(`<p><b>${name}</b>: <span class="ok">ĐỌC ĐƯỢC</span> — ${await fn()}</p>`); }
+  catch (e) { log(`<p><b>${name}</b>: <span class="fail">THẤT BẠI</span> — ${esc(e.message)} <br><small>(TypeError "Failed to fetch" thường là bị CORS chặn; xem Console để chắc chắn)</small></p>`); }
+}
+
+document.getElementById('run').onclick = async () => {
+  out.innerHTML = `<p>Origin của trang: <code>${esc(location.origin)}</code> · ${esc(new Date().toString())}</p>`;
+  await attempt('1. gviz JSON qua fetch (CORS)', async () => summary(await gvizFetch(CA, 'A1:F'), await gvizFetch(CD, 'A1:C'), 'gviz'));
+  await attempt('2. gviz JSONP (thẻ script)', async () => summary(await gvizJsonp(CA, 'A1:F'), await gvizJsonp(CD, 'A1:C'), 'gviz'));
+  await attempt('3. CSV qua fetch (CORS)', async () => `3 dòng đầu:<pre>${esc(await csvFetch(CA))}</pre>`);
+  const key = document.getElementById('key').value.trim();
+  if (key) await attempt('4. Sheets API + API key', async () => summary(await apiFetch(CA, 'A1:F', key), await apiFetch(CD, 'A1:C', key), 'values'));
+  else log('<p><b>4. Sheets API + API key</b>: bỏ qua (chưa nhập key)</p>');
+};
+</script>
+</body>
+</html>
