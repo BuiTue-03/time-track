@@ -5,7 +5,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { serialFromYMD as D, WEEK_STATUS as W, BUSY_TOPIC, parseSessions, parseTopics, computeStats } from '../src/core.js';
-import { staleOpen, latestOpen, STALE_FROM_MIN } from '../src/stats-extra.js';
+import { staleOpen, latestOpen, STALE_FROM_MIN, closeAction, closePrefillNow } from '../src/stats-extra.js';
 import { validateRow, checkEdit, EXPECTED_HEADERS, MSG_FINAL, splitNote, isOffsetNote } from '../src/rules.js';
 
 const H = (h, m = 0) => (h * 60 + m) / 1440;
@@ -155,4 +155,28 @@ test('ngày Bận đi làm có ca đã đóng: phút vẫn tính, không phải 
   const st = stats([[TODAY, null, null, BUSY_TOPIC, null], jp(TODAY, H(20), H(20, 30), 'Ôn tập')]);
   assert.equal(st.totalMin, 30);
   assert.equal(st.days[TODAY].studyDay, false);
+});
+
+// Phần D: nút đóng ca trong app dùng chung 1 luật với thanh báo
+test('closeAction: ca hôm nay / hôm qua (Đang diễn ra, Tạm chốt) đóng trong app; còn lại sửa trong Sheet', () => {
+  const [a] = parse([jp(TODAY, H(8), null)]);
+  assert.equal(closeAction(a, TODAY), 'close');
+  const [b] = parse([jp(YDAY, H(20), null)]);
+  assert.equal(closeAction(b, TODAY), 'close');
+  const [c] = parse([jp(TUE5, H(22), null)]);
+  assert.equal(closeAction(c, TUE5 + 1), 'close');           // thứ Tư: tuần 5 đang Tạm chốt
+  assert.equal(closeAction(c, TODAY), 'sheet');               // 2 ngày trước
+  const [d] = parse([jp(TUE4, H(22), null)]);
+  assert.equal(closeAction(d, TUE4 + 1), 'close');            // hôm sau của thứ Ba tuần 4 là thứ Tư (Tạm chốt)
+  assert.equal(closeAction(d, TODAY), 'sheet');               // tuần 4 Chốt hẳn
+  const [e] = parse([jp(TODAY, H(8), H(9))]);
+  assert.equal(closeAction(e, TODAY), null);                  // ca đã đóng: không có nút
+});
+test('closePrefillNow: ô kết thúc điền sẵn "bây giờ" chỉ với ca hôm nay, hoặc ca hôm qua trước 06:00 (học qua đêm)', () => {
+  const [a] = parse([jp(TODAY, H(8), null)]);
+  const [b] = parse([jp(YDAY, H(23), null)]);
+  assert.equal(closePrefillNow(a, TODAY, 10 * 60), true);
+  assert.equal(closePrefillNow(b, TODAY, 1 * 60), true);      // 01:00: đang học qua đêm
+  assert.equal(closePrefillNow(b, TODAY, 6 * 60), false);     // từ 06:00: để trống, Oriana tự điền giờ thật
+  assert.equal(closePrefillNow(b, TODAY, null), false);
 });

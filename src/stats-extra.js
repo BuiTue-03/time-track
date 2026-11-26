@@ -90,12 +90,23 @@ export function staleOpen(stats, nowMin, cfg = CONFIG) {
   return stats.openSessions
     .filter(s => s.date < stats.today)
     .sort((a, b) => a.date - b.date || (a.start % 1) - (b.start % 1))
-    .map(s => {
-      const status = weekStatus(weekNo(s.date, cfg), stats.today, cfg);
-      const closable = (status === WEEK_STATUS.CURRENT || status === WEEK_STATUS.PROVISIONAL) && s.date === stats.today - 1;
-      return { session: s, status, action: closable ? 'close' : 'sheet' };
-    });
+    .map(s => ({ session: s, status: weekStatus(weekNo(s.date, cfg), stats.today, cfg), action: closeAction(s, stats.today, cfg) }));
 }
+
+// Ca mở này đóng ở đâu (dùng chung cho thanh báo, thẻ "Ca đang mở" và danh sách ca ở tab Lịch):
+//   'close' = đóng trong app: ca của hôm nay, hoặc ca của hôm qua khi tuần đó Đang diễn ra / Tạm chốt;
+//   'sheet' = ca từ 2 ngày trước trở lên, hoặc tuần Chốt hẳn -> sửa tay trong Sheet (Oriana chọn, Phần A d);
+//   null    = không phải ca đang mở.
+export function closeAction(s, today, cfg = CONFIG) {
+  if (!s || !s.open) return null;
+  if (s.date === today) return 'close';
+  const status = weekStatus(weekNo(s.date, cfg), today, cfg);
+  return s.date === today - 1 && (status === WEEK_STATUS.CURRENT || status === WEEK_STATUS.PROVISIONAL) ? 'close' : 'sheet';
+}
+// Ô "Giờ kết thúc" khi đóng ca có điền sẵn giờ hiện tại không:
+//   ca hôm nay -> có; ca hôm qua mà chưa tới 06:00 (đang học qua đêm) -> có; còn lại để trống để Oriana tự điền giờ thật.
+export const closePrefillNow = (s, today, nowMin) =>
+  s.date === today || (s.date === today - 1 && nowMin !== null && nowMin !== undefined && nowMin < STALE_FROM_MIN);
 
 // Vòng tuần: phút tuần Đang diễn ra / mục tiêu tuần (1440). Vượt 100% -> vòng đầy (pct = 1), reached = true.
 // Số ngày có học hiện dạng chữ "x/6 ngày" (không vẽ vòng phụ, Oriana chọn ở Phần A).

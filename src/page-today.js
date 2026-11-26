@@ -47,6 +47,7 @@ export function renderToday(m, { nowMin, canFinish }) {
     $('open-body').innerHTML = `<div>
         <p class="time">${s.date === t ? '' : `${fmtDayShort(s.date)} · `}từ ${fmtTime(s.start)}${o.runningMin !== null ? ` · ${fmtHM(o.runningMin)}` : ''}</p>
         ${chip(s.category, s.topic ?? '')}
+        <p class="muted">Ca chưa đóng thì chưa tính giờ: phút đang chạy chưa cộng vào tổng, vòng và huy hiệu.</p>
         ${o.others ? `<p class="muted">Còn ${o.others} ca đang mở khác, xem ở tab Lịch.</p>` : ''}
       </div>
       ${canFinish && sameWeek ? `<button class="btn3d small" type="button" data-finish="${s.rowNumber}">Kết thúc ca</button>` : ''}`;
