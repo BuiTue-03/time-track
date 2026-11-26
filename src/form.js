@@ -9,7 +9,7 @@ import {
 } from './rules.js';
 import { serializeRow, snapshotCompare, verifyReadback, isEmptyRow } from './write-core.js';
 import {
-  signIn, hasValidToken, tokenInfo, readHeaders, readRowAF, findFirstEmptyRow, writeRow, clearRow,
+  signIn, hasValidToken, tokenInfo, readHeaders, readRowAF, findFirstEmptyRow, writeRow, clearRow, formatRow,
 } from './sheets-write.js';
 import { esc } from './ui-charts.js';
 import { mochiSvg, jump } from './mochi.js';
@@ -400,14 +400,28 @@ async function save() {
   }
 }
 
+// L4.5 (Oriana duyệt 26/11/2026): sau khi giá trị đã vào Sheet, đặt định dạng ngày/giờ cho A–C của dòng đó.
+// Lỗi ở bước này KHÔNG làm mất dữ liệu đã ghi -> chỉ thành cảnh báo.
+async function ensureFormat(rowNumber) {
+  try { await formatRow(rowNumber); return null; }
+  catch (e) { return `Chưa đặt được định dạng ngày/giờ cho dòng ${rowNumber} (${e.message}); nếu Sheet hiện số lạ ở cột A–C, hãy chọn lại định dạng trong Sheet.`; }
+}
+// Model vừa tải lại có thấy đúng ngày/giờ đã gửi không (gviz có thể trả bản cũ, hoặc bỏ ô sai kiểu)
+function modelMatches(seen, sent) {
+  const v = x => (x === null || x === undefined || x === '' ? null : x);
+  const eq = (a, b) => { a = v(a); b = v(b); return a === null || b === null ? a === b : Math.abs(a - b) < 5e-6; };
+  return eq(seen.date, sent[0]) && eq(seen.start, sent[1]) && eq(seen.end, sent[2]);
+}
 async function finishWrite(box, rowNumber, sent, lowWarning) {
+  const fmtWarning = await ensureFormat(rowNumber);
   const back = await readRowAF(rowNumber);
   const rv = verifyReadback(sent, back.raw, back.formatted);
   if (!rv.ok) throw err('READBACK', `Đã gửi lệnh ghi nhưng dòng ${rowNumber} đọc lại không khớp: ${rv.errors.join('; ')}. Hãy mở Sheet kiểm tra dòng này.`);
   pending = null;
   await app.reload();
   const seen = app.getModel().sessions.find(s => s.rowNumber === rowNumber);
-  const extra = [...rv.warnings, lowWarning].filter(Boolean);
+  const extra = [...rv.warnings, lowWarning, fmtWarning].filter(Boolean);
+  if (seen && !modelMatches(seen, sent)) extra.push('Sheet đã lưu đúng, nhưng số liệu trên trang chưa cập nhật kịp (Google trả bản cũ). Đừng lưu lại ca này; chờ vài giây rồi bấm "Tải lại" ở đầu trang.');
   if (!seen) extra.push('Số liệu trên trang chưa thấy dòng mới (Sheet có thể cập nhật chậm vài giây). Bấm "Tải lại" ở đầu trang sau ít giây.');
   setBusy(false);
   $('f-dialog').close();
@@ -511,6 +525,7 @@ async function undoDelete() {
   try {
     pending = null;
     await writeRow(rowNumber, values, { mustBeEmpty: true }); // dòng đã bị dùng cho ca khác -> lỗi NOT_EMPTY, không ghi đè
+    await ensureFormat(rowNumber); // L4.5: lỗi định dạng không chặn hoàn tác
     const back = await readRowAF(rowNumber);
     const rv = verifyReadback(values, back.raw, back.formatted);
     lastDeleted = null; clearTimeout(undoTimer);
