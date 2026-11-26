@@ -75,28 +75,34 @@
 
   <!-- ===== Lịch ===== -->
   <div id="pg-cal" class="page" hidden>
-    <div class="hello"><h1>Lịch</h1></div>
-    <div class="grid two">
+    <div class="hello"><h1>Lịch</h1><p>Chạm một ô để xem ca của tuần đó</p></div>
+    <div class="grid two cal-grid">
       <div class="grid">
         <section class="card">
-          <h2>Lịch học theo ngày</h2>
-          <div id="a4" class="chart-box"></div>
-          <div id="a4-legend" class="legend"></div>
+          <div class="chart" id="cal-heat"></div>
+          <div class="heat-legend" id="cal-heat-legend"></div>
         </section>
-        <details class="issues" id="issues" hidden></details>
+        <section class="card signin-card" id="signin-card">
+          <span class="muted" id="ca-signin-state"></span>
+          <button class="btn3d small ghost" type="button" id="ca-signin">Đăng nhập Google</button>
+        </section>
+        <details class="card issues" id="issues" hidden></details>
       </div>
-      <section class="card" id="ca-card" hidden>
-        <h2>Ca học: thêm, sửa, xóa</h2>
+      <section class="card week-card" id="ca-card">
+        <div class="week-nav">
+          <button class="navbtn" type="button" id="cal-prev" aria-label="Tuần trước">‹</button>
+          <div class="week-title"><b id="cal-wtitle"></b><span id="cal-wrange" class="muted"></span></div>
+          <button class="navbtn" type="button" id="cal-next" aria-label="Tuần sau">›</button>
+        </div>
+        <div class="state-strip" id="ca-strip"></div>
         <p class="muted" id="ca-disabled" hidden></p>
         <div id="ca-tools">
-          <div class="signin"><span class="muted" id="ca-signin-state"></span> <button type="button" id="ca-signin">Đăng nhập Google</button></div>
           <div class="msg" id="ca-result" hidden></div>
-          <label class="select">Tuần <select id="ca-week"></select></label>
-          <div class="strip" id="ca-strip"></div>
-          <p><button type="button" class="primary" id="ca-add">+ Thêm ca</button></p>
+          <div class="add-wrap" id="ca-add-wrap"><button class="btn3d" type="button" id="ca-add">＋ Thêm ca</button></div>
           <p class="why" id="ca-add-why" hidden></p>
-          <div id="ca-list"></div>
         </div>
+        <div id="ca-list"></div>
+        <details class="week-break" id="cal-break"></details>
       </section>
     </div>
   </div>
@@ -121,11 +127,6 @@
           <div class="seg inseg" id="st-rank-tabs"><button type="button" data-v="w" aria-pressed="true">Tuần</button><button type="button" data-v="t" aria-pressed="false">Chủ đề</button><button type="button" data-v="d" aria-pressed="false">Thứ</button></div>
           <ol class="rank" id="st-rank"></ol>
           <p class="foot" id="st-rank-foot"></p>
-        </section>
-        <section class="card">
-          <h2>Chủ đề và nhóm trong tuần</h2>
-          <label class="select">Chọn tuần <select id="week-select"></select></label>
-          <div id="rank-topics"></div>
         </section>
         <!-- CHỖ TRỐNG cho L5 (huy hiệu): chưa có logic -->
         <section class="card soon"><h2>Thành tích <span class="later">L5</span></h2><div class="badges" id="st-badges"></div></section>

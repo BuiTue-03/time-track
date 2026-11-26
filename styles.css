@@ -270,6 +270,41 @@ div.chart text { font-family: var(--f-body); font-size: 16px; fill: var(--text-2
 .soon .badges { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
 .badge { aspect-ratio: 1; border: 2px dashed var(--border); border-radius: 14px; display: grid; place-content: center; text-align: center; color: var(--text-2); font-weight: 800; line-height: 1.1; cursor: pointer; }
 
+/* ---------- Tab Lịch ---------- */
+@media (min-width: 900px) { .cal-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); } }
+.cal-grid { align-items: start; }
+.heat-legend { display: flex; align-items: center; gap: 4px; justify-content: flex-end; color: var(--text-2); margin-top: 8px; flex-wrap: wrap; }
+.heat-legend i { width: 18px; height: 18px; border-radius: 5px; display: block; }
+.heat-legend .busy-sw { margin-left: 12px; background: repeating-linear-gradient(45deg, var(--h0) 0 3px, var(--grey-cat) 3px 5px); }
+.signin-card { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 12px 18px; }
+details.card summary, .week-break summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 700; color: var(--text); }
+details.issues ul { margin: 6px 0 10px; padding-left: 20px; }
+.week-break { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 4px; }
+.week-break h3 { margin: 10px 0 4px; color: var(--text-2); }
+.week-nav { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; }
+.navbtn { width: 44px; height: 44px; border-radius: 14px; border: 0; background: var(--surface-2); font-size: 24px; cursor: pointer; color: var(--text); }
+.navbtn:disabled { opacity: .35; cursor: default; }
+.week-title { text-align: center; display: grid; }
+.week-title b { font-family: var(--f-head); font-size: 20px; }
+.state-strip { display: flex; gap: 10px; align-items: flex-start; border-radius: 14px; padding: 10px 14px; margin: 12px 0; }
+.state-strip .kao { font-weight: 800; white-space: nowrap; }
+.state-strip b { display: block; }
+.state-strip.s-cur { background: var(--cur-bg); }
+.state-strip.s-prov { background: var(--prov-bg); box-shadow: inset 4px 0 0 var(--prov-line); }
+.state-strip.s-final { background: var(--final-bg); }
+.day-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 18px 0 6px; font-family: var(--f-head); }
+.day-h span { font-family: var(--f-body); color: var(--text-2); }
+.sess { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; padding: 12px 0; border-top: 1px solid var(--border); }
+.sess .t { font-family: var(--f-head); font-size: 18px; font-variant-numeric: tabular-nums; }
+.sess .t span { font-family: var(--f-body); font-size: 16px; color: var(--text-2); font-weight: 400; }
+.sess .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
+.sess .snote { color: var(--text-2); margin: 4px 0 0; }
+.sess .btns { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+.mini { display: inline-block; border-radius: 8px; padding: 0 8px; font-weight: 700; border: 1.5px solid currentColor; }
+.mini.off { color: var(--prov-line); } .mini.open { color: var(--accent-text); }
+.empty-week { text-align: center; color: var(--text-2); padding: 18px 0 6px; }
+.empty-week svg { width: 72px; height: 62px; }
+
 /* ---------- TẠM THỜI (bước 1 Phần C): kiểu cũ của L3/L4 đổi sang biến màu mới.
    Các bước sau thay dần bằng giao diện mới rồi xóa khối này. ---------- */
 :root { --grid: var(--border); --bar: var(--a1); --bar-cur: var(--cur-bg); --hatch: var(--a1);

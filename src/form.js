@@ -2,7 +2,7 @@
 // Luật nằm ở rules.js (thuần, có test); phần ghi thuần ở write-core.js; gọi Google ở sheets-write.js.
 // Ở đây chỉ: vẽ danh sách ca + form, đọc dữ liệu form, chạy các bước ghi theo thứ tự và báo kết quả.
 // Không lưu gì vào localStorage / IndexedDB: dữ liệu form chỉ nằm trong bộ nhớ trang.
-import { WEEK_STATUS, ACTIVITIES, CATEGORIES, weekNo, weekStart, weekEnd, fmtDate, todaySerial, durationMin } from './core.js';
+import { WEEK_STATUS, ACTIVITIES, CATEGORIES, WEEKDAY_NAMES, weekday, weekNo, weekStart, weekEnd, fmtDate, todaySerial, durationMin } from './core.js';
 import {
   permissions, weekStatusOfDate, validateRow, checkDelete, splitNote, composeNote, isOffsetNote,
   parseDateInput, parseTimeInput, fmtTime, nowFraction, MSG_FINAL, OFFSET_LABEL,
@@ -11,7 +11,10 @@ import { serializeRow, snapshotCompare, verifyReadback, isEmptyRow } from './wri
 import {
   signIn, hasValidToken, tokenInfo, readHeaders, readRowAF, findFirstEmptyRow, writeRow, clearRow,
 } from './sheets-write.js';
-import { esc } from './charts.js';
+import { esc } from './ui-charts.js';
+import { mochiSvg, jump } from './mochi.js';
+import { catStyle } from './ui-config.js';
+import { fmtHM } from './format.js';
 
 const $ = id => document.getElementById(id);
 const ymdInput = s => fmtDate(s); // ô ngày là ô chữ dd/mm/yyyy
@@ -21,7 +24,8 @@ const err = (code, message, extra) => Object.assign(new Error(message), { code, 
 // ---------------------------------------------------------------------------------------------
 // Trạng thái của phần form (chỉ trong bộ nhớ)
 // ---------------------------------------------------------------------------------------------
-let app = null;          // { getModel(), reload() } do app.js cung cấp
+let app = null;          // { getModel(), reload(), onListWeek(w) } do app.js cung cấp
+let enabled = false;     // form bật (false: chế độ xem mẫu / chỉ đọc -> danh sách ca không có nút)
 let listWeek = null;     // tuần đang xem trong danh sách ca
 let editing = null;      // { mode: 'add'|'edit', original, snapshot, rowNumber }
 let busy = false;        // đang gửi -> chặn bấm đúp
@@ -29,17 +33,20 @@ let pending = null;      // lần ghi "chưa chắc đã lưu": { kind, rowNumbe
 let lastDeleted = null;  // ca vừa xóa, để "Hoàn tác" trong 5 phút: { session, rowNumber, values, until } — CHỈ trong bộ nhớ trang
 const UNDO_MS = 5 * 60 * 1000;
 
-export function initForm(appApi, { enabled, disabledReason }) {
+export function initForm(appApi, { enabled: on, disabledReason }) {
   app = appApi;
-  $('ca-card').hidden = false;
+  enabled = on;
+  $('ca-list').addEventListener('click', e => { // chạm vào ca: nhân vật trong ô trống nhảy (chỉ trang trí)
+    if (e.target.closest('.empty-week')) jump(e.target.closest('.empty-week'));
+  });
   if (!enabled) {
     $('ca-disabled').hidden = false;
     $('ca-disabled').textContent = disabledReason;
     $('ca-tools').hidden = true;
+    $('signin-card').hidden = true;
     return;
   }
   $('ca-signin').addEventListener('click', () => doSignIn());
-  $('ca-week').addEventListener('change', e => { listWeek = Number(e.target.value); renderList(); });
   $('ca-add').addEventListener('click', () => openForm({ mode: 'add' }));
   $('ca-list').addEventListener('click', e => {
     const b = e.target.closest('button[data-act]');
@@ -74,13 +81,20 @@ export function initForm(appApi, { enabled, disabledReason }) {
 
 // Gọi mỗi lần app.js tải xong dữ liệu
 export function onModel() {
-  if (!app || $('ca-tools').hidden) return;
+  if (!app) return;
   const m = app.getModel();
   const cur = weekNo(m.stats.today);
   if (listWeek === null || listWeek > cur) listWeek = cur;
-  $('ca-week').innerHTML = m.stats.weeks.slice().reverse()
-    .map(w => `<option value="${w.week}" ${w.week === listWeek ? 'selected' : ''}>Tuần ${w.week} (${fmtDate(w.start).slice(0, 5)}–${fmtDate(w.end)}) · ${w.status}</option>`).join('');
-  renderSignin();
+  if (enabled) renderSignin();
+  renderList();
+}
+
+// L4.5: chọn tuần bằng nút ‹ › hoặc chạm ô heatmap ở tab Lịch (thay ô chọn tuần cũ)
+export const getListWeek = () => listWeek;
+export function setListWeek(w) {
+  if (!app) return;
+  const cur = weekNo(app.getModel().stats.today);
+  listWeek = Math.max(1, Math.min(cur, w));
   renderList();
 }
 
@@ -113,6 +127,8 @@ function renderSignin() {
     ? `Đã đăng nhập Google · còn khoảng ${Math.max(1, Math.round(t.secondsLeft / 60))} phút`
     : 'Chưa đăng nhập Google: cần đăng nhập để lưu (xem và tải số liệu thì không cần).';
   $('ca-signin').textContent = ok ? 'Đăng nhập lại' : 'Đăng nhập Google';
+  // L4.5: dòng Google ở Cài đặt dùng cùng trạng thái
+  if ($('set-signin-state')) { $('set-signin-state').textContent = $('ca-signin-state').textContent; $('set-signin').textContent = $('ca-signin').textContent; }
 }
 async function doSignIn() {
   try {
@@ -148,43 +164,49 @@ function renderList() {
     [WEEK_STATUS.PROVISIONAL]: `Chỉ thêm được ca ghi bù (tự gắn nhãn ${OFFSET_LABEL}). Ca thường: chỉ sửa chủ đề, hoạt động, ghi chú. Ca ghi bù: sửa, xóa mọi trường.`,
     [WEEK_STATUS.FINAL]: MSG_FINAL,
   }[status] ?? '';
-  $('ca-strip').className = `strip s-${statusKey(status)}`;
-  $('ca-strip').innerHTML = `<b>Tuần ${w.week} · ${status}</b> <span>${esc(rule)}</span>`;
-  // Nút thêm
+  $('ca-strip').className = `state-strip s-${statusKey(status)}`;
+  $('ca-strip').innerHTML = `<span class="kao">${STATUS_KAO[statusKey(status)]}</span><span><b>${esc(status)}</b>${esc(rule)}</span>`;
+  // Nút thêm: tuần không cho thêm thì ẩn nút, ghi lý do
   const canAdd = pAdd.canAdd || pAdd.canAddBu;
   $('ca-add').disabled = !canAdd;
-  $('ca-add').textContent = pAdd.canAdd ? '+ Thêm ca' : '+ Thêm ca ghi bù';
+  $('ca-add-wrap').hidden = !canAdd;
+  $('ca-add').textContent = pAdd.canAdd ? '＋ Thêm ca' : '＋ Thêm ca ghi bù';
   $('ca-add-why').textContent = canAdd ? '' : pAdd.reasons.canAddBu;
-  $('ca-add-why').hidden = canAdd;
+  $('ca-add-why').hidden = canAdd || status === WEEK_STATUS.FINAL; // tuần chốt hẳn: dải trạng thái đã ghi lý do
 
   const list = m.sessions.filter(s => s.date >= w.start && s.date <= w.end).sort((a, b) => a.date - b.date || (a.start ?? 0) - (b.start ?? 0) || a.rowNumber - b.rowNumber);
-  if (!list.length) { $('ca-list').innerHTML = '<p class="muted">Tuần này chưa có ca nào.</p>'; return; }
-  $('ca-list').innerHTML = list.map(s => {
+  if (app.onListWeek) app.onListWeek(listWeek);
+  if (!list.length) { $('ca-list').innerHTML = `<div class="empty-week">${mochiSvg()}<p>Tuần này chưa có ca nào.</p></div>`; return; }
+  // Gom theo ngày; mỗi ca: giờ, thời lượng, nhóm/chủ đề, hoạt động, nhãn ghi bù / đang mở, ghi chú.
+  // Theo ý Oriana (26/11/2026): ẩn số dòng Sheet trong danh sách (vẫn ghi ở hộp xóa và thông báo kết quả).
+  // Nút chỉ hiện khi luật tuần cho phép (permissions() của rules.js, không đổi); dải trạng thái ghi luật.
+  let h = '', lastDay = null;
+  for (const s of list) {
+    if (s.date !== lastDay) {
+      lastDay = s.date;
+      const dayMin = list.filter(x => x.date === s.date && x.duration !== null).reduce((a, x) => a + x.duration, 0);
+      h += `<div class="day-h">${WEEKDAY_NAMES[weekday(s.date)]} ${fmtDate(s.date).slice(0, 5)}<span>${fmtHM(dayMin)}</span></div>`;
+    }
     const off = isOffsetNote(s.note);
     const p = permissions(status, { isOffset: off });
     const note = splitNote(s.note).text;
     const time = s.start === null ? 'không có giờ' : `${fmtTime(s.start)}–${s.end === null ? '…' : fmtTime(s.end)}`;
-    const why = [];
-    if (!p.canEdit) why.push(p.reasons.canEdit);
-    else if (!p.canEditTime) why.push(p.reasons.canEditTime);
-    if (p.canEdit && !p.canDelete) why.push(p.reasons.canDelete);
-    const uniqueWhy = [...new Set(why)].filter(x => !(status === WEEK_STATUS.FINAL && x === MSG_FINAL));
     const canFinish = s.open && status === WEEK_STATUS.CURRENT;
-    return `<div class="ca-row">
-      <div class="ca-main"><b>${fmtDate(s.date).slice(0, 5)}</b> · ${time}${s.duration !== null ? ` <span class="muted">(${s.duration} phút)</span>` : ''}
-        ${off ? '<span class="tag">ghi bù</span>' : ''}${s.open ? '<span class="tag">đang mở</span>' : ''}
-        <div>${esc(s.topic ?? '')}${s.activity ? ` · ${esc(s.activity)}` : ''}</div>
-        ${note ? `<div class="muted">${esc(note)}</div>` : ''}
-        <div class="muted">dòng ${s.rowNumber}</div></div>
-      <div class="ca-btns">
-        ${canFinish ? `<button type="button" data-act="finish" data-row="${s.rowNumber}">Kết thúc ca</button>` : ''}
-        <button type="button" data-act="edit" data-row="${s.rowNumber}" ${p.canEdit ? '' : 'disabled'}>Sửa</button>
-        <button type="button" data-act="delete" data-row="${s.rowNumber}" ${p.canDelete ? '' : 'disabled'}>Xóa</button>
-      </div>
-      ${uniqueWhy.length ? `<p class="why">${uniqueWhy.map(esc).join(' ')}</p>` : ''}
-    </div>`;
-  }).join('');
+    const cs = catStyle(s.category);
+    const btns = !enabled ? '' : [
+      canFinish ? `<button type="button" class="btn3d small" data-act="finish" data-row="${s.rowNumber}">Kết thúc ca</button>` : '',
+      p.canEdit ? `<button type="button" class="btn3d small ghost" data-act="edit" data-row="${s.rowNumber}">Sửa</button>` : '',
+      p.canDelete ? `<button type="button" class="btn3d small ghost" data-act="delete" data-row="${s.rowNumber}">Xóa</button>` : '',
+    ].join('');
+    h += `<div class="sess"><div>
+        <div class="t">${time}${s.duration !== null ? ` <span>${fmtHM(s.duration)}</span>` : ''}</div>
+        <div class="meta"><span class="chip ${cs.cls}">${cs.kao ? `${cs.kao} ` : ''}${esc(s.topic ?? '')}</span>${s.activity ? `<span>${esc(s.activity)}</span>` : ''}${off ? '<span class="mini off">ghi bù</span>' : ''}${s.open ? '<span class="mini open">đang mở</span>' : ''}</div>
+        ${note ? `<p class="snote">${esc(note)}</p>` : ''}</div>
+      <div class="btns">${btns}</div></div>`;
+  }
+  $('ca-list').innerHTML = h;
 }
+const STATUS_KAO = { cur: '(＾▽＾)', prov: '(•ω•)', final: '(˘ω˘)' };
 const statusKey = s => ({ [WEEK_STATUS.CURRENT]: 'cur', [WEEK_STATUS.PROVISIONAL]: 'prov', [WEEK_STATUS.FINAL]: 'final' }[s] ?? 'final');
 
 // ---------------------------------------------------------------------------------------------

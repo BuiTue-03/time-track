@@ -51,3 +51,25 @@ export function pairBars(el, days, { h = 180 } = {}) {
   });
   el.innerHTML = s + `</svg>`;
 }
+
+// Heatmap kiểu GitHub ở tab Lịch: cột = tuần, hàng = thứ (thứ Tư -> thứ Ba). Chạm ô = chọn tuần đó.
+// cells: [{ week, days: [{ date, min, busy, future, label, tip }] }] đã tính sẵn; level(min) -> 0..5
+export function calHeat(el, cols, { selected, today, level, colW = 44 } = {}) {
+  const w = W(el), lab = 40, cell = Math.min(52, Math.max(colW, Math.floor((w - lab) / Math.max(1, cols.length)))), H = 26 + cell * 7;
+  const rowLabels = ['T4', 'T5', 'T6', 'T7', 'CN', 'T2', 'T3'];
+  let s = `<svg viewBox="0 0 ${lab + cell * cols.length} ${H}" style="max-width:${lab + cell * cols.length}px" role="img" aria-label="Lịch học theo ngày"><defs><pattern id="busyp" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="var(--h0)"/><rect width="2.5" height="6" fill="var(--grey-cat)"/></pattern></defs>`;
+  cols.forEach((c, i) => {
+    const sel = c.week === selected;
+    if (sel) s += `<rect x="${lab + i * cell}" y="22" width="${cell}" height="${cell * 7 + 4}" rx="10" fill="var(--surface-2)"/>`;
+    s += `<text x="${lab + i * cell + cell / 2}" y="16" text-anchor="middle" style="${sel ? 'fill:var(--text);font-weight:800' : ''}">T${c.week}</text>`;
+  });
+  rowLabels.forEach((d, r) => { s += `<text x="0" y="${26 + r * cell + cell / 2 + 6}">${d}</text>`; });
+  cols.forEach((c, i) => c.days.forEach((d, r) => {
+    const x = lab + i * cell, y = 26 + r * cell;
+    if (d.future) { s += `<rect x="${x + 4}" y="${y + 4}" width="${cell - 8}" height="${cell - 8}" rx="6" fill="none" stroke="var(--border)" stroke-dasharray="3 3"/>`; return; }
+    s += `<g class="mk calcell" tabindex="0" data-week="${c.week}" data-tip="${esc(d.tip)}"><rect class="hit" x="${x}" y="${y}" width="${cell}" height="${cell}"/>` +
+      `<rect class="b" x="${x + 4}" y="${y + 4}" width="${cell - 8}" height="${cell - 8}" rx="6" fill="${d.busy ? 'url(#busyp)' : `var(--h${level(d.min)})`}"/>` +
+      (d.date === today ? `<rect x="${x + 2}" y="${y + 2}" width="${cell - 4}" height="${cell - 4}" rx="8" fill="none" stroke="var(--text)" stroke-width="2.5"/>` : '') + `</g>`;
+  }));
+  el.innerHTML = s + `</svg>`;
+}

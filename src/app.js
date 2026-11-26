@@ -2,17 +2,13 @@
 // L4: thêm form thêm/sửa/xóa (form.js). App đọc số liệu từ CHÍNH Sheet mà nó ghi vào (config.SPREADSHEET_ID),
 // để số dòng và số liệu luôn cùng một Sheet. Không lưu số liệu vào localStorage/IndexedDB/service worker:
 // mỗi lần tải là đọc mới từ Sheet (fetch cache: 'no-store').
-import { buildModel, todaySerial, serialFromYMD, weekNo, WEEK_STATUS, fmtDate } from './core.js';
+import { buildModel, todaySerial, serialFromYMD, fmtDate } from './core.js';
 import { gvizUrl, parseGvizText, TAB_SESSIONS, TAB_TOPICS } from './gviz.js';
 import { SPREADSHEET_ID, REAL_SPREADSHEET_ID, ALLOW_WRITE_TO_REAL_SHEET } from './config.js';
-import { initForm, onModel, openAddCurrentWeek, openFinish, formEnabled } from './form.js';
+import { initForm, onModel, openAddCurrentWeek, openFinish, formEnabled, getListWeek, setListWeek } from './form.js';
+import { initCal, renderCal, onWeek } from './page-cal.js';
 import { initToday, renderToday } from './page-today.js';
-import { rankWeeks, weeklyAverage, breakdown, rankWeekdays, compareWeeks, compareMonths, forecastWeek } from './insights.js';
-import { weeklyBars, activityBar, heatmap, HEAT_BINS, activityColorVar, installTooltip, esc } from './charts.js';
-import {
-  fmtMin, fmtHours, fmtPct, fmtSignedPct, fmtSignedMin, fmtRange, fmtDayShort, fmtTime, clockNow, monthLabel,
-} from './format.js';
-import { WEEKDAY_NAMES } from './core.js';
+import { clockNow } from './format.js';
 import { initShell, setScreen, seg, applyTheme, getTheme, showPage, currentPage } from './shell.js';
 import { initStats, renderStats } from './page-stats.js';
 import { mochiSvg, jump } from './mochi.js';
@@ -72,7 +68,7 @@ function today() {
 }
 
 // ---------- Trạng thái trang ----------
-let model = null, selectedWeek = null;
+let model = null;
 let screen = 'loading';
 function setState(state, msg = '') {
   // Mất mạng: báo riêng, không hiện số liệu cũ (app không lưu số liệu)
@@ -90,7 +86,6 @@ async function load() {
     model.headers = ((Array.isArray(head) ? head : head?.cells) ?? []).map(c => (c && typeof c === 'object' && 'v' in c ? c.v : c)); // tiêu đề A1:F1
     $('updated').textContent = `Cập nhật lúc ${clockNow()}`;
     if (!model.sessions.length) { setState('empty'); return; }
-    if (selectedWeek === null || selectedWeek > weekNo(model.stats.today)) selectedWeek = weekNo(model.stats.today);
     setState('ready');
     render();
     onModel();
@@ -100,11 +95,9 @@ async function load() {
 }
 
 // ---------- Vẽ ----------
-const deltaText = c => `${c.diff > 0 ? '▲' : c.diff < 0 ? '▼' : '='} ${fmtSignedMin(c.diff)}${c.pct !== null ? ` (${fmtSignedPct(c.pct)})` : ''}`;
-const width = id => Math.max(280, $(id).clientWidth);
 
 function render() {
-  const { stats, sessions, issues } = model;
+  const { stats } = model;
   const t = stats.today;
   const nowMin = (() => { const [h, mm] = clockNow().split(':').map(Number); return h * 60 + mm; })();
   renderToday(model, { nowMin: TODAY_OVERRIDE ? null : nowMin, canFinish: formEnabled() });
@@ -113,42 +106,17 @@ function render() {
 
   if (currentPage() === 'stats') renderStats(model);
 
-  // --- A4 (tạm, bước 5 thay bằng heatmap mới ở tab Lịch) ---
-  $('a4').innerHTML = heatmap(stats.weeks, stats.days, t, width('a4'));
-  $('a4-legend').innerHTML = HEAT_BINS.map((b, i) => `<span><i class="cell-sw h${i}"></i>${b.label}</span>`).join('') +
-    `<span><i class="cell-sw busy"></i>Bận đi làm (B)</span><span><i class="cell-sw today-sw"></i>Hôm nay</span>`;
-
-  // --- Xếp hạng (2): chủ đề / nhóm trong tuần được chọn ---
-  $('week-select').innerHTML = stats.weeks.map(w => `<option value="${w.week}" ${w.week === selectedWeek ? 'selected' : ''}>Tuần ${w.week} (${fmtRange(w.start, w.end)}) · ${w.status}</option>`).join('');
-  renderWeekBreakdown();
-
-  // --- Tổng quan + vấn đề dữ liệu ---
-  $('issues').hidden = !issues.length;
-  $('issues').innerHTML = `<summary>${issues.length} điểm cần xem lại trong Sheet</summary><ul>` +
-    issues.map(i => `<li>Dòng ${i.rowNumber}: ${esc(i.msg)}</li>`).join('') + `</ul>`;
-}
-
-function renderWeekBreakdown() {
-  const w = model.stats.weeks.find(x => x.week === selectedWeek);
-  const table = (rows, label) => rows.length
-    ? `<table><thead><tr><th>${label}</th><th class="num">Giờ</th><th class="num">Tỷ lệ</th><th class="num">Số ca</th></tr></thead><tbody>` +
-      rows.map((r, i) => `<tr><td><span class="muted">${i + 1}.</span> ${esc(r.key)}</td><td class="num">${fmtHours(r.min)}</td><td class="num">${fmtPct(r.share)}</td><td class="num">${r.count}</td></tr>`).join('') + `</tbody></table>`
-    : `<p class="muted">Tuần này chưa có ca nào có giờ.</p>`;
-  const to = Math.min(w.end, model.stats.today);
-  $('rank-topics').innerHTML =
-    (w.status === WEEK_STATUS.CURRENT ? `<p class="muted">Tuần đang diễn ra: số liệu tạm thời tính đến hôm nay.</p>` : w.status === WEEK_STATUS.PROVISIONAL ? `<p class="muted"><span class="tag">tạm chốt</span> có thể còn ca ghi bù.</p>` : '') +
-    `<h4>Theo nhóm</h4>` + table(breakdown(model.sessions, w.start, to, 'category'), 'Nhóm') +
-    `<h4>Theo chủ đề</h4>` + table(breakdown(model.sessions, w.start, to, 'topic'), 'Chủ đề');
+  renderCal(model);
 }
 
 // ---------- Gắn sự kiện ----------
 $('reload').addEventListener('click', load);
 $('state-retry').addEventListener('click', load);
 $('state-add').addEventListener('click', () => { setState('ready'); });
-$('week-select').addEventListener('change', e => { selectedWeek = Number(e.target.value); renderWeekBreakdown(); });
 let rt;
 window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => model && screen === 'ok' && render(), 150); });
 initStats();
+initCal({ getWeek: getListWeek, setWeek: setListWeek });
 initToday({
   onAdd: () => { showPage('cal'); openAddCurrentWeek(); },
   onFinish: row => { showPage('cal'); openFinish(row); },
@@ -159,5 +127,5 @@ $('brand-mochi').innerHTML = mochiSvg();
 $('brand').addEventListener('click', () => jump($('brand-mochi')));
 $('hello').textContent = `Chào ${UI.name} ヾ(＾∇＾)`;
 renderBanner();
-initForm({ getModel: () => model, reload: load }, { enabled: FORM_ENABLED, disabledReason: FORM_DISABLED_REASON });
+initForm({ getModel: () => model, reload: load, onListWeek: onWeek }, { enabled: FORM_ENABLED, disabledReason: FORM_DISABLED_REASON });
 load();
