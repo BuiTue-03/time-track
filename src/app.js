@@ -2,11 +2,13 @@
 // L4: thêm form thêm/sửa/xóa (form.js). App đọc số liệu từ CHÍNH Sheet mà nó ghi vào (config.SPREADSHEET_ID),
 // để số dòng và số liệu luôn cùng một Sheet. Không lưu số liệu vào localStorage/IndexedDB/service worker:
 // mỗi lần tải là đọc mới từ Sheet (fetch cache: 'no-store').
-import { buildModel, todaySerial, serialFromYMD, fmtDate } from './core.js';
+import { buildModel, todaySerial, serialFromYMD, fmtDate, weekNo } from './core.js';
 import { gvizUrl, parseGvizText, TAB_SESSIONS, TAB_TOPICS, TAB_SETTINGS, TAB_ACCRUAL } from './gviz.js';
 import { parseSettings, parseAccrual, DEFAULT_SETTINGS } from './rest.js';
 import { SPREADSHEET_ID, REAL_SPREADSHEET_ID, ALLOW_WRITE_TO_REAL_SHEET } from './config.js';
-import { initForm, onModel, openAddCurrentWeek, openFinish, formEnabled, getListWeek, setListWeek } from './form.js';
+import { initForm, onModel, openAddCurrentWeek, openAddForDate, openFinish, formEnabled, getListWeek, setListWeek } from './form.js';
+import { initL6, computeL6, renderL6, renderCalMiss } from './l6-view.js';
+import { vnClock } from './rest.js';
 import { initCal, renderCal, onWeek } from './page-cal.js';
 import { initToday, renderToday } from './page-today.js';
 import { clockNow, fmtHM } from './format.js';
@@ -125,6 +127,7 @@ async function load() {
     model.label = raw.label;
     model.l6 = raw.l6; // L6: settings, warnings, accrual (Tích lũy), accrualOk
     applySettings(raw.l6.settings);
+    computeL6(model, TODAY_OVERRIDE ? null : vnClock().nowMin); // L6: loại ngày, chuỗi, số dư, gợi ý quy đổi, ngày bỏ lỡ
     const head = raw.caRows[0]; // dữ liệu mẫu (fixture) lưu dòng dạng { rowNumber, cells }
     model.headers = ((Array.isArray(head) ? head : head?.cells) ?? []).map(c => (c && typeof c === 'object' && 'v' in c ? c.v : c)); // tiêu đề A1:F1
     $('updated').textContent = `Cập nhật lúc ${clockNow()}`;
@@ -152,6 +155,8 @@ function render() {
   else renderBadges(model); // L5: số huy hiệu ở Cài đặt luôn đúng (thẻ Thành tích vẽ sẵn, ẩn)
 
   renderCal(model);
+  renderL6(model); // sau renderToday: thanh báo ngày chưa có ca nhường chỗ cho thanh "ca chưa đóng"
+  renderCalMiss(getListWeek() ?? weekNo(t));
 }
 
 // ---------- Gắn sự kiện ----------
@@ -188,5 +193,11 @@ $('set-sheet').href = `https://docs.google.com/spreadsheets/d/${DATA_SHEET_ID}/e
 $('set-google').hidden = !FORM_ENABLED;
 $('set-signin').addEventListener('click', () => $('ca-signin').click());
 renderBanner();
-initForm({ getModel: () => model, reload: load, onListWeek: onWeek }, { enabled: FORM_ENABLED, disabledReason: FORM_DISABLED_REASON });
+initL6({
+  canWrite: () => formEnabled(),
+  onFixAdd: d => { showPage('cal'); openAddForDate(d); },
+  onFixRest: d => { showPage('cal'); /* L6 mục 4: hộp đánh dấu ngày nghỉ */ },
+  onConv: () => { /* L6 mục 5: hộp quy đổi */ },
+});
+initForm({ getModel: () => model, reload: load, onListWeek: w => { onWeek(w); renderCalMiss(w); } }, { enabled: FORM_ENABLED, disabledReason: FORM_DISABLED_REASON });
 load();

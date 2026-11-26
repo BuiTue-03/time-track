@@ -7,6 +7,19 @@ export const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<':
 export const W = el => Math.max(260, Math.round(el.clientWidth || 320));
 let uid = 0;
 
+// L6: ký hiệu pixel 11×11 (thiết kế gốc). Trăng khuyết = ô nằm trong hình tròn lớn nhưng ngoài hình tròn nhỏ lệch phải-trên.
+export const MOON_RECTS = (() => { let r = ''; for (let y = 0; y < 11; y++) for (let x = 0; x < 11; x++) {
+  const a = (x + .5 - 5.5) ** 2 + (y + .5 - 5.5) ** 2 <= 5.3 ** 2, b = (x + .5 - 8) ** 2 + (y + .5 - 3.6) ** 2 <= 4.6 ** 2;
+  if (a && !b) r += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="currentColor"/>`; } return r; })();
+export const MOON = `<svg viewBox="0 0 11 11" class="pixel" aria-hidden="true">${MOON_RECTS}</svg>`;
+export const COIN = '<svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M3 1h5v1h1v1h1v5H9v1H8v1H3V9H2V8H1V3h1V2h1zm0 2v5h5V3zm2 1h1v3H5z"/></svg>';
+export const FLAME = '<svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M5 0h1v1h1v1h1v2h1v4h-1v1h-1v1H4V9H3V8H2V5h1V4h1V2h1z"/></svg>';
+export const BOX = '<svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M1 4h9v6H1zM2 2h7v2H2zM5 2h1v8H5z" opacity=".9"/></svg>';
+// Ký hiệu ô heatmap: ngày nghỉ = trăng khuyết trên nền tròn; chờ đóng ca = 3 ô vuông (không chỉ dựa vào màu)
+export const heatRestMark = (cx, cy, cell) => `<circle cx="${cx}" cy="${cy}" r="${cell * 0.27}" fill="var(--surface)" stroke="var(--text-2)" stroke-width="1.5"/>` +
+  `<g transform="translate(${cx - cell * 0.18} ${cy - cell * 0.18}) scale(${(cell * 0.36) / 11})" style="color:var(--text)">${MOON_RECTS}</g>`;
+export const heatPendingMark = (cx, cy) => [-1, 0, 1].map(j => `<rect x="${cx + j * 8 - 2.5}" y="${cy - 2.5}" width="5" height="5" fill="var(--text)"/>`).join('');
+
 // Cột dọc. items: [{ v, label, sub?, tip, short?, partial?, color? }]; avg = đường trung bình (phút) hoặc null
 export function barChart(el, items, { avg = null, h = 200, color = 'var(--a1)', avgLabel = 'TB' } = {}) {
   const id = `hp${++uid}`;
@@ -53,11 +66,12 @@ export function pairBars(el, days, { h = 180 } = {}) {
 }
 
 // Heatmap kiểu GitHub ở tab Lịch: cột = tuần, hàng = thứ (thứ Tư -> thứ Ba). Chạm ô = chọn tuần đó.
-// cells: [{ week, days: [{ date, min, busy, future, label, tip }] }] đã tính sẵn; level(min) -> 0..5
+// cells: [{ week, days: [{ date, min, kind, future, label, tip }] }] đã tính sẵn; level(min) -> 0..5
+// L6: kind 'rest' (ngày nghỉ, gồm cả "Bận đi làm") vẽ trăng khuyết thay cho sọc chéo cũ; 'pending' vẽ 3 chấm.
 export function calHeat(el, cols, { selected, today, level, colW = 44 } = {}) {
   const w = W(el), lab = 40, cell = Math.min(52, Math.max(colW, Math.floor((w - lab) / Math.max(1, cols.length)))), H = 26 + cell * 7;
   const rowLabels = ['T4', 'T5', 'T6', 'T7', 'CN', 'T2', 'T3'];
-  let s = `<svg viewBox="0 0 ${lab + cell * cols.length} ${H}" style="max-width:${lab + cell * cols.length}px" role="img" aria-label="Lịch học theo ngày"><defs><pattern id="busyp" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="var(--h0)"/><rect width="2.5" height="6" fill="var(--grey-cat)"/></pattern></defs>`;
+  let s = `<svg viewBox="0 0 ${lab + cell * cols.length} ${H}" style="max-width:${lab + cell * cols.length}px" role="img" aria-label="Lịch học theo ngày">`;
   cols.forEach((c, i) => {
     const sel = c.week === selected;
     if (sel) s += `<rect x="${lab + i * cell}" y="22" width="${cell}" height="${cell * 7 + 4}" rx="10" fill="var(--surface-2)"/>`;
@@ -68,7 +82,8 @@ export function calHeat(el, cols, { selected, today, level, colW = 44 } = {}) {
     const x = lab + i * cell, y = 26 + r * cell;
     if (d.future) { s += `<rect x="${x + 4}" y="${y + 4}" width="${cell - 8}" height="${cell - 8}" rx="6" fill="none" stroke="var(--border)" stroke-dasharray="3 3"/>`; return; }
     s += `<g class="mk calcell" tabindex="0" data-week="${c.week}" data-tip="${esc(d.tip)}"><rect class="hit" x="${x}" y="${y}" width="${cell}" height="${cell}"/>` +
-      `<rect class="b" x="${x + 4}" y="${y + 4}" width="${cell - 8}" height="${cell - 8}" rx="6" fill="${d.busy ? 'url(#busyp)' : `var(--h${level(d.min)})`}"/>` +
+      `<rect class="b" x="${x + 4}" y="${y + 4}" width="${cell - 8}" height="${cell - 8}" rx="6" fill="var(--h${level(d.min)})"/>` +
+      (d.kind === 'rest' ? heatRestMark(x + cell / 2, y + cell / 2, cell) : d.kind === 'pending' ? heatPendingMark(x + cell / 2, y + cell / 2) : '') +
       (d.date === today ? `<rect x="${x + 2}" y="${y + 2}" width="${cell - 4}" height="${cell - 4}" rx="8" fill="none" stroke="var(--text)" stroke-width="2.5"/>` : '') + `</g>`;
   }));
   el.innerHTML = s + `</svg>`;

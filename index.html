@@ -22,11 +22,9 @@
   <header class="topbar">
     <button class="brand" type="button" id="brand" aria-label="time-track"><span id="brand-mochi"></span>time-track</button>
     <div class="stats">
-      <!-- CHỖ TRỐNG cho L6 (chuỗi ngày + kho ngày nghỉ): chưa có logic -->
-      <button class="pill" type="button" data-tip="Chuỗi ngày học · sẽ làm ở L6&#10;Chạm vào sẽ xem hành trình giữ chuỗi." aria-label="Chuỗi ngày học, sắp có">
-        <svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M5 0h1v1h1v1h1v2h1v4h-1v1h-1v1H4V9H3V8H2V5h1V4h1V2h1z"/></svg>—</button>
-      <button class="pill" type="button" data-tip="Kho ngày nghỉ · sẽ làm ở L6&#10;Số ngày nghỉ còn lại và phần đã quy đổi." aria-label="Kho ngày nghỉ, sắp có">
-        <svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M1 4h9v6H1zM2 2h7v2H2zM5 2h1v8H5z" opacity=".9"/></svg>—</button>
+      <!-- L6: chuỗi ngày học + số dư ngày nghỉ (chạm để xem chi tiết) -->
+      <button class="pill" type="button" id="pill-streak" aria-label="Chuỗi ngày học">—</button>
+      <button class="pill" type="button" id="pill-rest" aria-label="Số dư ngày nghỉ">—</button>
     </div>
   </header>
   <p class="notice" id="notice" hidden></p>
@@ -39,8 +37,12 @@
     </div>
     <!-- L5: thanh báo "ca chưa đóng" (ca mở của ngày trước, từ 06:00) -->
     <div id="alert" class="alert" role="status" hidden></div>
+    <!-- L6: thanh báo ngày chưa có ca (chỉ ngày còn sửa được; không hiện khi đang có thanh "ca chưa đóng") -->
+    <div id="alert-miss" class="alert soft" role="status" hidden></div>
     <div class="grid two">
       <div class="grid">
+        <section class="card conv" id="conv-card" aria-label="Gợi ý quy đổi ngày nghỉ" hidden></section>
+        <section class="card note-card" id="remind-card" aria-label="Nhắc nghỉ" hidden></section>
         <section class="card quote" aria-label="Câu khích lệ hôm nay">
           <span class="tag" id="q-tag">Câu của hôm nay</span>
           <div id="q-body"></div>
@@ -113,6 +115,7 @@
           <div class="add-wrap" id="ca-add-wrap"><button class="btn3d" type="button" id="ca-add">＋ Thêm ca</button></div>
           <p class="why" id="ca-add-why" hidden></p>
         </div>
+        <div class="miss6" id="cal-miss" hidden></div>
         <div id="ca-list"></div>
         <details class="week-break" id="cal-break"></details>
       </section>
@@ -181,17 +184,26 @@
           <div class="set-row"><span>Mỗi tuần</span><b id="set-goal-week"></b></div>
         </section>
       </div>
-      <!-- CHỖ TRỐNG cho L5–L7: chỉ hiển thị, chưa có logic, không bấm được -->
+      <!-- L6: ngày nghỉ, chuỗi. CHỖ TRỐNG cho L7: chỉ hiển thị, chưa có logic, không bấm được -->
       <div class="grid">
-        <section class="card set soon">
-          <h2>Ngày nghỉ và tích lũy <span class="later">L6</span></h2>
-          <div class="set-row"><span>Số dư ngày nghỉ</span><b class="muted">—</b></div>
-          <div class="set-row"><span>Đã quy đổi</span><b class="muted">—</b></div>
-          <div class="set-row"><span>Nhắc nghỉ sau 7 ngày học liền</span><span class="switch" aria-hidden="true"><i></i></span></div>
+        <section class="card set" aria-label="Ngày nghỉ và tích lũy">
+          <h2>Ngày nghỉ và tích lũy</h2>
+          <div class="set-row"><span>Số dư ngày nghỉ</span><b id="set-bal">—</b></div>
+          <div class="set-row"><span>Đã quy đổi</span><b id="set-conv">—</b></div>
+          <div class="set-row"><span>Hạn mức<br><span class="muted" id="set-quota"></span></span></div>
+          <div class="set-row"><span id="lb-remind">Nhắc nghỉ sau 7 ngày học liền<br><span class="muted">Một câu nhẹ ở trang Hôm nay</span></span>
+            <button class="sw" type="button" role="switch" aria-checked="true" aria-labelledby="lb-remind" id="sw-remind"><span class="trk"><i></i></span></button></div>
+          <div class="set-row"><span id="lb-miss">Báo ngày chưa có ca<br><span class="muted">Chỉ những ngày còn ghi bù được</span></span>
+            <button class="sw" type="button" role="switch" aria-checked="true" aria-labelledby="lb-miss" id="sw-miss"><span class="trk"><i></i></span></button></div>
+          <div class="set-row"><span class="muted">Số tiền chỉ để ghi nhận. App không chuyển tiền, không kết nối ngân hàng.</span></div>
+          <div class="set-row" id="set-l6-warn" hidden><span class="muted" id="set-l6-warn-txt"></span></div>
         </section>
-        <section class="card set soon">
-          <h2>Chuỗi ngày học <span class="later">L6</span></h2>
-          <div class="set-row"><span>Sửa chuỗi</span><b class="muted">—</b></div>
+        <section class="card set" aria-label="Chuỗi ngày học">
+          <h2>Chuỗi ngày học</h2>
+          <div class="set-row"><span>Chuỗi hiện tại</span><b id="set-cur">—</b></div>
+          <div class="set-row"><span>Dài nhất</span><b id="set-long">—</b></div>
+          <div class="set-row"><span>Mốc chuỗi<br><span class="muted" id="set-miles"></span></span></div>
+          <div class="set-row"><span>Sửa chuỗi<br><span class="muted">Ghi bù ca đã học, hoặc đánh dấu nghỉ cho ngày trống, trong tuần đang diễn ra và tuần tạm chốt</span></span></div>
         </section>
         <section class="card set soon">
           <h2>Bấm giờ học <span class="later">L7</span></h2>
@@ -225,6 +237,13 @@
 <dialog class="sheet" id="sheet" aria-label="Tuần này">
   <div id="sheet-body"></div>
   <div class="sheet-actions"><button class="btn3d small ghost" type="button" id="sheet-close">Đóng</button></div>
+</dialog>
+
+<!-- L6: tấm chi tiết chuỗi + ngày nghỉ (chạm nút tròn góc trên) -->
+<dialog class="sheet" id="detail" aria-labelledby="detail-title">
+  <h2 id="detail-title">Chuỗi và ngày nghỉ</h2>
+  <div id="detail-body"></div>
+  <div class="sheet-actions"><button class="btn3d small ghost" type="button" id="detail-close">Đóng</button></div>
 </dialog>
 
 <dialog class="sheet formsheet" id="f-dialog" aria-labelledby="f-title">
