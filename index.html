@@ -66,15 +66,20 @@
             <div class="cats" id="cats"></div>
           </div>
         </section>
-        <section class="card">
+        <section class="card" aria-label="Tuần này">
           <button class="week" type="button" id="week" aria-haspopup="dialog">
-            <span>
-              <h2>Tuần này</h2>
-              <span class="num" id="week-num"></span>
-              <span class="days" id="days" aria-hidden="true"></span>
+            <span class="wk">
+              <span class="wring" id="wring"></span>
+              <span class="wk-txt">
+                <h2>Tuần này</h2>
+                <span class="num" id="week-num"></span>
+                <span class="muted" id="week-days-txt"></span>
+                <span class="days" id="days" aria-hidden="true"></span>
+              </span>
+              <span class="chev" aria-hidden="true">›</span>
             </span>
-            <span class="chev" aria-hidden="true">›</span>
           </button>
+          <p class="muted wk-mark" id="week-mark"></p>
         </section>
       </div>
     </div>

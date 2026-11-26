@@ -57,8 +57,9 @@ export function jump(el) {
   s.classList.add('jump');
 }
 
-// Ăn mừng: ~40 hạt pixel bay ra + nhân vật nhảy + kaomoji; tự gỡ sau 3 giây
-export function party(alsoJump = []) {
+// Ăn mừng: ~40 hạt pixel bay ra + nhân vật nhảy + kaomoji; tự gỡ sau 3 giây.
+// L5: html = nội dung riêng ở giữa (đủ mục tiêu tuần, huy hiệu mới); bỏ trống = câu khen mặc định.
+export function party(alsoJump = [], html = null) {
   const box = document.createElement('div');
   box.className = 'party';
   box.setAttribute('aria-hidden', 'true');
@@ -70,8 +71,8 @@ export function party(alsoJump = []) {
     box.appendChild(p);
   }
   const say = document.createElement('div');
-  say.className = 'say';
-  say.innerHTML = mochiSvg() + `<span>Giỏi quá, ${UI.name}! (≧▽≦)♪</span>`;
+  say.className = html ? 'say col' : 'say';
+  say.innerHTML = html ?? mochiSvg() + `<span>Giỏi quá, ${UI.name}! (≧▽≦)♪</span>`;
   box.appendChild(say);
   document.body.appendChild(box);
   setTimeout(() => jump(say), 250);
