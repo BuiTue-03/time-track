@@ -164,6 +164,81 @@ code { font-size: 16px; background: var(--surface-2); padding: 1px 4px; border-r
 .party .say svg { width: 56px; height: 48px; }
 @keyframes pop { 12% { transform: translate(-50%, -50%) scale(1.08); } 20%, 80% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(-50%, -60%) scale(.9); opacity: 0; } }
 
+/* ---------- Trang Hôm nay ---------- */
+.quote { position: relative; overflow: hidden; padding: 22px 20px 20px; min-height: 190px; background: linear-gradient(140deg, var(--surface) 55%, var(--surface-2)); }
+.quote .tag { display: inline-block; background: none; padding: 0; font-weight: 700; color: var(--accent-text); margin-bottom: 8px; }
+.quote .jp span { display: inline-block; }
+.quote .jp { font-family: var(--f-jp); font-size: 28px; line-height: 1.45; margin: 0; max-width: 15em; position: relative; z-index: 1; }
+.quote .vi { font-size: 17px; margin: 10px 0 0; max-width: 24em; position: relative; z-index: 1; padding-right: 72px; }
+.quote .src { color: var(--text-2); margin: 10px 0 0; position: relative; z-index: 1; }
+.quote .peek { position: absolute; right: -10px; bottom: -12px; width: 108px; cursor: pointer; border: 0; background: none; padding: 0; }
+.quote .peek svg { width: 100%; height: auto; display: block; }
+.open-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.open-row p { margin: 4px 0 0; }
+.open h2 { display: flex; align-items: center; gap: 8px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; background: var(--ring); animation: pulse 1.2s ease-in-out 3; }
+@keyframes pulse { 50% { transform: scale(1.5); opacity: .5; } }
+.open .time { font-family: var(--f-head); font-size: 26px; margin: 4px 0 2px; font-variant-numeric: tabular-nums; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 14px; line-height: 1.35; font-weight: 700; }
+.chip.c-nn { background: var(--pink-l); color: #1E2233; }
+.chip.c-ba { background: var(--pink-d); color: var(--on-pink-d); }
+.chip.c-kh { background: var(--grey-cat); color: #1E2233; }
+.ring-card { display: flex; align-items: center; gap: 18px; }
+.ring { position: relative; width: 148px; height: 148px; flex: none; cursor: pointer; border: 0; background: none; padding: 0; color: var(--text); }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring .track { stroke: var(--surface-2); }
+.ring .bar { stroke: var(--ring); transition: stroke-dashoffset 1s cubic-bezier(.3, 1.3, .5, 1); }
+.ring .mid { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.ring .mid b { font-family: var(--f-head); font-size: 22px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.ring .mid span { color: var(--text-2); }
+.ring-side h2 { margin-bottom: 4px; }
+.ring-side p { margin: 0; }
+@media (max-width: 440px) { .ring { width: 122px; height: 122px; } .ring .mid b { font-size: 19px; } .ring-card { gap: 14px; padding: 16px; } }
+.cats { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.week { background: none; padding: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; border: 0; cursor: pointer; color: var(--text); }
+.week .num { font-family: var(--f-head); font-size: 30px; font-variant-numeric: tabular-nums; display: block; }
+.days { display: flex; gap: 5px; margin-top: 8px; }
+.days i { width: 22px; height: 22px; border-radius: 6px; background: var(--surface-2); display: block; }
+.days i.on { background: var(--accent); } .days i.full { background: var(--accent-edge); } .days i.today { outline: 2px solid var(--text); outline-offset: 1px; }
+.chev { width: 44px; height: 44px; flex: none; display: grid; place-content: center; border-radius: 14px; background: var(--surface-2); font-size: 22px; }
+@media (min-width: 900px) { .quote .jp { font-size: 32px; } }
+
+/* ---------- Tấm trượt từ dưới lên ---------- */
+dialog.sheet { border: 0; padding: 20px; border-radius: 24px 24px 0 0; width: 100%; max-width: 560px; margin: auto auto 0; background: var(--surface); color: var(--text); max-height: calc(100dvh - 24px); overflow: auto; }
+dialog.sheet::backdrop { background: rgba(10, 12, 20, .5); }
+dialog.sheet[open] { animation: up .25s ease-out; }
+@keyframes up { from { transform: translateY(40%); opacity: 0; } }
+@media (min-width: 900px) { dialog.sheet { margin: auto; border-radius: 24px; } }
+.sheet h2 { margin-bottom: 4px; }
+.sheet .chart { margin: 8px 0 12px; }
+.sheet-actions { display: flex; justify-content: flex-end; }
+
+/* ---------- Biểu đồ chung (số trên cột chỉ hiện khi rê chuột / chạm) ---------- */
+div.chart { width: 100%; }
+div.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+div.chart text { font-family: var(--f-body); font-size: 16px; fill: var(--text-2); font-variant-numeric: tabular-nums; }
+.chart .grid-l { stroke: var(--border); stroke-width: 1; }
+.chart .mk { cursor: pointer; outline: none; }
+.chart .mk .hit { fill: transparent; }
+.chart .mk .v { fill: var(--text); font-weight: 800; opacity: 0; transition: opacity .15s; }
+.chart .mk.sel .v { opacity: 1; }
+@media (hover: hover) { .chart .mk:hover .v { opacity: 1; } }
+.chart .mk.sel .b, .chart .mk:focus-visible .b { stroke: var(--text); stroke-width: 2; }
+.grow { transform-box: fill-box; transform-origin: 50% 100%; animation: grow .7s cubic-bezier(.3, 1.3, .5, 1) both; }
+.growx { transform-box: fill-box; transform-origin: 0 50%; animation: growx .7s cubic-bezier(.3, 1.2, .5, 1) both; }
+@keyframes grow { from { transform: scaleY(0); } }
+@keyframes growx { from { transform: scaleX(0); } }
+.big2 { font-family: var(--f-head); font-size: 28px; font-variant-numeric: tabular-nums; }
+.sub2 { color: var(--text-2); margin: 0; }
+.pair { display: grid; gap: 6px; margin: 6px 0 14px; }
+.pair .row { min-height: 44px; cursor: pointer; display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 10px; }
+.pair .lab { color: var(--text-2); }
+.pair .track { height: 24px; border-radius: 8px; background: var(--surface-2); overflow: hidden; }
+.pair .fill { display: block; height: 100%; border-radius: 8px; }
+.fill.cur { background: var(--a1); } .fill.prev { background: var(--prev); }
+.lg { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); margin-right: 12px; }
+.lg i { width: 16px; height: 16px; border-radius: 5px; display: block; }
+
 /* ---------- TẠM THỜI (bước 1 Phần C): kiểu cũ của L3/L4 đổi sang biến màu mới.
    Các bước sau thay dần bằng giao diện mới rồi xóa khối này. ---------- */
 :root { --grid: var(--border); --bar: var(--a1); --bar-cur: var(--cur-bg); --hatch: var(--a1);
@@ -174,7 +249,6 @@ code { font-size: 16px; background: var(--surface-2); padding: 1px 4px; border-r
 .state { background: var(--surface); border-radius: 20px; padding: 18px; box-shadow: var(--shadow); }
 .grid.two { margin-bottom: 16px; } .card { margin-bottom: 16px; } .grid.two > .card { margin-bottom: 0; }
 .big { font-family: var(--f-head); font-size: 28px; margin: 0; font-variant-numeric: tabular-nums; }
-.open { background: var(--surface-2); padding: 6px 10px; border-radius: 12px; }
 .cmp { margin: 10px 0 0; } .cmp dt { color: var(--text-2); margin-top: 8px; } .cmp dd { margin: 2px 0 0; }
 .tag { display: inline-block; padding: 0 8px; border-radius: 8px; background: var(--tag-bg); color: var(--tag-text); white-space: nowrap; font-weight: 700; }
 .forecast { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 8px; }

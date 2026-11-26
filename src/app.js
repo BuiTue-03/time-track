@@ -5,14 +5,15 @@
 import { buildModel, todaySerial, serialFromYMD, weekNo, WEEK_STATUS, fmtDate } from './core.js';
 import { gvizUrl, parseGvizText, TAB_SESSIONS, TAB_TOPICS } from './gviz.js';
 import { SPREADSHEET_ID, REAL_SPREADSHEET_ID, ALLOW_WRITE_TO_REAL_SHEET } from './config.js';
-import { initForm, onModel } from './form.js';
+import { initForm, onModel, openAddCurrentWeek, openFinish, formEnabled } from './form.js';
+import { initToday, renderToday } from './page-today.js';
 import { rankWeeks, weeklyAverage, breakdown, rankWeekdays, compareWeeks, compareMonths, forecastWeek } from './insights.js';
 import { weeklyBars, activityBar, heatmap, HEAT_BINS, activityColorVar, installTooltip, esc } from './charts.js';
 import {
   fmtMin, fmtHours, fmtPct, fmtSignedPct, fmtSignedMin, fmtRange, fmtDayShort, fmtTime, clockNow, monthLabel,
 } from './format.js';
 import { WEEKDAY_NAMES } from './core.js';
-import { initShell, setScreen, seg, applyTheme, getTheme } from './shell.js';
+import { initShell, setScreen, seg, applyTheme, getTheme, showPage } from './shell.js';
 import { mochiSvg, jump } from './mochi.js';
 import { UI } from './ui-config.js';
 
@@ -104,9 +105,10 @@ const width = id => Math.max(280, $(id).clientWidth);
 function render() {
   const { stats, sessions, issues } = model;
   const t = stats.today;
+  const nowMin = (() => { const [h, mm] = clockNow().split(':').map(Number); return h * 60 + mm; })();
+  renderToday(model, { nowMin: TODAY_OVERRIDE ? null : nowMin, canFinish: formEnabled() });
   $('notice').hidden = !(model.label || TODAY_OVERRIDE);
   $('notice').textContent = [model.label && `Đang xem ${model.label}.`, TODAY_OVERRIDE && `Đang giả lập hôm nay = ${fmtDate(t)}.`].filter(Boolean).join(' ');
-  $('today-line').textContent = `Hôm nay ${fmtDate(t)} · tuần ${weekNo(t)}`;
 
   // --- Tuần này (thống kê tạm thời) + so sánh + dự báo ---
   const cw = compareWeeks(stats), fc = forecastWeek(stats), cur = rankWeeks(stats).current;
@@ -206,6 +208,10 @@ $('state-add').addEventListener('click', () => { setState('ready'); });
 $('week-select').addEventListener('change', e => { selectedWeek = Number(e.target.value); renderWeekBreakdown(); });
 let rt;
 window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => model && screen === 'ok' && render(), 150); });
+initToday({
+  onAdd: () => { showPage('cal'); openAddCurrentWeek(); },
+  onFinish: row => { showPage('cal'); openFinish(row); },
+});
 initShell({ onPage: () => { if (model && screen === 'ok') render(); } });
 seg($('set-theme'), getTheme(), applyTheme);
 $('brand-mochi').innerHTML = mochiSvg();

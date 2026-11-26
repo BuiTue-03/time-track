@@ -84,6 +84,25 @@ export function onModel() {
   renderList();
 }
 
+// L4.5: lối tắt từ trang Hôm nay. Chỉ MỞ form như khi bấm nút trong danh sách ca; luồng lưu không đổi.
+export const formEnabled = () => !!app && !$('ca-tools').hidden;
+export function openAddCurrentWeek() {
+  if (!formEnabled() || busy) return false;
+  listWeek = weekNo(app.getModel().stats.today); // thêm ca mặc định vào tuần đang diễn ra
+  onModel();
+  openForm({ mode: 'add' });
+  return true;
+}
+export function openFinish(rowNumber) {
+  if (!formEnabled() || busy) return false;
+  const s = app.getModel().sessions.find(x => x.rowNumber === rowNumber);
+  if (!s || !s.open || weekStatusOfDate(s.date, currentToday()) !== WEEK_STATUS.CURRENT) return false; // giống điều kiện nút "Kết thúc ca" trong danh sách
+  listWeek = weekNo(s.date);
+  onModel();
+  openForm({ mode: 'edit', original: s, finish: true });
+  return true;
+}
+
 // ---------------------------------------------------------------------------------------------
 // Đăng nhập
 // ---------------------------------------------------------------------------------------------

@@ -32,8 +32,44 @@
       <p id="today-line"></p>
     </div>
     <div class="grid two">
-      <section class="card"><h2>Tuần này</h2><div id="this-week"></div></section>
-      <section class="card"><h2>Tháng này</h2><div id="this-month"></div></section>
+      <div class="grid">
+        <section class="card quote" aria-label="Câu khích lệ hôm nay">
+          <span class="tag">Câu của hôm nay</span>
+          <p class="jp" lang="ja" id="quote-jp"></p>
+          <p class="vi" id="quote-vi"></p>
+          <p class="src" id="quote-src"></p>
+          <button class="peek" type="button" id="peek" aria-label="Chạm để nhân vật nhảy"></button>
+        </section>
+        <div class="add-wrap"><button class="btn3d" type="button" id="add">＋ Thêm ca</button></div>
+        <section class="card open" id="open-card" aria-label="Ca đang mở" hidden>
+          <h2><span class="dot"></span>Ca đang mở</h2>
+          <div class="open-row" id="open-body"></div>
+        </section>
+      </div>
+      <div class="grid">
+        <section class="card ring-card" aria-label="Tiến độ hôm nay">
+          <button class="ring" type="button" id="ring" data-tip="">
+            <svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="50" fill="none" stroke-width="14"/>
+              <circle class="bar" id="ring-bar" cx="60" cy="60" r="50" fill="none" stroke-width="14" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16"/></svg>
+            <span class="mid"><b id="ring-num">0</b><span id="ring-goal"></span></span>
+          </button>
+          <div class="ring-side">
+            <h2>Hôm nay</h2>
+            <p id="ring-msg" class="muted"></p>
+            <div class="cats" id="cats"></div>
+          </div>
+        </section>
+        <section class="card">
+          <button class="week" type="button" id="week" aria-haspopup="dialog">
+            <span>
+              <h2>Tuần này</h2>
+              <span class="num" id="week-num"></span>
+              <span class="days" id="days" aria-hidden="true"></span>
+            </span>
+            <span class="chev" aria-hidden="true">›</span>
+          </button>
+        </section>
+      </div>
     </div>
   </div>
 
@@ -68,6 +104,10 @@
   <!-- ===== Thống kê ===== -->
   <div id="pg-stats" class="page" hidden>
     <div class="hello"><h1>Thống kê</h1><p id="totals"></p></div>
+    <div class="grid two">
+      <section class="card"><h2>Tuần này</h2><div id="this-week"></div></section>
+      <section class="card"><h2>Tháng này</h2><div id="this-month"></div></section>
+    </div>
     <section class="card">
       <h2>Tổng giờ theo tuần</h2>
       <div id="a1" class="chart-box"></div>
@@ -124,6 +164,11 @@
   <button class="tab" type="button" data-page="stats"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M1 6h2v4H1zm3-3h2v7H4zm3 2h2v5H7zM1 10h9v1H1z"/></svg></span>Thống kê</button>
   <button class="tab" type="button" data-page="settings"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M4 0h3v2h1l1-1 1 1-1 1v1h2v3H9v1l1 1-1 1-1-1H7v2H4V9H3l-1 1-1-1 1-1V7H0V4h2V3L1 2l1-1 1 1h1zm1 4v3h1V4z"/></svg></span>Cài đặt</button>
 </nav>
+
+<dialog class="sheet" id="sheet" aria-label="Tuần này">
+  <div id="sheet-body"></div>
+  <div class="sheet-actions"><button class="btn3d small ghost" type="button" id="sheet-close">Đóng</button></div>
+</dialog>
 
 <dialog id="f-dialog" aria-labelledby="f-title">
   <form id="ca-form" novalidate>
