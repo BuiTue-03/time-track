@@ -14,6 +14,7 @@ import { initStats, renderStats } from './page-stats.js';
 import { mochiSvg, jump } from './mochi.js';
 import { UI } from './ui-config.js';
 import { checkCelebration } from './badges.js';
+import { initQuoteCard } from './quote-card.js';
 
 const TIMEOUT_MS = 8000;
 const params = new URLSearchParams(location.search);
@@ -118,6 +119,7 @@ $('state-add').addEventListener('click', () => openAddCurrentWeek());
 let rt;
 window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => model && screen === 'ok' && render(), 150); });
 initStats();
+initQuoteCard();
 initCal({ getWeek: getListWeek, setWeek: setListWeek });
 initToday({
   onAdd: () => { showPage('cal'); openAddCurrentWeek(); },

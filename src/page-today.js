@@ -4,7 +4,8 @@ import { WEEK_STATUS, WEEKDAY_NAMES, weekday, weekNo, fmtDate } from './core.js'
 import { breakdown } from './insights.js';
 import { dayMinutes, weekDays, weekVsPrevByDay, latestOpen, staleOpen, closeAction, weekRing, avg4Marker } from './stats-extra.js';
 import { fmtH1, fmtHM, fmtDiff, fmtTime, fmtDayShort } from './format.js';
-import { UI, QUOTE, catStyle } from './ui-config.js';
+import { UI, catStyle } from './ui-config.js';
+import { setQuoteModel } from './quote-card.js';
 import { mochiSvg, party, jump } from './mochi.js';
 import { esc, barChart, pairRows, pairBars } from './ui-charts.js';
 
@@ -18,8 +19,6 @@ export const chip = (category, text = category) => {
 };
 
 export function initToday({ onAdd, onFinish }) {
-  $('quote-jp').innerHTML = QUOTE.jp.map(p => `<span>${esc(p)}</span>`).join('');
-  $('quote-vi').textContent = QUOTE.vi;
   $('peek').innerHTML = mochiSvg();
   $('peek').addEventListener('click', () => jump($('peek')));
   $('add').addEventListener('click', onAdd);
@@ -44,6 +43,7 @@ export function renderToday(m, { nowMin, canFinish, sheetUrl }) {
   $('today-line').textContent = `${WEEKDAY_NAMES[weekday(t)]}, ${fmtDate(t)} · tuần ${weekNo(t)}`;
 
   renderAlert(stats, nowMin, canFinish, sheetUrl);
+  setQuoteModel(m); // L5: câu của ngày theo nhóm (cố gắng / nghỉ ngơi)
 
   // --- Ca đang mở (mới nhất) ---
   const o = latestOpen(stats, nowMin);

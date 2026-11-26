@@ -17,8 +17,8 @@ export const CATEGORY_STYLE = {
 };
 export const catStyle = c => CATEGORY_STYLE[c] ?? { cls: 'c-kh', color: 'var(--grey-cat)', kao: '' };
 
-// Câu khích lệ ở trang Hôm nay. Danh sách câu + đổi câu theo ngày là việc của L5 (chưa làm);
-// hiện chỉ có 1 câu cố định (đã duyệt ở bản mẫu). Mỗi phần trong `jp` xuống dòng nguyên cụm.
+// Câu dự phòng: L5 lấy câu mỗi ngày từ quotes.json (src/quotes.js). Câu này chỉ hiện khi chưa tải được quotes.json
+// (ví dụ lần đầu mở app mà mất mạng). Mỗi phần trong `jp` xuống dòng nguyên cụm.
 export const QUOTE = {
   jp: ['今日の一歩は、', '明日の自分への', '贈り物。'],
   vi: 'Bước đi hôm nay là món quà cho chính mình ngày mai.',

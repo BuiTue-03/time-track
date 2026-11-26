@@ -389,3 +389,11 @@ details.issues ul { margin: 6px 0 10px; padding-left: 20px; }
 .bd-next .row { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .party .say .bdg-big svg { width: 64px; height: 78px; }
 .nw { white-space: nowrap; }
+/* Câu khích lệ mỗi ngày (quotes.json) */
+.quote .vi.only { font-size: 20px; font-family: var(--f-head); line-height: 1.5; }
+.quote .by { margin: 8px 0 0; color: var(--text-2); position: relative; z-index: 1; padding-right: 72px; }
+.quote .note { margin: 8px 0 0; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); color: var(--text); position: relative; z-index: 1; margin-right: 72px; }
+.quote .qbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 14px; position: relative; z-index: 1; padding-right: 84px; }
+.linkbtn { border: 0; background: none; color: var(--accent-text); font: inherit; font-weight: 700; min-height: 44px; padding: 0 4px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.quote details.by summary { list-style: none; display: inline-flex; align-items: center; }
+.quote details.by summary::-webkit-details-marker { display: none; }
