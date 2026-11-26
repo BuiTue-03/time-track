@@ -13,6 +13,7 @@ import { initShell, setScreen, seg, applyTheme, getTheme, showPage, currentPage 
 import { initStats, renderStats } from './page-stats.js';
 import { mochiSvg, jump } from './mochi.js';
 import { UI } from './ui-config.js';
+import { checkCelebration } from './badges.js';
 
 const TIMEOUT_MS = 8000;
 const params = new URLSearchParams(location.search);
@@ -89,6 +90,7 @@ async function load() {
     setState('ready');
     render();
     onModel();
+    if (!USE_FIXTURE && !TODAY_OVERRIDE) checkCelebration(model); // L5: mốc huy hiệu mới -> ăn mừng 1 lần trên máy này
   } catch (e) {
     setState('error', e.message);
   }

@@ -76,7 +76,7 @@ export function renderToday(m, { nowMin, canFinish, sheetUrl }) {
   // Cùng lúc đủ cả ngày lẫn tuần: chỉ ăn mừng tuần.
   const weekHit = lastWeekMin !== null && lastWeekMin < ring.goal && ring.reached;
   const dayHit = lastTodayMin !== null && lastTodayMin < UI.goalDayMin && min >= UI.goalDayMin;
-  if (weekHit) setTimeout(() => party([$('peek'), $('brand-mochi')], `${mochiSvg()}<span>Đủ ${fmtHM(ring.goal)} tuần này rồi, ${esc(UI.name)}! (≧▽≦)♪</span><small>Nghỉ ngơi xíu nha</small>`), 900);
+  if (weekHit) setTimeout(() => party([$('peek'), $('brand-mochi')], `${mochiSvg()}<span>Đủ ${fmtHM(ring.goal)} tuần này rồi, ${esc(UI.name)}! <span class="nw">(≧▽≦)♪</span></span><small>Nghỉ ngơi xíu nha</small>`), 900);
   else if (dayHit) setTimeout(() => party([$('peek'), $('brand-mochi')]), 900);
   lastTodayMin = min;
   lastWeekMin = ring.min;

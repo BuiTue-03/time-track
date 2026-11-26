@@ -266,8 +266,6 @@ div.chart text { font-family: var(--f-body); font-size: 16px; fill: var(--text-2
 /* Chỗ trống cho L5–L7: viền nét đứt, chưa có logic */
 .soon { border: 2px dashed var(--border); box-shadow: none; background: transparent; }
 .later { font-family: var(--f-body); font-size: 16px; color: var(--text-2); border: 1px dashed var(--border); border-radius: 8px; padding: 0 8px; }
-.soon .badges { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-.badge { aspect-ratio: 1; border: 2px dashed var(--border); border-radius: 14px; display: grid; place-content: center; text-align: center; color: var(--text-2); font-weight: 800; line-height: 1.1; cursor: pointer; }
 
 /* ---------- Tab Lịch ---------- */
 @media (min-width: 900px) { .cal-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); } }
@@ -373,3 +371,21 @@ details.issues ul { margin: 6px 0 10px; padding-left: 20px; }
 .party .say.col { flex-direction: column; text-align: center; gap: 6px; }
 .party .say .row { display: flex; align-items: center; gap: 10px; }
 .party .say small { font-family: var(--f-body); font-size: 17px; color: var(--text-2); }
+/* Huy hiệu pixel (Thống kê -> Thành tích) */
+:root { --badge-lock: #EEF1F8; --gold: #F2C14E; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --badge-lock: #272B3B; } }
+:root[data-theme="dark"] { --badge-lock: #272B3B; }
+.badges5 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.bdg { border: 0; background: none; padding: 6px 0 4px; border-radius: 14px; cursor: pointer; color: var(--text); display: grid; justify-items: center; gap: 2px; min-height: 44px; font: inherit; }
+.bdg svg { width: 100%; max-width: 56px; height: auto; display: block; }
+.bdg b { font-family: var(--f-head); font-size: 17px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.bdg span { color: var(--text-2); line-height: 1.1; }
+.bdg.lock b { color: var(--text-2); }
+.bdg.new svg { animation: shine 1.2s ease-in-out 2; }
+@keyframes shine { 50% { transform: translateY(-6px) scale(1.06); } }
+.bd-next { margin: 14px 0 0; display: grid; gap: 6px; }
+.bd-next .bar { height: 14px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.bd-next .bar i { display: block; height: 100%; background: var(--accent-edge); border-radius: 99px; }
+.bd-next .row { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.party .say .bdg-big svg { width: 64px; height: 78px; }
+.nw { white-space: nowrap; }
