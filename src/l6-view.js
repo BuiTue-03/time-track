@@ -4,7 +4,7 @@
 // localStorage chỉ giữ tùy chọn của MÁY NÀY (không lưu số liệu Sheet):
 //   tt-remind (bật/tắt nhắc nghỉ), tt-miss (bật/tắt báo ngày chưa có ca), tt-conv-later (tháng đã bấm "Để sau"),
 //   tt-streak-seen (mốc chuỗi đã ăn mừng).
-import { WEEKDAY_NAMES, weekday, weekStart, weekEnd, fmtDate } from './core.js';
+import { WEEK_STATUS, WEEKDAY_NAMES, weekday, weekStart, weekEnd, fmtDate } from './core.js';
 import { restSummary, conversionSuggestion, fmtVnd } from './rest.js';
 import { DAY, classifyDays, streaks, restReminder, missedToFix, STREAK_MILESTONES, streakMilestonesReached } from './streak.js';
 import { fmtHM, fmtDayShort } from './format.js';
@@ -165,6 +165,9 @@ export function renderCalMiss(week) {
   if (!model || !box) return;
   const ws = weekStart(week), we = weekEnd(week);
   const list = model.missed.filter(x => x.date >= ws && x.date <= we);
+  // Nút "Đánh dấu ngày nghỉ": chỉ tuần Đang diễn ra / Tạm chốt (tuần Chốt hẳn: dải trạng thái đã ghi lý do)
+  const wk = model.stats.weeks.find(w => w.week === week);
+  if ($('mark-wrap')) $('mark-wrap').hidden = !opts.canWrite?.() || !wk || wk.status === WEEK_STATUS.FINAL;
   box.hidden = !list.length;
   box.innerHTML = !list.length ? '' : `<h3>Ngày chưa có ca</h3><p class="muted" style="margin:0">Những ngày này đang làm đứt chuỗi. Đã học thật thì ghi bù ca; nghỉ thì đánh dấu nghỉ.</p>` +
     list.map(x => `<div class="drow"><div><span class="d">${dayLabel(x.date)}</span><p class="k">${KIND_TEXT[DAY.MISSED]}${x.offset ? ' · tuần tạm chốt, ghi vào có nhãn [OFFSET]' : ''}</p></div>${fixButtons(x.date, x.offset) || '<span></span>'}</div>`).join('');

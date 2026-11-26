@@ -114,6 +114,8 @@
           <div class="msg" id="ca-result" hidden></div>
           <div class="add-wrap" id="ca-add-wrap"><button class="btn3d" type="button" id="ca-add">＋ Thêm ca</button></div>
           <p class="why" id="ca-add-why" hidden></p>
+          <!-- L6: đánh dấu ngày nghỉ (ghi 1 dòng không giờ vào tab Ca học) -->
+          <div class="add-wrap" id="mark-wrap"><button class="btn3d ghost" type="button" id="mark-btn">Đánh dấu ngày nghỉ</button></div>
         </div>
         <div class="miss6" id="cal-miss" hidden></div>
         <div id="ca-list"></div>
@@ -244,6 +246,20 @@
   <h2 id="detail-title">Chuỗi và ngày nghỉ</h2>
   <div id="detail-body"></div>
   <div class="sheet-actions"><button class="btn3d small ghost" type="button" id="detail-close">Đóng</button></div>
+</dialog>
+
+<!-- L6: hộp đánh dấu ngày nghỉ -->
+<dialog class="sheet" id="mark-dlg" aria-labelledby="mark-title">
+  <h2 id="mark-title">Đánh dấu ngày nghỉ</h2>
+  <div class="state-strip" id="mark-strip"></div>
+  <label class="fld" for="mark-date">Ngày <span class="hint">dd/mm/yyyy</span><input id="mark-date" inputmode="numeric" autocomplete="off"></label>
+  <div class="fld" role="radiogroup" aria-label="Loại ngày nghỉ">Loại
+    <div class="pick"><label><input type="radio" name="mark-kind" value="Nghỉ ngơi" checked> Nghỉ ngơi</label>
+      <label><input type="radio" name="mark-kind" value="Bận đi làm, không học, có ôn tập ngắn"> Bận đi làm, không học, có ôn tập ngắn</label></div></div>
+  <div class="confirm" id="mark-confirm"></div>
+  <ul class="errors" id="mark-err"></ul>
+  <div class="msg" id="mark-msg" hidden></div>
+  <div class="actions"><button class="btn3d small ghost" type="button" id="mark-cancel">Hủy</button><button class="btn3d small" type="button" id="mark-save">Ghi ngày nghỉ</button></div>
 </dialog>
 
 <dialog class="sheet formsheet" id="f-dialog" aria-labelledby="f-title">

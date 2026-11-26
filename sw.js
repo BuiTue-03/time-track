@@ -10,7 +10,7 @@ const STATIC = [
   './src/app.js', './src/config.js', './src/core.js', './src/form.js', './src/format.js', './src/gviz.js', './src/insights.js',
   './src/mochi.js', './src/page-cal.js', './src/page-stats.js', './src/page-today.js', './src/rules.js', './src/sheets-write.js',
   './src/shell.js', './src/stats-extra.js', './src/ui-charts.js', './src/ui-config.js', './src/write-core.js', './src/pwa.js',
-  './src/milestones.js', './src/quotes.js', './src/badges.js', './src/quote-card.js', './src/rest.js', './src/streak.js', './src/l6-view.js', './quotes.json',
+  './src/milestones.js', './src/quotes.js', './src/badges.js', './src/quote-card.js', './src/rest.js', './src/streak.js', './src/l6-view.js', './src/rest-ui.js', './quotes.json',
   './fonts/mplus-rounded-1c-bold.woff2', './fonts/mplus-rounded-1c-regular.woff2', './fonts/nunito-var.woff2',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png', './icons/favicon-32.png',
 ];

@@ -6,7 +6,8 @@ import { buildModel, todaySerial, serialFromYMD, fmtDate, weekNo } from './core.
 import { gvizUrl, parseGvizText, TAB_SESSIONS, TAB_TOPICS, TAB_SETTINGS, TAB_ACCRUAL } from './gviz.js';
 import { parseSettings, parseAccrual, DEFAULT_SETTINGS } from './rest.js';
 import { SPREADSHEET_ID, REAL_SPREADSHEET_ID, ALLOW_WRITE_TO_REAL_SHEET } from './config.js';
-import { initForm, onModel, openAddCurrentWeek, openAddForDate, openFinish, formEnabled, getListWeek, setListWeek } from './form.js';
+import { initForm, onModel, openAddCurrentWeek, openAddForDate, openFinish, formEnabled, getListWeek, setListWeek, refreshSignin, showResult } from './form.js';
+import { initRestUi, openMark, defaultMarkDate } from './rest-ui.js';
 import { initL6, computeL6, renderL6, renderCalMiss } from './l6-view.js';
 import { vnClock } from './rest.js';
 import { initCal, renderCal, onWeek } from './page-cal.js';
@@ -196,8 +197,10 @@ renderBanner();
 initL6({
   canWrite: () => formEnabled(),
   onFixAdd: d => { showPage('cal'); openAddForDate(d); },
-  onFixRest: d => { showPage('cal'); /* L6 mục 4: hộp đánh dấu ngày nghỉ */ },
+  onFixRest: d => { showPage('cal'); setListWeek(weekNo(d)); openMark(d); },
   onConv: () => { /* L6 mục 5: hộp quy đổi */ },
 });
+initRestUi({ getModel: () => model, reload: load, onSignin: refreshSignin, showResult });
+$('mark-btn').addEventListener('click', () => { if (formEnabled()) openMark(defaultMarkDate(getListWeek())); });
 initForm({ getModel: () => model, reload: load, onListWeek: w => { onWeek(w); renderCalMiss(w); } }, { enabled: FORM_ENABLED, disabledReason: FORM_DISABLED_REASON });
 load();

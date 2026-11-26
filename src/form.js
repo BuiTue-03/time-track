@@ -119,6 +119,9 @@ export function openAddForDate(date) {
   refreshForm();
   return true;
 }
+// L6: rest-ui.js dùng chung dòng trạng thái đăng nhập và ô kết quả của tab Lịch
+export const refreshSignin = () => { if (enabled) renderSignin(); };
+export const showResult = (kind, text) => showMsg($('ca-result'), kind, text);
 export function openFinish(rowNumber) {
   if (!formEnabled() || busy) return false;
   const s = app.getModel().sessions.find(x => x.rowNumber === rowNumber);
