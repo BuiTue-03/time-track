@@ -1,8 +1,9 @@
 // stats-extra.js — Phép tính MỚI thêm ở L4.5 (Oriana cho phép 26/11/2026, kèm điều kiện ghi lại vào bộ nhớ dự án).
 // Hàm thuần, chỉ dùng kết quả có sẵn của core.js (stats, sessions); KHÔNG sửa cách tính cũ.
 // Có test ở test/stats-extra.test.mjs.
-import { WEEK_STATUS, CONFIG, weekNo, weekStart } from './core.js';
+import { WEEK_STATUS, CONFIG, weekNo, weekStart, weekStatus } from './core.js';
 import { weeklyAverage } from './insights.js';
+import { UI } from './ui-config.js';
 
 // Phút của 1 ngày (theo stats.days; ngày không có dòng = 0)
 export const dayMinutes = (stats, d) => stats.days[d]?.min ?? 0;
@@ -75,3 +76,50 @@ export function latestOpen(stats, nowMin) {
 }
 
 export const isCurrent = w => w.status === WEEK_STATUS.CURRENT;
+
+// ---------------------------------------------------------------------------------------------
+// L5 (Oriana duyệt Phần A 26/11/2026)
+// ---------------------------------------------------------------------------------------------
+// Ca chưa đóng của NGÀY TRƯỚC (ngày < hôm nay, giờ VN). Chỉ báo từ 06:00 để khỏi báo nhầm lúc học qua nửa đêm.
+// nowMin = phút hiện tại trong ngày; null (chế độ giả lập ngày) -> coi như đã qua 06:00.
+// action: 'close' = đóng được trong app (ca của hôm qua, tuần Đang diễn ra hoặc Tạm chốt);
+//         'sheet' = ca từ 2 ngày trước trở lên hoặc tuần Chốt hẳn -> Oriana sửa tay trong Sheet.
+export const STALE_FROM_MIN = 6 * 60;
+export function staleOpen(stats, nowMin, cfg = CONFIG) {
+  if (nowMin !== null && nowMin !== undefined && nowMin < STALE_FROM_MIN) return [];
+  return stats.openSessions
+    .filter(s => s.date < stats.today)
+    .sort((a, b) => a.date - b.date || (a.start % 1) - (b.start % 1))
+    .map(s => ({ session: s, status: weekStatus(weekNo(s.date, cfg), stats.today, cfg), action: closeAction(s, stats.today, cfg) }));
+}
+
+// Ca mở này đóng ở đâu (dùng chung cho thanh báo, thẻ "Ca đang mở" và danh sách ca ở tab Lịch):
+//   'close' = đóng trong app: ca của hôm nay, hoặc ca của hôm qua khi tuần đó Đang diễn ra / Tạm chốt;
+//   'sheet' = ca từ 2 ngày trước trở lên, hoặc tuần Chốt hẳn -> sửa tay trong Sheet (Oriana chọn, Phần A d);
+//   null    = không phải ca đang mở.
+export function closeAction(s, today, cfg = CONFIG) {
+  if (!s || !s.open) return null;
+  if (s.date === today) return 'close';
+  const status = weekStatus(weekNo(s.date, cfg), today, cfg);
+  return s.date === today - 1 && (status === WEEK_STATUS.CURRENT || status === WEEK_STATUS.PROVISIONAL) ? 'close' : 'sheet';
+}
+// Ô "Giờ kết thúc" khi đóng ca có điền sẵn giờ hiện tại không:
+//   ca hôm nay -> có; ca hôm qua mà chưa tới 06:00 (đang học qua đêm) -> có; còn lại để trống để Oriana tự điền giờ thật.
+export const closePrefillNow = (s, today, nowMin) =>
+  s.date === today || (s.date === today - 1 && nowMin !== null && nowMin !== undefined && nowMin < STALE_FROM_MIN);
+
+// Vòng tuần: phút tuần Đang diễn ra / mục tiêu tuần (1440). Vượt 100% -> vòng đầy (pct = 1), reached = true.
+// Số ngày có học hiện dạng chữ "x/6 ngày" (không vẽ vòng phụ, Oriana chọn ở Phần A).
+export function weekRing(stats, goal = UI.goalWeekMin, goalDays = UI.goalWeekDays) {
+  const w = stats.weeks.find(isCurrent) ?? stats.weeks.at(-1);
+  const min = w?.min ?? 0;
+  return { week: w?.week ?? null, min, goal, pct: Math.min(1, min / goal), reached: min >= goal, studyDays: w?.studyDays ?? 0, goalDays, daysElapsed: w?.daysElapsed ?? 0 };
+}
+
+// Vạch mốc "trung bình 4 tuần gần nhất": TB tổng phút của tối đa 4 tuần đã qua gần nhất (tính cả tuần Tạm chốt,
+// kèm cờ để giao diện ghi "tạm chốt"). Ít hơn 4 tuần -> dùng số tuần có, enough = false ("chưa đủ 4 tuần").
+export function avg4Marker(stats, n = 4) {
+  const base = weeklyAverage(stats, n);
+  if (!base) return null;
+  return { avgMin: base.avgMin, weeks: base.weeks, n: base.weeks.length, enough: base.weeks.length >= n, includesProvisional: base.includesProvisional };
+}

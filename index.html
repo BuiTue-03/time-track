@@ -37,12 +37,14 @@
       <h1 id="hello"></h1>
       <p id="today-line"></p>
     </div>
+    <!-- L5: thanh báo "ca chưa đóng" (ca mở của ngày trước, từ 06:00) -->
+    <div id="alert" class="alert" role="status" hidden></div>
     <div class="grid two">
       <div class="grid">
         <section class="card quote" aria-label="Câu khích lệ hôm nay">
-          <span class="tag">Câu của hôm nay</span>
-          <p class="jp" lang="ja" id="quote-jp"></p>
-          <p class="vi" id="quote-vi"></p>
+          <span class="tag" id="q-tag">Câu của hôm nay</span>
+          <div id="q-body"></div>
+          <div class="qbar"><button class="btn3d small ghost" type="button" id="q-other">Xem câu khác</button><button class="linkbtn" type="button" id="q-back" hidden>Về câu hôm nay</button></div>
           <button class="peek" type="button" id="peek" aria-label="Chạm để nhân vật nhảy"></button>
         </section>
         <div class="add-wrap"><button class="btn3d" type="button" id="add">＋ Thêm ca</button></div>
@@ -64,15 +66,20 @@
             <div class="cats" id="cats"></div>
           </div>
         </section>
-        <section class="card">
+        <section class="card" aria-label="Tuần này">
           <button class="week" type="button" id="week" aria-haspopup="dialog">
-            <span>
-              <h2>Tuần này</h2>
-              <span class="num" id="week-num"></span>
-              <span class="days" id="days" aria-hidden="true"></span>
+            <span class="wk">
+              <span class="wring" id="wring"></span>
+              <span class="wk-txt">
+                <h2>Tuần này</h2>
+                <span class="num" id="week-num"></span>
+                <span class="muted" id="week-days-txt"></span>
+                <span class="days" id="days" aria-hidden="true"></span>
+              </span>
+              <span class="chev" aria-hidden="true">›</span>
             </span>
-            <span class="chev" aria-hidden="true">›</span>
           </button>
+          <p class="muted wk-mark" id="week-mark"></p>
         </section>
       </div>
     </div>
@@ -134,8 +141,13 @@
           <ol class="rank" id="st-rank"></ol>
           <p class="foot" id="st-rank-foot"></p>
         </section>
-        <!-- CHỖ TRỐNG cho L5 (huy hiệu): chưa có logic -->
-        <section class="card soon"><h2>Thành tích <span class="later">L5</span></h2><div class="badges" id="st-badges"></div></section>
+        <!-- L5: huy hiệu mốc giờ tích lũy (src/badges.js) -->
+        <section class="card" aria-label="Thành tích">
+          <h2>Thành tích</h2>
+          <p class="muted" style="margin:0 0 12px">Tổng từ 21/10/2026: <b id="bd-total"></b> (chỉ ca đã đóng). Chạm huy hiệu để xem ngày đạt hoặc số giờ còn thiếu.</p>
+          <div class="badges5" id="st-badges"></div>
+          <div class="bd-next" id="bd-next"></div>
+        </section>
       </div>
     </div>
   </div>
@@ -157,6 +169,13 @@
           <div class="set-row"><span>Số liệu<br><span class="muted" id="updated"></span></span><button class="btn3d small ghost" type="button" id="reload">Tải lại</button></div>
         </section>
         <section class="card set">
+          <h2>Câu khích lệ và huy hiệu</h2>
+          <div class="set-row"><span id="sw-jp-label">Hiện tiếng Nhật gốc<br><span class="muted">Tắt thì chỉ hiện nghĩa tiếng Việt</span></span>
+            <button class="sw" type="button" role="switch" aria-checked="true" aria-labelledby="sw-jp-label" id="sw-jp"><span class="trk"><i></i></span></button></div>
+          <div class="set-row"><span>Danh sách câu<br><span class="muted" id="set-quotes">Đang tải…</span></span></div>
+          <div class="set-row"><span>Huy hiệu<br><span class="muted" id="set-badges">—</span></span></div>
+        </section>
+        <section class="card set">
           <h2>Mục tiêu</h2>
           <div class="set-row"><span>Mỗi ngày</span><b id="set-goal-day"></b></div>
           <div class="set-row"><span>Mỗi tuần</span><b id="set-goal-week"></b></div>
@@ -173,10 +192,6 @@
         <section class="card set soon">
           <h2>Chuỗi ngày học <span class="later">L6</span></h2>
           <div class="set-row"><span>Sửa chuỗi</span><b class="muted">—</b></div>
-        </section>
-        <section class="card set soon">
-          <h2>Câu khích lệ và huy hiệu <span class="later">L5</span></h2>
-          <div class="set-row"><span>Danh sách câu</span><b class="muted">—</b></div>
         </section>
         <section class="card set soon">
           <h2>Bấm giờ học <span class="later">L7</span></h2>
@@ -201,7 +216,7 @@
 </div>
 
 <nav class="tabs" aria-label="Các trang">
-  <button class="tab" type="button" data-page="today"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M5 1h1v1h1v1h1v1h1v1h1v1H9v4H6V7H5v3H2V6H1V5h1V4h1V3h1V2h1z"/></svg></span>Hôm nay</button>
+  <button class="tab" type="button" data-page="today"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M5 1h1v1h1v1h1v1h1v1h1v1H9v4H6V7H5v3H2V6H1V5h1V4h1V3h1V2h1z"/></svg><i class="ndot" id="ndot" hidden></i></span>Hôm nay<span class="sr" id="ndot-sr" hidden>, có ca chưa đóng</span></button>
   <button class="tab" type="button" data-page="cal"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M1 2h9v8H1zM2 4v5h7V4zM3 5h1v1H3zm2 0h1v1H5zm2 0h1v1H7zM3 7h1v1H3zm2 0h1v1H5zM3 1h1v2H3zm4 0h1v2H7z"/></svg></span>Lịch</button>
   <button class="tab" type="button" data-page="stats"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M1 6h2v4H1zm3-3h2v7H4zm3 2h2v5H7zM1 10h9v1H1z"/></svg></span>Thống kê</button>
   <button class="tab" type="button" data-page="settings"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M4 0h3v2h1l1-1 1 1-1 1v1h2v3H9v1l1 1-1 1-1-1H7v2H4V9H3l-1 1-1-1 1-1V7H0V4h2V3L1 2l1-1 1 1h1zm1 4v3h1V4z"/></svg></span>Cài đặt</button>
@@ -216,19 +231,20 @@
   <form id="ca-form" novalidate>
     <h2 id="f-title">Thêm ca học</h2>
     <div class="state-strip" id="f-strip"></div>
-    <label class="fld">Ngày <span class="hint" id="f-date-hint"></span>
+    <div class="close-info" id="f-close-info" hidden></div>
+    <label class="fld not-close">Ngày <span class="hint" id="f-date-hint"></span>
       <input type="text" id="f-date" inputmode="numeric" placeholder="dd/mm/yyyy" autocomplete="off" required></label>
     <div class="row2">
-      <label class="fld">Bắt đầu <span class="hint">(24 giờ)</span> <input type="text" id="f-start" inputmode="numeric" placeholder="hh:mm" autocomplete="off"></label>
-      <label class="fld">Kết thúc <span class="hint">(trống nếu chưa xong)</span> <input type="text" id="f-end" inputmode="numeric" placeholder="hh:mm" autocomplete="off"></label>
+      <label class="fld not-close">Bắt đầu <span class="hint">(24 giờ)</span> <input type="text" id="f-start" inputmode="numeric" placeholder="hh:mm" autocomplete="off"></label>
+      <label class="fld">Kết thúc <span class="hint" id="f-end-hint">(trống nếu chưa xong)</span> <input type="text" id="f-end" inputmode="numeric" placeholder="hh:mm" autocomplete="off"></label>
     </div>
     <p class="dur" id="f-dur"></p>
     <p class="why" id="f-time-why" hidden></p>
-    <label class="fld">Chủ đề <select id="f-topic"></select></label>
-    <label class="fld">Hoạt động <select id="f-activity"></select></label>
-    <label class="check"><input type="checkbox" id="f-offset"><span>Đây là ca ghi bù <span class="hint" id="f-offset-why"></span></span></label>
-    <label class="fld">Ghi chú (tùy chọn) <textarea id="f-note" rows="2"></textarea></label>
-    <p class="hint" id="f-note-preview"></p>
+    <label class="fld not-close">Chủ đề <select id="f-topic"></select></label>
+    <label class="fld not-close">Hoạt động <select id="f-activity"></select></label>
+    <label class="check not-close"><input type="checkbox" id="f-offset"><span>Đây là ca ghi bù <span class="hint" id="f-offset-why"></span></span></label>
+    <label class="fld not-close">Ghi chú (tùy chọn) <textarea id="f-note" rows="2"></textarea></label>
+    <p class="hint not-close" id="f-note-preview"></p>
     <ul class="errors" id="f-errors"></ul>
     <ul class="warnings" id="f-warnings"></ul>
     <div class="msg" id="ca-msg" hidden></div>

@@ -7,10 +7,10 @@ import { fmtHours, fmtH1, fmtH1Short, fmtHM, fmtDiff, fmtPct, fmtDayShort, fmtRa
 import { UI, catStyle } from './ui-config.js';
 import { esc, barChart, pairRows, W } from './ui-charts.js';
 import { chip } from './page-today.js';
+import { renderBadges } from './badges.js';
 
 const $ = id => document.getElementById(id);
 const SHORT = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-const MILESTONES = [10, 25, 50, 100, 150, 200, 300, 500, 750, 1000]; // CHỖ TRỐNG huy hiệu L5
 let model = null, rankTab = 'w';
 
 export function initStats() {
@@ -21,12 +21,12 @@ export function initStats() {
     $('st-rank-tabs').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
     renderRank();
   });
-  $('st-badges').innerHTML = MILESTONES.map(h => `<span class="badge" data-tip="Huy hiệu ${h} giờ · sẽ làm ở L5">${h}<br>giờ</span>`).join('');
 }
 
 export function renderStats(m) {
   model = m;
   const { stats } = m;
+  renderBadges(m); // L5: thẻ Thành tích
   $('totals').textContent = `Từ ${fmtDate(stats.weeks[0].start)} đến hôm nay: ${fmtHours(stats.totalMin)} · ${stats.rowsWithTime} ca · ${stats.studyDays} ngày có học`;
   renderCmpWeek(); renderPace(); renderMonth(); renderWeeks(); renderTrend(); renderCats();
   renderActs(); renderWeekday(); renderTod(); renderRank();
