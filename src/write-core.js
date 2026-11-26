@@ -1,9 +1,10 @@
 // write-core.js — Phần "thuần" của việc ghi Sheet (L4): dựng range, đổi dữ liệu form thành 1 dòng A:F,
 // so sánh ảnh chụp dòng, tìm dòng trống. Không gọi mạng -> test được bằng node --test.
 // sheets-write.js (phần gọi Google) BẮT BUỘC đi qua các hàm ở đây.
-import { LAST_FORMULA_ROW, SHEET_CA_HOC } from './config.js';
+import { LAST_FORMULA_ROW, SHEET_CA_HOC, SHEET_TICH_LUY, ACCRUAL_LAST_ROW } from './config.js';
 import { composeNote, fmtTime, minutesOf } from './rules.js';
 import { fmtDate } from './core.js';
+import { ACCRUAL_TAG_RE } from './rest.js';
 
 export const FIRST_DATA_ROW = 2;
 export const LOW_ROWS_WARNING = 50; // còn <= 50 dòng trống -> cảnh báo
@@ -134,4 +135,79 @@ export function buildFormatRequests(sheetId, rowIndex) {
       fields: 'userEnteredFormat.numberFormat', // chỉ định dạng số; giữ nguyên màu, viền, data validation, giá trị
     },
   }));
+}
+
+// ---------------------------------------------------------------------------------------------
+// L6 (Oriana duyệt Phần A, quyết định o/f, 26/11/2026). Ghi tab "Tích lũy": CHỈ cột A:B (ngày quy đổi, số ngày) và D (ghi chú)
+// của 1 dòng trong 2..60. Cột C ("Số tiền") là công thức = B × 'Cài đặt'!C6 có sẵn tới dòng 60 -> KHÔNG BAO GIỜ ghi C.
+// App không sửa, không xóa dòng Tích lũy (sửa tay trong Sheet).
+// ---------------------------------------------------------------------------------------------
+export const ACCRUAL_FIRST_ROW = 2;
+const ACC_PREFIX = `'${SHEET_TICH_LUY}'!`;
+function checkAccrualRow(n) {
+  if (!Number.isInteger(n)) throw err('RANGE', `Số dòng Tích lũy không hợp lệ: ${JSON.stringify(n)}`);
+  if (n < ACCRUAL_FIRST_ROW || n > ACCRUAL_LAST_ROW)
+    throw err('RANGE', `Dòng ${n} ngoài khoảng ${ACCRUAL_FIRST_ROW}..${ACCRUAL_LAST_ROW} của tab Tích lũy (công thức cột C chỉ tới dòng ${ACCRUAL_LAST_ROW}). Không ghi.`);
+}
+// HÀM DUY NHẤT dựng range ghi Tích lũy
+export function buildAccrualRanges(n) {
+  checkAccrualRow(n);
+  const r = { ab: `${ACC_PREFIX}A${n}:B${n}`, d: `${ACC_PREFIX}D${n}:D${n}` };
+  assertAccrualRange(r.ab); assertAccrualRange(r.d);
+  return r;
+}
+// Chốt chặn: chỉ nhận đúng 'Tích lũy'!A{n}:B{n} hoặc 'Tích lũy'!D{n}:D{n}, n trong 2..60
+export function assertAccrualRange(a1) {
+  if (typeof a1 !== 'string' || !a1.startsWith(ACC_PREFIX)) throw err('RANGE', `Range ghi phải thuộc tab "${SHEET_TICH_LUY}": ${a1}`);
+  const m = /^(?:A(\d+):B(\d+)|D(\d+):D(\d+))$/.exec(a1.slice(ACC_PREFIX.length));
+  if (!m) throw err('RANGE', `Range ghi Tích lũy chỉ được là A{n}:B{n} hoặc D{n}:D{n} (không chạm cột C): ${a1}`);
+  const [r1, r2] = m[1] ? [Number(m[1]), Number(m[2])] : [Number(m[3]), Number(m[4])];
+  if (r1 !== r2) throw err('RANGE', `Range ghi Tích lũy chỉ được 1 dòng: ${a1}`);
+  checkAccrualRow(r1);
+  return true;
+}
+// Dữ liệu quy đổi -> giá trị gửi (RAW). Ghi chú bắt buộc có nhãn tháng "[T11/2026 · mã]" (để chống ghi trùng và biết tháng).
+export function serializeAccrual({ date, days, note }) {
+  if (!Number.isInteger(date)) throw err('DATA', 'Ngày quy đổi phải là số nguyên (serial)');
+  if (!Number.isInteger(days) || days <= 0) throw err('DATA', 'Số ngày quy đổi phải là số nguyên dương');
+  if (typeof note !== 'string' || !ACCRUAL_TAG_RE.test(note)) throw err('DATA', 'Ghi chú phải bắt đầu bằng nhãn tháng [T{tháng}/{năm} · mã]');
+  return { ab: [date, days], d: [note] };
+}
+// Dòng trống đầu tiên của Tích lũy từ dữ liệu A2:D60 (phần tử 0 = dòng 2). Trống = A, B, D đều trống (cột C bỏ qua).
+export function findFirstEmptyAccrualRow(rowsFrom2, last = ACCRUAL_LAST_ROW) {
+  const total = last - ACCRUAL_FIRST_ROW + 1;
+  let first = -1, emptyLeft = 0;
+  for (let i = 0; i < total; i++) {
+    const r = rowsFrom2[i];
+    if (!r || [r[0], r[1], r[3]].every(empty)) { emptyLeft++; if (first === -1) first = i; }
+  }
+  if (first === -1) throw err('FULL', `Tab Tích lũy đã hết dòng có công thức (dòng ${ACCRUAL_FIRST_ROW}–${last} đều có dữ liệu). App KHÔNG tự nới giới hạn. Cần kéo công thức cột C xuống thêm trong Sheet trước.`);
+  const warning = emptyLeft <= 5 ? `Tab Tích lũy chỉ còn ${emptyLeft} dòng trống có công thức (tới dòng ${last}). Sắp phải kéo công thức cột C xuống thêm.` : null;
+  return { row: first + ACCRUAL_FIRST_ROW, emptyLeft, warning };
+}
+// Đọc lại sau khi ghi: A, B, D lệch -> LỖI; cột C chưa bằng B × tiền/ngày -> CẢNH BÁO (công thức chưa tính / bị sửa);
+// cột A không hiện dd/mm/yyyy -> CẢNH BÁO.
+export function verifyAccrualReadback(sent, rawRow, formattedA, money) {
+  const errors = [], warnings = [];
+  const want = [sent.ab[0], sent.ab[1], null, sent.d[0]];
+  [0, 1, 3].forEach(i => {
+    const a = want[i], b = rawRow?.[i];
+    const same = typeof a === 'number' && typeof b === 'number' ? Math.abs(a - b) < 5e-6 : a === b;
+    if (!same) errors.push(`Cột ${'ABCD'[i]}: đã gửi ${JSON.stringify(a)}, Sheet lưu ${JSON.stringify(empty(b) ? '' : b)}`);
+  });
+  const c = rawRow?.[2], cComputed = typeof c === 'number' && Math.abs(c - sent.ab[1] * money) < 0.5;
+  if (!cComputed) warnings.push(`Cột C (Số tiền) đọc được ${JSON.stringify(empty(c) ? '' : c)}, chưa bằng ${sent.ab[1]} × ${money}. Hãy mở Sheet xem công thức cột C của dòng này.`);
+  const shown = String(formattedA ?? '').trim();
+  if (shown !== fmtDate(sent.ab[0])) warnings.push(`Cột A: Sheet hiển thị "${shown}", app mong "${fmtDate(sent.ab[0])}" (giá trị vẫn đúng; có thể do định dạng ô).`);
+  return { ok: errors.length === 0, errors, warnings, cComputed };
+}
+// Định dạng ngày dd/MM/yyyy cho cột A của đúng 1 dòng Tích lũy (bài học dòng 168 ở L4.5)
+export function buildAccrualFormatRequests(sheetId, n) {
+  checkAccrualRow(n);
+  if (!Number.isInteger(sheetId) || sheetId < 0) throw err('RANGE', `sheetId không hợp lệ: ${JSON.stringify(sheetId)}`);
+  return [{ repeatCell: {
+    range: { sheetId, startRowIndex: n - 1, endRowIndex: n, startColumnIndex: 0, endColumnIndex: 1 },
+    cell: { userEnteredFormat: { numberFormat: { type: 'DATE', pattern: 'dd/MM/yyyy' } } },
+    fields: 'userEnteredFormat.numberFormat',
+  } }];
 }

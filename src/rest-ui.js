@@ -4,9 +4,9 @@
 // quá 8 giây: "chưa chắc đã lưu", phải đọc lại mới cho thử lại (không ghi trùng) -> đặt định dạng ngày cột A -> đọc lại đối chiếu.
 import { WEEK_STATUS, WEEKDAY_NAMES, weekday, weekNo, weekEnd, fmtDate, todaySerial } from './core.js';
 import { validateRow, weekStatusOfDate, parseDateInput, nowFraction } from './rules.js';
-import { canMarkRest, REST_TOPICS } from './rest.js';
-import { serializeRow, snapshotCompare, verifyReadback, isEmptyRow, findFirstEmptyRow } from './write-core.js';
-import { signIn, hasValidToken, readHeaders, readRange, readRowAF, writeRow, formatRow } from './sheets-write.js';
+import { canMarkRest, REST_TOPICS, parseAccrual, restSummary, conversionSuggestion, accrualTag, composeAccrualNote, randomCode, vnClock, fmtVnd } from './rest.js';
+import { serializeRow, snapshotCompare, verifyReadback, isEmptyRow, findFirstEmptyRow, serializeAccrual, findFirstEmptyAccrualRow, verifyAccrualReadback } from './write-core.js';
+import { signIn, hasValidToken, readHeaders, readRange, readRowAF, writeRow, formatRow, readAccrualRows, readAccrualRow, writeAccrualRow, formatAccrualRow } from './sheets-write.js';
 import { LAST_FORMULA_ROW } from './config.js';
 import { esc } from './ui-charts.js';
 import { mochiSvg, jump } from './mochi.js';
@@ -27,6 +27,14 @@ export function initRestUi(appApi) {
   $('mark-dlg').addEventListener('cancel', e => { if (busy) e.preventDefault(); }); // phím Esc khi đang gửi: không đóng
   $('mark-save').addEventListener('click', saveMark);
   $('mark-msg').addEventListener('click', e => { const b = e.target.closest('button[data-do]'); if (b) actions[b.dataset.do]?.(); });
+  // Quy đổi
+  $('st-minus').addEventListener('click', () => { if (!busy) { convN = Math.max(1, convN - 1); refreshConv(); } });
+  $('st-plus').addEventListener('click', () => { if (!busy && conv) { convN = Math.min(conv.days, convN + 1); refreshConv(); } });
+  $('conv-note').addEventListener('input', refreshConv);
+  $('conv-cancel').addEventListener('click', () => { if (!busy) $('conv-dlg').close(); });
+  $('conv-dlg').addEventListener('cancel', e => { if (busy) e.preventDefault(); });
+  $('conv-save').addEventListener('click', saveConv);
+  $('conv-msg').addEventListener('click', e => { const b = e.target.closest('button[data-do]'); if (b) actions[b.dataset.do]?.(); });
 }
 
 function showMsg(box, kind, text, buttons = []) {
@@ -97,6 +105,11 @@ function setBusy(b) {
   $('mark-save').disabled = b;
   $('mark-cancel').disabled = b;
   $('mark-save').textContent = b ? 'Đang gửi…' : 'Ghi ngày nghỉ';
+  $('conv-save').disabled = b || !!convPending;
+  $('conv-cancel').disabled = b;
+  $('conv-save').textContent = b ? 'Đang gửi…' : 'Ghi nhận';
+  $('st-minus').disabled = b || convN <= 1;
+  $('st-plus').disabled = b || !conv || convN >= conv.days;
 }
 
 async function saveMark() {
@@ -186,9 +199,124 @@ async function checkMark() {
   }
 }
 
+// =============================================================================================
+// 2. Quy đổi: ghi 1 dòng tab Tích lũy (A = ngày quy đổi, B = số ngày, D = "[T11/2026 · mã] ghi chú"); C do Sheet tự tính.
+//    Mã 4 ký tự tạo 1 lần khi mở hộp: lần thử lại sau "chưa chắc đã lưu" dùng lại mã đó -> nhận ra dòng đã ghi, không ghi trùng.
+//    App chỉ GHI NHẬN, không chuyển tiền.
+// =============================================================================================
+let conv = null, convN = 1, convCode = null, convPending = null; // convPending = { rowNumber, sent }
+export function openConv() {
+  if (busy) return;
+  const m = app.getModel();
+  conv = m.conv;
+  if (!conv) return;
+  convN = conv.days; convCode = randomCode(); convPending = null;
+  const S = m.l6.settings;
+  $('conv-sub').textContent = `Tháng ${conv.m}/${conv.y}: dùng ${S.restQuotaPerMonth - conv.unused}/${S.restQuotaPerMonth} ngày nghỉ, còn ${conv.unused} ngày chưa dùng${conv.convertedForMonth ? `, đã quy đổi ${conv.convertedForMonth}` : ''}. Tối đa ${conv.days} ngày.`;
+  $('conv-note').value = '';
+  showMsg($('conv-msg'), null);
+  setBusy(false);
+  refreshConv();
+  $('conv-dlg').showModal();
+}
+const convNote = () => composeAccrualNote(accrualTag(conv.y, conv.m, convCode), $('conv-note').value);
+function refreshConv() {
+  if (!conv) return;
+  const m = app.getModel(), money = m.l6.settings.moneyPerRestDay;
+  $('st-val').textContent = convN;
+  $('st-minus').disabled = busy || convN <= 1;
+  $('st-plus').disabled = busy || convN >= conv.days;
+  $('conv-confirm').innerHTML = `<b>Ghi nhận đã quy đổi ${convN} ngày nghỉ, ${fmtVnd(convN * money)}. App chỉ ghi nhận, không chuyển tiền.</b>
+    <span class="muted">Ghi 1 dòng vào tab Tích lũy: ngày ${fmtDate(today())}, ${convN} ngày, ghi chú "${esc(convNote())}" (cột Số tiền do Sheet tự tính). Số dư sau khi ghi: ${fmtBal(m.rest.balance - convN)} ngày.${conv.days - convN ? ` ${conv.days - convN} ngày còn lại vẫn giữ, cộng dồn.` : ''}</span>`;
+}
+
+async function saveConv() {
+  if (busy || convPending || !conv) return;
+  const box = $('conv-msg');
+  setBusy(true);
+  if (!(await ensureSignedIn(box))) { setBusy(false); refreshConv(); return; }
+  const m = app.getModel(), S = m.l6.settings, money = S.moneyPerRestDay;
+  let phase = 'read', rowNumber = null, sent = null;
+  try {
+    showMsg(box, 'info', 'Đang đọc lại tab Tích lũy rồi ghi… (đừng đóng app)');
+    sent = serializeAccrual({ date: today(), days: convN, note: convNote() });
+    // Đọc lại NGAY TRƯỚC KHI GHI và tính lại mức tối đa với dữ liệu mới nhất (chặn quy đổi trùng từ máy khác / lần trước)
+    const rows = await readAccrualRows();
+    const fresh = parseAccrual([['Ngày quy đổi', 'Số ngày', 'Số tiền', 'Ghi chú'], ...rows], 'values');
+    if (fresh.entries.some(e => e.tag === convCode)) throw err('DUP', 'Tab Tích lũy đã có dòng với cùng mã quy đổi này (lần gửi trước đã lưu). Không ghi thêm.');
+    const clock = vnClock();
+    const sug = conversionSuggestion(restSummary(m.sessions, fresh.entries, clock.today, S), clock.today, clock.nowMin, S);
+    if (!sug || sug.monthKey !== conv.monthKey || convN > sug.days)
+      throw err('STALE', sug && sug.monthKey === conv.monthKey
+        ? `Số liệu mới nhất trong Sheet chỉ cho quy đổi tối đa ${sug.days} ngày cho tháng ${conv.m}/${conv.y} (có thể vừa quy đổi ở máy khác). Chưa ghi gì.`
+        : `Theo số liệu mới nhất trong Sheet, tháng ${conv.m}/${conv.y} không còn ngày để quy đổi (có thể đã quy đổi ở máy khác). Chưa ghi gì.`);
+    const pick = findFirstEmptyAccrualRow(rows);
+    rowNumber = pick.row;
+    phase = 'write';
+    convPending = { rowNumber, sent };
+    await writeAccrualRow(rowNumber, sent);
+    phase = 'verify';
+    await finishConv(rowNumber, sent, money, pick.warning);
+  } catch (e) {
+    setBusy(false);
+    handleConvError(e, phase);
+    refreshConv();
+    $('conv-save').disabled = !!convPending; // "chưa chắc đã lưu": chỉ mở lại sau khi kiểm tra
+  }
+}
+async function finishConv(rowNumber, sent, money, lowWarning) {
+  let fmtWarning = null;
+  try { await formatAccrualRow(rowNumber); } catch (e) { fmtWarning = `Chưa đặt được định dạng ngày cho cột A dòng ${rowNumber} của tab Tích lũy (${e.message}).`; }
+  const back = await readAccrualRow(rowNumber);
+  const rv = verifyAccrualReadback(sent, back.raw, back.formattedA, money);
+  if (!rv.ok) throw err('READBACK', `Đã gửi lệnh ghi nhưng dòng ${rowNumber} của tab Tích lũy đọc lại không khớp: ${rv.errors.join('; ')}. Hãy mở Sheet kiểm tra dòng này.`);
+  convPending = null;
+  await app.reload();
+  const extra = [...rv.warnings, lowWarning, fmtWarning].filter(Boolean);
+  setBusy(false);
+  $('conv-dlg').close();
+  conv = null;
+  app.showResult(extra.length ? 'warn' : 'ok', `Đã ghi nhận quy đổi ${sent.ab[1]} ngày nghỉ (${fmtVnd(sent.ab[1] * money)}) vào dòng ${rowNumber} của tab Tích lũy${rv.cComputed ? ', cột Số tiền đã tự tính' : ''}. App chỉ ghi nhận, không chuyển tiền.` + (extra.length ? ' ' + extra.join(' ') : ''));
+}
+function handleConvError(e, phase) {
+  const box = $('conv-msg');
+  app.onSignin?.();
+  if (phase === 'write' && UNCERTAIN.includes(e.code))
+    return showMsg(box, 'warn', `Chưa chắc đã lưu: ${e.message}. App KHÔNG tự gửi lại. Bấm "Kiểm tra trong Sheet" để đọc lại dòng ${convPending.rowNumber} của tab Tích lũy trước khi thử lại (tránh ghi trùng).`, [['checkConv', 'Kiểm tra trong Sheet']]);
+  if (phase === 'verify' && e.code !== 'READBACK')
+    return showMsg(box, 'warn', `Lệnh ghi đã được Google nhận, nhưng bước đọc lại bị lỗi (${e.message}). Bấm "Kiểm tra trong Sheet".`, [['checkConv', 'Kiểm tra trong Sheet']]);
+  if (phase !== 'write' || AUTH.includes(e.code) || e.code === 'NOT_EMPTY') convPending = null;
+  if (AUTH.includes(e.code))
+    return showMsg(box, 'error', `Phiên đăng nhập Google đã hết hạn hoặc bị thu hồi. ${phase === 'write' ? 'Google từ chối lệnh ghi nên chưa ghi gì.' : 'Chưa ghi gì.'} Bấm "Đăng nhập lại", rồi bấm "Ghi nhận" lần nữa.`, [['signin', 'Đăng nhập lại']]);
+  if (e.code === 'NOT_EMPTY') return showMsg(box, 'error', `${e.message} (có thể vừa được ghi tay hoặc từ thiết bị khác). Chưa ghi gì. Bấm "Ghi nhận" lần nữa để app đọc lại và tìm dòng trống khác.`);
+  if (e.code === 'DUP' || e.code === 'STALE') return showMsg(box, 'error', e.message, [['reload', 'Tải lại dữ liệu']]);
+  if (['FULL', 'GUARD', 'RANGE', 'DATA', 'READBACK'].includes(e.code)) return showMsg(box, 'error', e.message);
+  if (UNCERTAIN.includes(e.code)) return showMsg(box, 'error', `Không liên lạc được Google trước khi ghi (${e.message}). Chưa ghi gì. Kiểm tra mạng rồi bấm lại.`);
+  return showMsg(box, 'error', `Google báo lỗi: ${e.message}. ${phase === 'write' ? 'Hãy bấm "Kiểm tra trong Sheet".' : 'Chưa ghi gì.'}`, phase === 'write' ? [['checkConv', 'Kiểm tra trong Sheet']] : []);
+}
+async function checkConv() {
+  if (!convPending || busy) return;
+  const box = $('conv-msg'), { rowNumber, sent } = convPending, money = app.getModel().l6.settings.moneyPerRestDay;
+  setBusy(true);
+  try {
+    const back = await readAccrualRow(rowNumber);
+    const r = back.raw;
+    if (r[0] === sent.ab[0] && r[1] === sent.ab[1] && r[3] === sent.d[0]) return await finishConv(rowNumber, sent, money, null); // đã lưu thật
+    convPending = null;
+    setBusy(false);
+    if ([r[0], r[1], r[3]].every(v => v === '' || v == null)) { refreshConv(); return showMsg(box, 'info', `Đã kiểm tra: dòng ${rowNumber} của tab Tích lũy vẫn trống, tức là CHƯA lưu. Có thể bấm "Ghi nhận" để thử lại.`); }
+    showMsg(box, 'error', `Đã kiểm tra: dòng ${rowNumber} của tab Tích lũy có dữ liệu khác (có thể vừa ghi tay). Chưa ghi quy đổi. Bấm "Tải lại dữ liệu" rồi xem lại.`, [['reload', 'Tải lại dữ liệu']]);
+  } catch (e) {
+    setBusy(false);
+    $('conv-save').disabled = true; // vẫn chưa biết đã lưu hay chưa
+    showMsg(box, 'error', `Chưa đọc lại được Sheet (${e.message}). Bấm "Kiểm tra trong Sheet" lần nữa khi có mạng.`, [['checkConv', 'Kiểm tra trong Sheet'], ...(AUTH.includes(e.code) ? [['signin', 'Đăng nhập lại']] : [])]);
+  }
+}
+
 const actions = {
   check: () => checkMark(),
+  checkConv: () => checkConv(),
   signin: async () => { try { await signIn(); app.onSignin?.(); showMsg(currentBox(), 'info', 'Đã đăng nhập lại. Bấm lại nút ghi.'); } catch (e) { showMsg(currentBox(), 'error', `Chưa đăng nhập được (${e.message}).`); } },
-  reload: async () => { markPending = null; if ($('mark-dlg').open) $('mark-dlg').close(); await app.reload(); },
+  reload: async () => { markPending = null; convPending = null; if ($('mark-dlg').open) $('mark-dlg').close(); if ($('conv-dlg').open) $('conv-dlg').close(); await app.reload(); },
 };
-const currentBox = () => $('mark-msg');
+const currentBox = () => ($('conv-dlg').open ? $('conv-msg') : $('mark-msg'));
