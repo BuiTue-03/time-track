@@ -8,7 +8,7 @@ import { parseSettings, parseAccrual, DEFAULT_SETTINGS } from './rest.js';
 import { SPREADSHEET_ID, REAL_SPREADSHEET_ID, ALLOW_WRITE_TO_REAL_SHEET } from './config.js';
 import { initForm, onModel, openAddCurrentWeek, openAddForDate, openFinish, formEnabled, getListWeek, setListWeek, refreshSignin, showResult } from './form.js';
 import { initRestUi, openMark, openConv, defaultMarkDate } from './rest-ui.js';
-import { initL6, computeL6, renderL6, renderCalMiss } from './l6-view.js';
+import { initL6, computeL6, renderL6, renderCalMiss, checkStreakCelebration } from './l6-view.js';
 import { vnClock } from './rest.js';
 import { initCal, renderCal, onWeek } from './page-cal.js';
 import { initToday, renderToday } from './page-today.js';
@@ -136,7 +136,10 @@ async function load() {
     setState('ready');
     render();
     onModel();
-    if (!USE_FIXTURE && !TODAY_OVERRIDE) checkCelebration(model); // L5: mốc huy hiệu mới -> ăn mừng 1 lần trên máy này
+    if (!USE_FIXTURE && !TODAY_OVERRIDE) {
+      const h = checkCelebration(model); // L5: mốc huy hiệu mới -> ăn mừng 1 lần trên máy này
+      checkStreakCelebration(model, h ? 3800 : 1200); // L6: mốc chuỗi mới; nếu vừa ăn mừng huy hiệu giờ thì chờ xong (3 giây)
+    }
   } catch (e) {
     setState('error', e.message);
   }

@@ -9,7 +9,9 @@ import { restSummary, conversionSuggestion, fmtVnd } from './rest.js';
 import { DAY, classifyDays, streaks, restReminder, missedToFix, STREAK_MILESTONES, streakMilestonesReached } from './streak.js';
 import { fmtHM, fmtDayShort } from './format.js';
 import { esc, MOON, COIN, FLAME, BOX } from './ui-charts.js';
-import { mochiSvg } from './mochi.js';
+import { mochiSvg, party } from './mochi.js';
+import { celebrationPlan } from './milestones.js';
+import { UI } from './ui-config.js';
 
 const $ = id => document.getElementById(id);
 
@@ -35,6 +37,12 @@ export function flameBadge(on) {
 }
 export const fmtBal = b => (b < 0 ? `−${Math.abs(b)}` : String(b));
 const dayLabel = d => `${WEEKDAY_NAMES[weekday(d)]} ${fmtDayShort(d)}`;
+// Câu nhắc nghỉ: dùng cả 3 câu, xoay vòng theo ngày (Oriana chốt 26/11/2026)
+export const REMIND = [
+  '7 ngày học liền rồi đó (˘ω˘) Mai nghỉ một ngày cũng được nha.',
+  'Chăm quá trời! Nhớ chừa một ngày cho mình thở nhé.',
+  'Học đều 7 ngày rồi. Nghỉ cũng là một phần của học đó (・ω・)',
+];
 export const KIND_TEXT = { [DAY.STUDY]: 'Ngày học', [DAY.REST]: 'Ngày nghỉ', [DAY.PENDING]: 'Chờ đóng ca', [DAY.NOT_YET]: 'Hôm nay chưa có ca', [DAY.MISSED]: 'Chưa có ca nào' };
 
 // ---------- Tính số liệu L6 cho model (gọi sau buildModel) ----------
@@ -114,6 +122,11 @@ export function renderL6(m) {
   }
 
 
+  // Thẻ nhắc nghỉ (≥ 7 ngày học liền), 3 câu xoay vòng theo ngày; tắt được ở Cài đặt
+  const showRemind = prefs.remind() && m.remind.show;
+  $('remind-card').hidden = !showRemind;
+  $('remind-card').innerHTML = showRemind ? `<span class="mo">${mochiSvg()}</span><div><p class="big">${esc(REMIND[t % REMIND.length])}</p><p class="muted">${m.remind.count} ngày học liền · tắt được ở Cài đặt</p></div>` : '';
+
   // Cài đặt
   $('set-bal').textContent = `${fmtBal(r.balance)} ngày`;
   $('set-conv').textContent = `${r.converted} ngày · ${fmtVnd(r.converted * S.moneyPerRestDay)}`;
@@ -173,3 +186,19 @@ export function renderCalMiss(week) {
     list.map(x => `<div class="drow"><div><span class="d">${dayLabel(x.date)}</span><p class="k">${KIND_TEXT[DAY.MISSED]}${x.offset ? ' · tuần tạm chốt, ghi vào có nhãn [OFFSET]' : ''}</p></div>${fixButtons(x.date, x.offset) || '<span></span>'}</div>`).join('');
 }
 
+
+// ---------- Ăn mừng mốc chuỗi (7/14/30/60/100 ngày, theo chuỗi DÀI NHẤT): 1 lần/mốc/máy ----------
+// Dùng chung celebrationPlan với huy hiệu giờ: lần đầu trên máy chỉ đánh dấu đã xem (không ăn mừng hồi tố);
+// "đã xem" chỉ thêm, không bớt -> chuỗi đứt rồi đạt lại mốc cũ không ăn mừng lần 2.
+const SEEN = 'tt-streak-seen';
+export function checkStreakCelebration(m, delayMs = 1200) {
+  let seen = null;
+  try { const v = JSON.parse(ls.get(SEEN)); seen = Array.isArray(v) ? v.filter(Number.isFinite) : null; } catch { seen = null; }
+  const plan = celebrationPlan(streakMilestonesReached(m.streak.longest), seen);
+  ls.set(SEEN, JSON.stringify(plan.seen));
+  if (!plan.celebrate.length) return null;
+  const x = plan.celebrate[0];
+  setTimeout(() => party([$('peek'), $('brand-mochi')],
+    `<span class="row"><span class="fl">${flameBadge(true)}</span>${mochiSvg()}</span><span>${x} ngày học liền rồi đó, ${esc(UI.name)}! <span class="nw">＼(＾▽＾)／</span></span><small>Mốc chuỗi mới · ${fmtDate(m.stats.today)}</small>`), delayMs);
+  return x;
+}
