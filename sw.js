@@ -4,6 +4,8 @@
 // Cách lấy file: mạng trước (luôn có bản mới khi online), mất mạng mới dùng bản đã lưu.
 // QUY TẮC (L5): mỗi lần phát hành phải đổi số phiên bản; mọi file mới trong src/, quotes.json, phông, hình phải có trong STATIC
 // (test/sw.test.mjs kiểm tra). Không bao giờ thêm số liệu Sheet vào đây.
+// L6: test/sw-stamp.test.mjs băm nội dung STATIC; đổi nội dung mà không đổi VERSION -> test hỏng. Sau khi đổi VERSION:
+// chạy `node tools/sw-stamp.mjs --write` để cập nhật dấu.
 const VERSION = 'tt-static-v3'; // v2 = L5, v3 = L6
 const STATIC = [
   './', './index.html', './styles.css', './manifest.webmanifest',
