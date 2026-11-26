@@ -173,31 +173,35 @@ function renderRank() {
   $('st-rank-foot').textContent = foot;
 }
 
-// 10. Xu hướng [DỰ ĐOÁN] (cách 1, Oriana chọn 26/11/2026): các tuần đã qua + 3 tuần tới theo trung bình 4 tuần gần nhất,
-// dải mờ = thấp nhất–cao nhất của 4 tuần đó. Không phải lời hứa: chỉ nói "nếu giữ nhịp như 4 tuần gần đây".
+// 10. Xu hướng [DỰ ĐOÁN] (cách 1, Oriana chọn 26/11/2026): các tuần đã qua + 3 tuần SAU tuần đang chạy theo TB 4 tuần gần nhất,
+// dải mờ = thấp nhất–cao nhất của 4 tuần đó. Tuần đang chạy KHÔNG dự đoán (Oriana chọn 26/11/2026, để không lệch với thẻ Nhịp tuần):
+// chỉ hiện chấm rỗng xám = số đã học tới nay, không nối vào đường. Không phải lời hứa: chỉ nói "nếu giữ nhịp như 4 tuần gần đây".
 function renderTrend() {
   const { stats } = model, el = $('st-trend'), t = trendAvg4(stats);
   const done = stats.weeks.filter(w => w.status !== WEEK_STATUS.CURRENT && w.status !== WEEK_STATUS.FUTURE);
   if (!t || done.length < 2) { el.innerHTML = '<p class="sub2">Cần ít nhất 2 tuần đã qua để vẽ xu hướng.</p>'; $('st-trend-foot').textContent = ''; return; }
-  const last = done.at(-1);
-  const pred = [1, 2, 3].map(k => ({ week: last.week + k, v: t.avgMin, lo: t.lo, hi: t.hi }));
-  const all = [...done.map(w => ({ week: w.week, v: w.min })), ...pred];
+  const cur = stats.weeks.find(w => w.status === WEEK_STATUS.CURRENT);
+  const base = cur ? cur.week : done.at(-1).week;
+  const pred = [1, 2, 3].map(k => ({ week: base + k, v: t.avgMin, lo: t.lo, hi: t.hi, kind: 'guess' }));
+  const all = [...done.map(w => ({ week: w.week, v: w.min, kind: 'done' })), ...(cur ? [{ week: cur.week, v: cur.min, kind: 'cur' }] : []), ...pred];
   const w = W(el), h = 220, m = { t: 20, r: 12, b: 40, l: 12 };
   const max = Math.max(1, ...all.map(p => p.hi ?? p.v)) * 1.1;
   const X = i => m.l + (i / (all.length - 1)) * (w - m.l - m.r), Y = v => m.t + (h - m.t - m.b) * (1 - v / max);
-  const li = done.length - 1;
-  let s = `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Xu hướng giờ học mỗi tuần, có phần dự đoán"><line class="grid-l" x1="${m.l}" x2="${w - m.r}" y1="${Y(0)}" y2="${Y(0)}"/>`;
-  s += `<path d="M${X(li)},${Y(last.min)} ${pred.map((p, k) => `L${X(li + 1 + k)},${Y(p.hi)}`).join(' ')} ${[...pred].reverse().map((p, k) => `L${X(li + pred.length - k)},${Y(p.lo)}`).join(' ')} Z" fill="var(--accent)" opacity=".28"/>`;
+  const p0 = all.length - pred.length; // chỉ số điểm dự đoán đầu tiên
+  let s = `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Xu hướng giờ học mỗi tuần, có phần dự đoán từ tuần sau"><line class="grid-l" x1="${m.l}" x2="${w - m.r}" y1="${Y(0)}" y2="${Y(0)}"/>`;
+  s += `<path d="M${pred.map((p, k) => `${X(p0 + k)},${Y(p.hi)}`).join(' L')} ${[...pred].reverse().map((p, k) => `L${X(all.length - 1 - k)},${Y(p.lo)}`).join(' ')} Z" fill="var(--accent)" opacity=".28"/>`;
   s += `<path d="M${done.map((d, i) => `${X(i)},${Y(d.min)}`).join(' L')}" fill="none" stroke="var(--a1)" stroke-width="3.5" stroke-linejoin="round"/>`;
-  s += `<path d="M${X(li)},${Y(last.min)} ${pred.map((p, k) => `L${X(li + 1 + k)},${Y(p.v)}`).join(' ')}" fill="none" stroke="var(--a1)" stroke-width="3" stroke-dasharray="7 6"/>`;
+  s += `<path d="M${pred.map((p, k) => `${X(p0 + k)},${Y(p.v)}`).join(' L')}" fill="none" stroke="var(--a1)" stroke-width="3" stroke-dasharray="7 6"/>`;
   all.forEach((p, i) => {
-    const guess = i > li, anchor = i === 0 ? 'start' : i === all.length - 1 ? 'end' : 'middle';
-    const tip = guess ? `Tuần ${p.week} · [DỰ ĐOÁN]\nkhoảng ${fmtH1(p.v)}\ndao động ${fmtH1(p.lo)}–${fmtH1(p.hi)} (thấp nhất–cao nhất của tuần ${t.baseWeeks.join(', ')})` : `Tuần ${p.week}: ${fmtHM(p.v)}`;
+    const anchor = i === 0 ? 'start' : i === all.length - 1 ? 'end' : 'middle';
+    const tip = p.kind === 'guess' ? `Tuần ${p.week} · [DỰ ĐOÁN]\nkhoảng ${fmtH1(p.v)}\ndao động ${fmtH1(p.lo)}–${fmtH1(p.hi)} (thấp nhất–cao nhất của tuần ${t.baseWeeks.join(', ')})`
+      : p.kind === 'cur' ? `Tuần ${p.week} (đang diễn ra): ${fmtHM(p.v)} tới nay\nDự báo cuối tuần xem ở thẻ Nhịp tuần` : `Tuần ${p.week}: ${fmtHM(p.v)}`;
+    const fill = p.kind === 'done' ? 'var(--a1)' : 'var(--surface)', stroke = p.kind === 'cur' ? 'var(--text-2)' : 'var(--a1)';
     s += `<g class="mk" tabindex="0" data-tip="${esc(tip)}"><rect class="hit" x="${X(i) - 22}" y="${m.t}" width="44" height="${h - m.t - m.b}"/>
-      <circle class="b" cx="${X(i)}" cy="${Y(p.v)}" r="${guess ? 5 : 6}" fill="${guess ? 'var(--surface)' : 'var(--a1)'}" stroke="var(--a1)" stroke-width="3"/>
+      <circle class="b" cx="${X(i)}" cy="${Y(p.v)}" r="${p.kind === 'done' ? 6 : 5}" fill="${fill}" stroke="${stroke}" stroke-width="3"/>
       <text class="v" x="${X(i)}" y="${Y(p.v) - 14}" text-anchor="${anchor}">${fmtH1Short(p.v)}</text></g>
       <text x="${X(i)}" y="${h - 12}" text-anchor="${anchor}">T${p.week}</text>`;
   });
   el.innerHTML = s + `</svg>`;
-  $('st-trend-foot').textContent = `Nếu giữ nhịp trung bình 4 tuần gần nhất (tuần ${t.baseWeeks.join(', ')}): khoảng ${fmtH1(t.avgMin)} mỗi tuần. Nét đứt và dải mờ là dự đoán.`;
+  $('st-trend-foot').textContent = `Từ tuần ${base + 1}, nếu giữ nhịp trung bình 4 tuần gần nhất (tuần ${t.baseWeeks.join(', ')}): khoảng ${fmtH1(t.avgMin)} mỗi tuần. Nét đứt và dải mờ là dự đoán; chấm rỗng màu xám là tuần đang diễn ra (số tới nay).`;
 }
