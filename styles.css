@@ -397,3 +397,9 @@ details.issues ul { margin: 6px 0 10px; padding-left: 20px; }
 .linkbtn { border: 0; background: none; color: var(--accent-text); font: inherit; font-weight: 700; min-height: 44px; padding: 0 4px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .quote details.by summary { list-style: none; display: inline-flex; align-items: center; }
 .quote details.by summary::-webkit-details-marker { display: none; }
+/* Công tắc thật (Cài đặt): vùng chạm 64×48 */
+.sw { width: 64px; height: 48px; flex: none; border: 0; background: none; cursor: pointer; padding: 0; display: grid; place-items: center; }
+.sw .trk { position: relative; width: 56px; height: 34px; border-radius: 99px; border: 2px solid var(--text-2); background: var(--surface-2); }
+.sw i { position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--text-2); transition: transform .2s; }
+.sw[aria-checked="true"] .trk { background: var(--accent-edge); border-color: var(--accent-edge); }
+.sw[aria-checked="true"] i { transform: translateX(22px); background: #FFFFFF; }

@@ -13,8 +13,9 @@ import { initShell, setScreen, seg, applyTheme, getTheme, showPage, currentPage 
 import { initStats, renderStats } from './page-stats.js';
 import { mochiSvg, jump } from './mochi.js';
 import { UI } from './ui-config.js';
-import { checkCelebration } from './badges.js';
-import { initQuoteCard } from './quote-card.js';
+import { checkCelebration, renderBadges } from './badges.js';
+import { initQuoteCard, getShowJapanese, setShowJapanese } from './quote-card.js';
+import { eligible } from './quotes.js';
 
 const TIMEOUT_MS = 8000;
 const params = new URLSearchParams(location.search);
@@ -108,6 +109,7 @@ function render() {
   $('notice').textContent = [model.label && `Đang xem ${model.label}.`, TODAY_OVERRIDE && `Đang giả lập hôm nay = ${fmtDate(t)}.`].filter(Boolean).join(' ');
 
   if (currentPage() === 'stats') renderStats(model);
+  else renderBadges(model); // L5: số huy hiệu ở Cài đặt luôn đúng (thẻ Thành tích vẽ sẵn, ẩn)
 
   renderCal(model);
 }
@@ -119,7 +121,14 @@ $('state-add').addEventListener('click', () => openAddCurrentWeek());
 let rt;
 window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => model && screen === 'ok' && render(), 150); });
 initStats();
-initQuoteCard();
+// L5 Cài đặt: công tắc "Hiện tiếng Nhật gốc" + số câu dùng hằng ngày
+$('sw-jp').setAttribute('aria-checked', String(getShowJapanese()));
+$('sw-jp').addEventListener('click', () => { const on = !getShowJapanese(); $('sw-jp').setAttribute('aria-checked', String(on)); setShowJapanese(on); });
+initQuoteCard().then(q => {
+  if (!q) { $('set-quotes').textContent = 'Chưa tải được quotes.json (đang dùng câu dự phòng).'; return; }
+  const used = ['co_gang', 'nghi_ngoi', 'khong_nhu_y'].reduce((a, g) => a + eligible(q, g).length, 0);
+  $('set-quotes').textContent = `${used} câu dùng hằng ngày (bỏ ${q.length - used} câu chưa đủ nguồn) · mỗi ngày 1 câu`;
+});
 initCal({ getWeek: getListWeek, setWeek: setListWeek });
 initToday({
   onAdd: () => { showPage('cal'); openAddCurrentWeek(); },
