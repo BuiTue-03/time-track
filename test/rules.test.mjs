@@ -198,12 +198,13 @@ test('sửa ở tuần Đang diễn ra: đổi giờ được, đổi ngày tron
   assert.deepEqual(checkEdit(asInput(o, { start: H(7), end: H(10) }), o, TODAY), []);
   assert.ok(checkEdit(asInput(o, { date: TUE_PREV }), o, TODAY).some(e => e.includes('tuần khác')));
 });
-test('Q6c: "Kết thúc ca" (điền giờ kết thúc cho ca mở) ở Đang diễn ra được; ca mở cũ ở Tạm chốt chỉ sửa chủ đề', () => {
+test('Q6c + L5 (Phần A e): "Kết thúc ca" ở Đang diễn ra được; ca mở cũ ở Tạm chốt đóng được nhưng chỉ điền giờ kết thúc', () => {
   const open = orig({ date: TODAY, end: null });
   ok(validateRow(asInput(open, { end: H(10) }), ctx({ mode: 'edit', original: open })));
   const oldOpen = orig({ end: null });
   ok(validateRow(asInput(oldOpen, { activity: 'Lý thuyết' }), ctx({ mode: 'edit', original: oldOpen })));
-  assert.ok(validateRow(asInput(oldOpen, { end: H(10) }), ctx({ mode: 'edit', original: oldOpen })).errors.length);
+  ok(validateRow(asInput(oldOpen, { end: H(10) }), ctx({ mode: 'edit', original: oldOpen })));            // L5: đóng được
+  assert.ok(validateRow(asInput(oldOpen, { end: H(10), activity: 'Lý thuyết' }), ctx({ mode: 'edit', original: oldOpen })).errors.length); // đóng + sửa: chặn
 });
 test('sửa ở Chốt hẳn: chặn kể cả chỉ đổi ghi chú', () => {
   const o = orig({ date: FINAL_DAY });

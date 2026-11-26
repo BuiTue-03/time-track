@@ -5,6 +5,8 @@
 //   - Nhãn ghi bù = "[OFFSET]" ở đầu cột F (Ghi chú). Khi sửa ca không được thêm/bỏ nhãn.
 //   - Chặn ngày/giờ tương lai; ca trùng giờ chỉ cảnh báo; ca qua đêm cho phép, cảnh báo nếu > 10 tiếng.
 //   - Ca chưa có giờ kết thúc (ca đang mở) chỉ lưu được ở tuần Đang diễn ra.
+//   - L5 (Oriana duyệt Phần A e, 26/11/2026): ĐÓNG ca mở (chỉ điền giờ kết thúc vào dòng có sẵn) được cả ở tuần
+//     Tạm chốt; ở Tạm chốt không được sửa trường khác cùng lúc. Chốt hẳn: chặn như cũ.
 import {
   CONFIG, WEEK_STATUS, ACTIVITIES, BUSY_TOPIC, weekNo, weekStatus, fmtDate, durationMin,
   serialFromYMD, ymdFromSerial,
@@ -44,18 +46,19 @@ export function weekStatusOfDate(dateSerial, todaySerial, cfg = CONFIG) {
 //   canEdit    : mở form sửa được không (ít nhất 1 trường)
 //   canEditTime: sửa được ngày / giờ bắt đầu / giờ kết thúc
 //   canDelete  : xóa được
+//   canClose   : đóng ca mở = chỉ điền giờ kết thúc cho dòng có sẵn (L5)
 // Tuần Tạm chốt phân biệt ca thường (normal) và ca ghi bù (offset).
 // ---------------------------------------------------------------------------------------------
-const NO = { canAdd: false, canAddBu: false, canEdit: false, canEditTime: false, canDelete: false };
+const NO = { canAdd: false, canAddBu: false, canEdit: false, canEditTime: false, canDelete: false, canClose: false };
 export const MSG_FINAL = 'Tuần này đã chốt hẳn. Muốn sửa, hãy sửa trực tiếp trên Sheet.';
 export const PERMISSIONS = {
   [WEEK_STATUS.CURRENT]: {
-    normal: { canAdd: true, canAddBu: true, canEdit: true, canEditTime: true, canDelete: true },
-    offset: { canAdd: true, canAddBu: true, canEdit: true, canEditTime: true, canDelete: true },
+    normal: { canAdd: true, canAddBu: true, canEdit: true, canEditTime: true, canDelete: true, canClose: true },
+    offset: { canAdd: true, canAddBu: true, canEdit: true, canEditTime: true, canDelete: true, canClose: true },
   },
   [WEEK_STATUS.PROVISIONAL]: {
-    normal: { canAdd: false, canAddBu: true, canEdit: true, canEditTime: false, canDelete: false },
-    offset: { canAdd: false, canAddBu: true, canEdit: true, canEditTime: true, canDelete: true },
+    normal: { canAdd: false, canAddBu: true, canEdit: true, canEditTime: false, canDelete: false, canClose: true },
+    offset: { canAdd: false, canAddBu: true, canEdit: true, canEditTime: true, canDelete: true, canClose: true },
   },
   [WEEK_STATUS.FINAL]: { normal: NO, offset: NO },
   [WEEK_STATUS.FUTURE]: { normal: NO, offset: NO },
@@ -227,12 +230,23 @@ export function checkEdit(input, original, today, cfg = CONFIG) {
   if (!!input.isOffset !== wasOffset)
     errors.push(wasOffset ? 'Không bỏ được nhãn ca ghi bù khi sửa.' : 'Không thêm được nhãn ca ghi bù khi sửa. Muốn ghi bù, hãy thêm ca mới.');
   if (!sameTimes(input, original)) {
-    if (!p.canEditTime) errors.push(p.reasons.canEditTime);
+    if (!p.canEditTime && p.canClose && isClosing(input, original)) {
+      // Đóng ca ở tuần Tạm chốt: chỉ được điền giờ kết thúc, mọi trường khác giữ nguyên
+      if (!onlyEndFilled(input, original)) errors.push(MSG_CLOSE_ONLY);
+    } else if (!p.canEditTime) errors.push(p.reasons.canEditTime);
     else if (weekNo(input.date, cfg) !== weekNo(original.date, cfg))
       errors.push('Không đổi được ngày của ca sang tuần khác.');
   }
   return errors;
 }
+
+// Đóng ca = dòng gốc chưa có giờ kết thúc, bản sửa có giờ kết thúc
+export const MSG_CLOSE_ONLY = 'Tuần này đang tạm chốt: khi đóng ca chỉ điền giờ kết thúc, không sửa ngày, giờ bắt đầu, chủ đề, hoạt động hay ghi chú cùng lúc.';
+const isClosing = (input, original) => (original.end ?? null) === null && typeof input.end === 'number';
+const onlyEndFilled = (input, original) =>
+  input.date === original.date && eqT(input.start, original.start) && (input.topic ?? '') === (original.topic ?? '') &&
+  (input.activity ?? '') === (original.activity ?? '') && (input.noteText ?? '') === splitNote(original.note).text &&
+  !!input.isOffset === isOffsetNote(original.note);
 
 // Ca nào trùng giờ với input (khoảng [bắt đầu, kết thúc) tuyệt đối; ca mở coi như kéo tới hết ngày)
 export function overlaps(input, sessions, skipRow) {
