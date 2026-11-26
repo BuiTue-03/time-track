@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="vi">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>time-track bản mẫu L5</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="../styles.css">
+<style>
+/* ============================================================
+   BẢN MẪU L5 (vòng 1) — Dữ liệu GIẢ, không đọc/ghi Google Sheet.
+   Dùng lại styles.css của app thật (màu, phông, thẻ, nút) + vài quy tắc mới ở dưới.
+   Câu khích lệ lấy THẬT từ quotes.json bằng src/quotes.js (cách chọn câu sẽ dùng trong app).
+   ============================================================ */
+/* Phông M PLUS Rounded 1c cắt lại: thêm chữ Hán của 120 câu (cùng phông, OFL 1.1) */
+@font-face { font-family: "MPR Bold"; src: url(fonts-l5/mplus-rounded-1c-bold.woff2) format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "MPR"; src: url(fonts-l5/mplus-rounded-1c-regular.woff2) format("woff2"); font-weight: 400; font-display: swap; }
+:root { --proto-bg: #E9ECF5; --badge-lock: #EEF1F8; --gold: #F2C14E; --gold-edge: #A8770C; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --proto-bg: #0D0F15; --badge-lock: #272B3B; --gold: #F2C14E; --gold-edge: #C9932A; } }
+:root[data-theme="dark"] { --proto-bg: #0D0F15; --badge-lock: #272B3B; --gold: #F2C14E; --gold-edge: #C9932A; }
+
+/* Thanh điều khiển bản mẫu (không có trong app thật) */
+.proto { background: var(--proto-bg); border-bottom: 1px solid var(--border); padding-block: 4px 10px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.proto summary { max-width: 1180px; margin: 0 auto; cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 6px; color: var(--text-2); }
+.proto b { color: var(--text); }
+.proto-in { max-width: 1180px; margin: 8px auto 0; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; color: var(--text-2); }
+.proto-in > span { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
+/* 1. Thanh cảnh báo "ca chưa đóng" (trên cùng trang Hôm nay) */
+.alert { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; background: var(--prov-bg); box-shadow: inset 4px 0 0 var(--prov-line);
+  border-radius: 16px; padding: 12px 14px 12px 18px; margin: 0 0 16px; }
+.alert .kao { font-weight: 800; white-space: nowrap; }
+.alert .txt { flex: 1; min-width: 200px; margin: 0; }
+.alert .txt b { display: block; }
+.tab .ico { position: relative; }
+.tab .ndot { position: absolute; top: 2px; right: 6px; width: 12px; height: 12px; border-radius: 50%; background: var(--prov-line); border: 2px solid var(--surface); }
+
+/* 2. Thẻ câu khích lệ: nhiều loại */
+.quote .jp { font-size: 30px; }
+.quote .vi.only { font-size: 20px; font-family: var(--f-head); line-height: 1.5; }
+.quote .by { margin: 8px 0 0; color: var(--text-2); position: relative; z-index: 1; padding-right: 72px; }
+.quote .note { margin: 8px 0 0; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); position: relative; z-index: 1; margin-right: 72px; }
+.quote .qbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 14px; position: relative; z-index: 1; padding-right: 84px; }
+.quote .grp { color: var(--text-2); }
+.linkbtn { border: 0; background: none; color: var(--accent-text); font-weight: 700; min-height: 44px; padding: 0 4px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
+/* 3. Vòng tuần + vạch mốc (trong thẻ "Tuần này") */
+.wk { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; width: 100%; }
+.wring { position: relative; width: 112px; height: 112px; }
+.wring svg { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+.wring .track { stroke: var(--surface-2); }
+.wring .bar { stroke: var(--ring); transition: stroke-dashoffset 1s cubic-bezier(.3, 1.3, .5, 1); }
+.wring .mark { stroke: var(--text); stroke-width: 4; stroke-linecap: round; }
+.wring .mid { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; font-family: var(--f-head); font-size: 18px; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.wk-txt { min-width: 0; }
+.wk-txt p { margin: 2px 0 0; }
+.wk-txt .num { font-family: var(--f-head); font-size: 26px; font-variant-numeric: tabular-nums; display: block; }
+.wk-txt .num .of { font-size: 17px; color: var(--text-2); white-space: nowrap; }
+.wk .days { margin-top: 8px; }
+.legend-mark { display: inline-block; width: 4px; height: 16px; background: var(--text); border-radius: 2px; vertical-align: -2px; margin-right: 6px; }
+
+/* 4. Huy hiệu pixel (Thống kê → Thành tích) */
+.badges5 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.bdg { border: 0; background: none; padding: 6px 0 4px; border-radius: 14px; cursor: pointer; color: var(--text); display: grid; justify-items: center; gap: 2px; min-height: 44px; }
+.bdg svg { width: 100%; max-width: 56px; height: auto; display: block; }
+.bdg b { font-family: var(--f-head); font-size: 17px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.bdg span { color: var(--text-2); line-height: 1.1; }
+.bdg.lock b { color: var(--text-2); }
+.bdg.new svg { animation: shine 1.2s ease-in-out 2; }
+@keyframes shine { 50% { transform: translateY(-6px) scale(1.06); } }
+.next { margin: 14px 0 0; display: grid; gap: 6px; }
+.next .bar { height: 14px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.next .bar i { display: block; height: 100%; background: var(--accent-edge); border-radius: 99px; }
+.next .row { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+
+/* 5. Ăn mừng huy hiệu: dùng khung .party của app, thêm huy hiệu ở giữa */
+.party .say .bdg-big svg { width: 64px; height: 78px; }
+.party .say { flex-direction: column; text-align: center; gap: 6px; }
+.party .say .row { display: flex; align-items: center; gap: 10px; }
+.party .say small { font-family: var(--f-body); font-size: 17px; color: var(--text-2); }
+
+/* 6. Đóng ca: tấm trượt */
+.close-info { background: var(--surface-2); border-radius: 14px; padding: 10px 14px; margin: 10px 0 0; display: grid; gap: 4px; }
+.close-info .t { font-family: var(--f-head); font-size: 18px; }
+.close-sum { margin: 10px 0 0; font-weight: 700; color: var(--accent-text); }
+.close-sum.bad { color: var(--err); }
+
+/* 7. Công tắc thật (Cài đặt) */
+.sw { width: 64px; height: 48px; flex: none; border: 0; background: none; cursor: pointer; padding: 0; display: grid; place-items: center; }
+.sw .trk { position: relative; width: 56px; height: 34px; border-radius: 99px; border: 2px solid var(--text-2); background: var(--surface-2); }
+.sw i { position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--text-2); transition: transform .2s; }
+.sw[aria-checked="true"] .trk { background: var(--accent-edge); border-color: var(--accent-edge); }
+.sw[aria-checked="true"] i { transform: translateX(22px); background: #FFFFFF; }
+.sw-wrap { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+</style>
+
+<details class="proto" id="proto" open>
+  <summary><b>Bản mẫu L5 · dữ liệu giả</b> · chạm để đổi tình huống</summary>
+  <div class="proto-in">
+    <span>Giao diện <span class="seg" id="p-theme"><button data-v="auto">Theo máy</button><button data-v="light">Sáng</button><button data-v="dark">Tối</button></span></span>
+    <span>Ca chưa đóng <span class="seg" id="p-stale"><button data-v="none">Không có</button><button data-v="yday">Của hôm qua</button><button data-v="prov">Tối thứ Ba (tạm chốt)</button><button data-v="final">Tuần chốt hẳn</button></span></span>
+    <span>Tuần này <span class="seg" id="p-week"><button data-v="960">16 giờ</button><button data-v="1530">25,5 giờ (đạt)</button></span></span>
+    <span>Câu <span class="seg" id="p-quote"><button data-v="day">Câu của hôm nay</button><button data-v="ja">Tiếng Nhật</button><button data-v="src">Có nguồn</button><button data-v="rest">Nghỉ ngơi</button></span></span>
+    <span>Câu đang hiện: <b id="q-id"></b></span><span>Thử <button class="btn3d small ghost" type="button" id="p-party-badge">Ăn mừng huy hiệu 150 giờ</button><button class="btn3d small ghost" type="button" id="p-party-week">Ăn mừng đủ mục tiêu tuần</button></span>
+  </div>
+</details>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><span id="brand-mochi"></span>time-track</div>
+    <div class="stats">
+      <button class="pill" type="button" aria-label="Chuỗi ngày học, sắp có (L6)"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M5 0h1v1h1v1h1v2h1v4h-1v1h-1v1H4V9H3V8H2V5h1V4h1V2h1z"/></svg>—</button>
+      <button class="pill" type="button" aria-label="Kho ngày nghỉ, sắp có (L6)"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M1 4h9v6H1zM2 2h7v2H2zM5 2h1v8H5z" opacity=".9"/></svg>—</button>
+    </div>
+  </header>
+
+  <!-- ===== Hôm nay ===== -->
+  <div id="pg-today" class="page">
+    <div class="hello"><h1>Chào Oriana ヾ(＾∇＾)</h1><p>Thứ Năm, 26/11/2026 · tuần 6</p></div>
+    <div id="alert" class="alert" role="status" hidden></div>
+    <div class="grid two">
+      <div class="grid">
+        <section class="card quote" aria-label="Câu khích lệ hôm nay" id="quote">
+          <span class="tag" id="q-tag">Câu của hôm nay</span>
+          <div id="q-body"></div>
+          <div class="qbar"><button class="btn3d small ghost" type="button" id="q-other">Xem câu khác</button><button class="linkbtn" type="button" id="q-back" hidden>Về câu hôm nay</button></div>
+          <button class="peek" type="button" id="peek" aria-label="Chạm để nhân vật nhảy"></button>
+        </section>
+        <div class="add-wrap"><button class="btn3d" type="button">＋ Thêm ca</button></div>
+        <section class="card open" aria-label="Ca đang mở">
+          <h2><span class="dot"></span>Ca đang mở</h2>
+          <div class="open-row"><div><p class="time">từ 12:40 · 48 phút</p><span class="chip c-ba">(•ω•) BA - Thực hành làm ứng dụng cá nhân</span>
+            <p class="muted">Phút đang chạy chưa cộng vào tổng, vòng và huy hiệu.</p></div>
+            <button class="btn3d small" type="button">Kết thúc ca</button></div>
+        </section>
+      </div>
+      <div class="grid">
+        <section class="card ring-card" aria-label="Tiến độ hôm nay">
+          <div class="ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="50" fill="none" stroke-width="14"/>
+            <circle class="bar" cx="60" cy="60" r="50" fill="none" stroke-width="14" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="138.2"/></svg>
+            <span class="mid"><b>2 giờ<br>14 phút</b><span>trên 4 giờ</span></span></div>
+          <div class="ring-side"><h2>Hôm nay</h2><p class="muted">Đang học đều tay nè (＾▽＾)</p></div>
+        </section>
+        <section class="card" aria-label="Tuần này">
+          <button class="week" type="button">
+            <span class="wk">
+              <span class="wring" id="wring"></span>
+              <span class="wk-txt">
+                <h2>Tuần này</h2>
+                <span class="num" id="wk-num"></span>
+                <p class="muted" id="wk-days"></p>
+                <span class="days" id="wk-cells" aria-hidden="true"></span>
+              </span>
+              <span class="chev" aria-hidden="true">›</span>
+            </span>
+          </button>
+          <p class="muted" id="wk-mark" style="margin:12px 0 0"></p>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Thống kê (chỉ thẻ mới của L5) ===== -->
+  <div id="pg-stats" class="page" hidden>
+    <div class="hello"><h1>Thống kê</h1><p class="muted">Bản mẫu chỉ có thẻ Thành tích mới; các thẻ khác giữ nguyên như app hiện tại.</p></div>
+    <div class="grid two">
+      <section class="card" aria-label="Thành tích">
+        <h2>Thành tích</h2>
+        <p class="muted" style="margin:0 0 12px">Tổng từ 21/10/2026: <b id="tot"></b> (chỉ ca đã đóng)</p>
+        <div class="badges5" id="badges"></div>
+        <div class="next" id="next"></div>
+      </section>
+      <section class="card" aria-label="Huy hiệu là gì">
+        <h2>Huy hiệu đạt khi nào</h2>
+        <p style="margin:0">Mỗi mốc giờ tích lũy có 1 huy hiệu: 10, 25, 50, 100, 150, 200, 300, 500, 750 và 1000 giờ. Ngày đạt mốc tính lại từ dữ liệu mỗi lần tải, nên sửa hoặc xóa ca thì ngày đạt mốc đổi theo.</p>
+        <p class="muted" style="margin:10px 0 0">Chạm vào một huy hiệu để xem ngày đạt hoặc số giờ còn thiếu.</p>
+      </section>
+    </div>
+  </div>
+
+  <!-- ===== Cài đặt (chỉ phần L5) ===== -->
+  <div id="pg-settings" class="page" hidden>
+    <div class="hello"><h1>Cài đặt</h1></div>
+    <div class="grid two">
+      <section class="card set">
+        <h2>Câu khích lệ và huy hiệu</h2>
+        <div class="set-row"><span id="sw-label">Hiện tiếng Nhật gốc<br><span class="muted">Tắt thì chỉ hiện nghĩa tiếng Việt</span></span>
+          <button class="sw" type="button" role="switch" aria-checked="true" aria-labelledby="sw-label" id="sw-jp"><span class="trk"><i></i></span></button></div>
+        <div class="set-row"><span>Danh sách câu<br><span class="muted" id="set-quotes"></span></span></div>
+        <div class="set-row"><span>Huy hiệu<br><span class="muted" id="set-badges"></span></span></div>
+      </section>
+      <section class="card set">
+        <h2>Mục tiêu</h2>
+        <div class="set-row"><span>Mỗi ngày</span><b>4 giờ</b></div>
+        <div class="set-row"><span>Mỗi tuần</span><b>6 ngày · 24 giờ</b></div>
+        <div class="set-row"><span class="muted">Mục tiêu chỉ dùng để vẽ vòng tiến độ.</span></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<nav class="tabs" aria-label="Các trang">
+  <button class="tab" type="button" data-page="today" aria-current="page"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M5 1h1v1h1v1h1v1h1v1h1v1H9v4H6V7H5v3H2V6H1V5h1V4h1V3h1V2h1z"/></svg><i class="ndot" id="ndot" hidden></i></span>Hôm nay</button>
+  <button class="tab" type="button" data-page="cal" disabled><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M1 2h9v8H1zM2 4v5h7V4zM3 5h1v1H3zm2 0h1v1H5zm2 0h1v1H7zM3 7h1v1H3zm2 0h1v1H5zM3 1h1v2H3zm4 0h1v2H7z"/></svg></span>Lịch</button>
+  <button class="tab" type="button" data-page="stats"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M1 6h2v4H1zm3-3h2v7H4zm3 2h2v5H7zM1 10h9v1H1z"/></svg></span>Thống kê</button>
+  <button class="tab" type="button" data-page="settings"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M4 0h3v2h1l1-1 1 1-1 1v1h2v3H9v1l1 1-1 1-1-1H7v2H4V9H3l-1 1-1-1 1-1V7H0V4h2V3L1 2l1-1 1 1h1zm1 4v3h1V4z"/></svg></span>Cài đặt</button>
+</nav>
+
+<!-- Tấm đóng ca -->
+<dialog class="sheet" id="close-dlg" aria-labelledby="close-title">
+  <h2 id="close-title">Đóng ca</h2>
+  <div class="close-info" id="close-info"></div>
+  <label class="fld" for="close-end">Giờ kết thúc <span class="hint">hh:mm, 24 giờ. Nhỏ hơn giờ bắt đầu thì tính sang hôm sau.</span>
+    <input id="close-end" inputmode="numeric" autocomplete="off" placeholder="ví dụ 23:10"></label>
+  <p class="close-sum" id="close-sum" aria-live="polite"></p>
+  <p class="muted" id="close-rule" style="margin:8px 0 0"></p>
+  <div class="actions"><button class="btn3d small ghost" type="button" id="close-cancel">Hủy</button><button class="btn3d small" type="button" id="close-save">Lưu giờ kết thúc</button></div>
+</dialog>
+<div class="tip" id="tip" hidden></div>
+
+<script type="module">
+import { mochiSvg, jump } from '../src/mochi.js';
+import { eligible, quoteForDay, otherQuote, displayParts } from '../src/quotes.js';
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+
+// ---------- Số liệu GIẢ ----------
+const N = 36;                       // 26/11/2026 = ngày thứ 36 kể từ 21/10/2026
+const FAKE = {
+  weekDays: [250, 134, 0, 0, 0, 0, 0], todayIdx: 1,   // thứ Tư -> thứ Ba; hôm nay thứ Năm
+  avg4: 1286, avg4Weeks: '2–5',                        // TB 4 tuần đã qua (có tuần 5 tạm chốt)
+  totalMin: 7710,                                      // 128 giờ 30 phút
+  badgeDates: { 10: '23/10', 25: '27/10', 50: '03/11', 100: '17/11' },
+};
+const MILESTONES = [10, 25, 50, 100, 150, 200, 300, 500, 750, 1000];
+const KAO = { 10: '(・ω・)', 25: '(•ω•)', 50: '(＾▽＾)', 100: 'ヾ(＾∇＾)', 150: '(≧▽≦)', 200: '(≧▽≦)♪', 300: '＼(＾▽＾)／', 500: 'ヽ(＾▽＾)ノ', 750: '＼(≧▽≦)／', 1000: 'ヽ(≧▽≦)ノ♪' };
+const fmtHM = m => { const h = Math.floor(m / 60), r = Math.round(m % 60); return h ? (r ? `${h} giờ ${r} phút` : `${h} giờ`) : `${r} phút`; };
+const fmtH1 = m => `${(Math.round(m / 6) / 10).toLocaleString('vi-VN')} giờ`;
+
+// ---------- Huy hiệu pixel (thiết kế gốc, vẽ bằng ô vuông 14×17) ----------
+// r = dải ruy băng, o = viền, m = mặt huy hiệu (màu theo bậc), h = đốm sáng, s = ngôi sao giữa
+const BADGE = [
+  '.rrr......rrr.',
+  '..rrr....rrr..',
+  '...rrr..rrr...',
+  '....rrrrrr....',
+  '....oooooo....',
+  '..oommmmmmoo..',
+  '.ohhmmmmmmmmo.',
+  '.ohmmmmsmmmmo.',
+  'ommmmmsssmmmmo',
+  'ommsssssssmmmo',
+  'ommmmsssssmmmo',
+  'ommmmmsssmmmmo',
+  '.ommmssmssmmo.',
+  '.ommmsmmmsmmo.',
+  '..ommmmmmmmo..',
+  '...oommmmoo...',
+  '.....oooo.....',
+];
+const TIER = { 10: 'var(--accent)', 25: 'var(--accent)', 50: 'var(--pink-l)', 100: 'var(--pink-l)', 150: 'var(--a4)', 200: 'var(--a4)', 300: 'var(--a3)', 500: 'var(--a3)', 750: 'var(--gold)', 1000: 'var(--gold)' };
+function badgeSvg(h, on) {
+  const C = on ? { r: 'var(--pink-d)', o: 'var(--mochi-line)', m: TIER[h], h: '#FFFFFF', s: '#FFFFFF' }
+               : { r: 'var(--border)', o: 'var(--grey-cat)', m: 'var(--badge-lock)', h: 'var(--badge-lock)', s: 'var(--border)' };
+  let r = '';
+  BADGE.forEach((row, y) => [...row].forEach((ch, x) => { if (C[ch]) r += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${C[ch]}"/>`; }));
+  return `<svg viewBox="0 0 14 17" class="pixel" aria-hidden="true">${r}</svg>`;
+}
+
+// ---------- Câu khích lệ (THẬT: quotes.json + src/quotes.js) ----------
+let QUOTES = [], qMode = 'day', other = 0, showJP = store.get('tt-mock-jp') !== '0';
+function renderQuote() {
+  let q, tag = 'Câu của hôm nay', grp;
+  if (other > 0) { q = otherQuote(QUOTES, N, other); tag = 'Câu khác'; grp = 'Khi tuần không như ý'; }
+  else if (qMode === 'ja') { q = QUOTES.find(x => x.id === 'q093'); grp = 'Cố gắng'; }
+  else if (qMode === 'src') { q = QUOTES.find(x => x.id === 'q112'); grp = 'Nghỉ ngơi'; }
+  else if (qMode === 'rest') { q = quoteForDay(QUOTES, 'nghi_ngoi', N); grp = 'Nghỉ ngơi'; }
+  else { q = quoteForDay(QUOTES, weekMin >= 1440 ? 'nghi_ngoi' : 'co_gang', N); grp = weekMin >= 1440 ? 'Nghỉ ngơi' : 'Cố gắng'; }
+  const d = displayParts(q, { showJapanese: showJP });
+  $('q-tag').textContent = tag;
+  $('q-body').innerHTML =
+    (d.big ? `<p class="jp" lang="ja">${esc(d.big)}</p><p class="vi">${esc(d.vi)}</p>` : `<p class="vi only">${esc(d.vi)}</p>`) +
+    (d.author ? `<p class="by">— ${esc(d.author)}</p>` : '') +
+    (d.note ? `<details class="by"><summary class="linkbtn" style="padding:0">Chạm để đọc ghi chú</summary><p class="note">${esc(d.note)}</p></details>` : '');
+  $('q-back').hidden = other === 0;
+  $('q-other').textContent = other ? 'Câu khác nữa' : 'Xem câu khác';
+  $('q-id').textContent = `${q.id} · nhóm ${grp}`;
+}
+$('q-other').addEventListener('click', () => { other++; renderQuote(); jump($('peek')); });
+$('q-back').addEventListener('click', () => { other = 0; renderQuote(); });
+
+// ---------- Vòng tuần + vạch mốc ----------
+let weekMin = 960;
+function renderWeek() {
+  const goal = 1440, R = 46, C = 2 * Math.PI * R, p = Math.min(1, weekMin / goal), a = Math.min(1, FAKE.avg4 / goal);
+  const ang = a * 2 * Math.PI, x1 = 56 + (R - 11) * Math.cos(ang), y1 = 56 + (R - 11) * Math.sin(ang), x2 = 56 + (R + 11) * Math.cos(ang), y2 = 56 + (R + 11) * Math.sin(ang);
+  $('wring').innerHTML = `<svg viewBox="0 0 112 112" aria-hidden="true"><circle class="track" cx="56" cy="56" r="${R}" fill="none" stroke-width="14"/>
+    <circle class="bar" cx="56" cy="56" r="${R}" fill="none" stroke-width="14" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - p)}"/>
+    <line class="mark" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/></svg><span class="mid">${Math.round(p * 100)}%</span>`;
+  const days = FAKE.weekDays.slice(); if (weekMin >= 1440) days.splice(0, 2, 760, 770);
+  $('wk-num').innerHTML = `${fmtH1(weekMin)} <span class="of">/ 24 giờ</span>`;
+  $('wk-days').textContent = '2/6 ngày có học';
+  $('wk-cells').innerHTML = days.map((m, i) => `<i class="${m >= 240 ? 'full' : m > 0 ? 'on' : ''} ${i === FAKE.todayIdx ? 'today' : ''}"></i>`).join('');
+  $('wk-mark').innerHTML = `<span class="legend-mark"></span>Vạch: trung bình 4 tuần gần nhất ${fmtH1(FAKE.avg4)} (tuần ${FAKE.avg4Weeks}, có tuần 5 <span class="tagp">tạm chốt</span>)` +
+    (weekMin >= 1440 ? '<br>Đủ mục tiêu tuần rồi. Nghỉ ngơi xíu nha (˘ω˘)' : '');
+  renderQuote();
+}
+
+// ---------- Ca chưa đóng ----------
+const STALE = {
+  yday:  { date: '25/11', wd: 'Thứ Tư', start: '20:10', topic: 'JP - Từ vựng', status: 'Đang diễn ra', act: 'close', startMin: 20 * 60 + 10, dayNext: '26/11' },
+  prov:  { date: '24/11', wd: 'Thứ Ba', start: '22:30', topic: 'JP - Bài tập', status: 'Tạm chốt', act: 'close', startMin: 22 * 60 + 30, dayNext: '25/11' },
+  final: { date: '17/11', wd: 'Thứ Ba', start: '21:00', topic: 'JP - Ngữ pháp', status: 'Chốt hẳn', act: 'sheet' },
+};
+let stale = 'none';
+function renderAlert() {
+  const s = STALE[stale];
+  $('alert').hidden = !s; $('ndot').hidden = !s;
+  if (!s) return;
+  $('alert').innerHTML = s.act === 'close'
+    ? `<span class="kao">(・・?)</span><p class="txt"><b>Có 1 ca chưa đóng</b>${s.wd} ${s.date}, từ ${s.start} · ${esc(s.topic)}. Ca chưa đóng thì chưa tính giờ.${s.status === 'Tạm chốt' ? ' Tuần đó đang <span class="tagp">tạm chốt</span>: chỉ điền được giờ kết thúc.' : ''}</p>
+       <button class="btn3d small" type="button" id="alert-close">Đóng ca</button>`
+    : `<span class="kao">(・・?)</span><p class="txt"><b>Có 1 ca chưa đóng</b>${s.wd} ${s.date}, từ ${s.start} · ${esc(s.topic)}. Tuần này đã chốt hẳn. Muốn sửa, hãy sửa trực tiếp trên Sheet.</p>
+       <a class="btn3d small ghost" href="#" id="alert-sheet">Mở Sheet</a>`;
+  $('alert-close')?.addEventListener('click', openClose);
+  $('alert-sheet')?.addEventListener('click', e => e.preventDefault());
+}
+function openClose() {
+  const s = STALE[stale];
+  $('close-info').innerHTML = `<span class="t">${s.wd} ${s.date} · từ ${s.start}</span><span class="chip c-nn">(＾▽＾) ${esc(s.topic)}</span><span class="muted">Chủ đề, hoạt động, ghi chú giữ nguyên.</span>`;
+  $('close-rule').innerHTML = s.status === 'Tạm chốt' ? 'Tuần của ca này đang <span class="tagp">tạm chốt</span>: chỉ điền giờ kết thúc, không sửa trường khác. Tổng tuần đó có thể đổi.' : '';
+  $('close-end').value = ''; updateSum();
+  $('close-dlg').showModal(); $('close-end').focus();
+}
+function updateSum() {
+  const s = STALE[stale], m = /^(\d{1,2})[:.h](\d{2})$/.exec($('close-end').value.trim());
+  const el = $('close-sum');
+  el.classList.remove('bad');
+  if (!m) { el.textContent = 'Nhập giờ kết thúc thật của ca.'; $('close-save').disabled = true; return; }
+  const e = +m[1] * 60 + +m[2];
+  if (+m[1] > 23 || +m[2] > 59) { el.textContent = 'Giờ chưa đúng dạng hh:mm.'; el.classList.add('bad'); $('close-save').disabled = true; return; }
+  const next = e < s.startMin, dur = e - s.startMin + (next ? 1440 : 0);
+  if (dur === 0) { el.textContent = 'Giờ kết thúc trùng giờ bắt đầu (0 phút).'; el.classList.add('bad'); $('close-save').disabled = true; return; }
+  el.textContent = `Kết thúc ${m[1].padStart(2, '0')}:${m[2]} ngày ${next ? `${s.dayNext} (hôm sau)` : s.date} · ${fmtHM(dur)}, tính vào ngày ${s.date}.` + (dur > 600 ? ' Ca dài hơn 10 tiếng, kiểm tra lại giờ nhé.' : '');
+  $('close-save').disabled = false;
+}
+$('close-end').addEventListener('input', updateSum);
+$('close-cancel').addEventListener('click', () => $('close-dlg').close());
+$('close-save').addEventListener('click', () => { $('close-dlg').close(); stale = 'none'; mark('p-stale', 'none'); renderAlert(); });
+
+// ---------- Huy hiệu ----------
+function renderBadges(fresh = null) {
+  const tot = FAKE.totalMin;
+  $('tot').textContent = fmtHM(tot);
+  $('badges').innerHTML = MILESTONES.map(h => {
+    const on = tot >= h * 60;
+    const tip = on ? `${h} giờ · đạt ngày ${FAKE.badgeDates[h] ?? '26/11'}/2026 ${KAO[h]}` : `${h} giờ · còn ${fmtHM(h * 60 - tot)}`;
+    return `<button class="bdg ${on ? '' : 'lock'} ${fresh === h ? 'new' : ''}" type="button" data-tip="${esc(tip)}" aria-label="${esc(tip)}">${badgeSvg(h, on)}<b>${h}</b><span>giờ</span></button>`;
+  }).join('');
+  const nx = MILESTONES.find(h => tot < h * 60), prev = [...MILESTONES].reverse().find(h => tot >= h * 60) ?? 0;
+  $('next').innerHTML = nx ? `<div class="row"><b>Mốc tiếp theo: ${nx} giờ</b><span class="muted">còn ${fmtHM(nx * 60 - tot)}</span></div>
+    <div class="bar"><i style="width:${((tot - prev * 60) / ((nx - prev) * 60)) * 100}%"></i></div>` : '';
+  $('set-badges').textContent = `${MILESTONES.filter(h => tot >= h * 60).length}/10 đã đạt · ăn mừng mỗi mốc 1 lần trên máy này`;
+}
+
+// ---------- Ăn mừng (≤ 3 giây, như app; luôn bật theo ý Oriana) ----------
+function party(html) {
+  const box = document.createElement('div');
+  box.className = 'party'; box.setAttribute('aria-hidden', 'true');
+  const colors = ['var(--accent)', 'var(--accent-edge)', 'var(--pink-l)', 'var(--pink-d)', '#FFD66B'];
+  for (let i = 0; i < 40; i++) {
+    const p = document.createElement('i'), a = Math.random() * Math.PI * 2, d = 120 + Math.random() * 260;
+    p.style.left = '50%'; p.style.top = '38%'; p.style.background = colors[i % colors.length];
+    p.style.setProperty('--dx', `${Math.cos(a) * d}px`); p.style.setProperty('--dy', `${Math.sin(a) * d + 120}px`); p.style.setProperty('--r', `${Math.random() * 540}deg`);
+    box.appendChild(p);
+  }
+  const say = document.createElement('div'); say.className = 'say'; say.innerHTML = html;
+  box.appendChild(say); document.body.appendChild(box);
+  setTimeout(() => jump(say), 250);
+  setTimeout(() => box.remove(), 3000);
+}
+$('p-party-badge').addEventListener('click', () => {
+  FAKE.totalMin = 9010; FAKE.badgeDates[150] = '26/11'; show('stats'); renderBadges(150);
+  party(`<span class="row"><span class="bdg-big">${badgeSvg(150, true)}</span>${mochiSvg()}</span><span>150 giờ rồi đó, Oriana! ${KAO[150]}</span><small>Huy hiệu mới · 26/11/2026</small>`);
+});
+$('p-party-week').addEventListener('click', () => {
+  weekMin = 1530; mark('p-week', '1530'); show('today'); renderWeek();
+  setTimeout(() => party(`${mochiSvg()}<span>Đủ 24 giờ tuần này rồi! (≧▽≦)♪</span><small>Nghỉ ngơi xíu nha</small>`), 700);
+});
+
+// ---------- Cài đặt: công tắc tiếng Nhật ----------
+$('sw-jp').setAttribute('aria-checked', String(showJP));
+$('sw-jp').addEventListener('click', () => { showJP = !showJP; $('sw-jp').setAttribute('aria-checked', String(showJP)); store.set('tt-mock-jp', showJP ? '1' : '0'); renderQuote(); });
+
+// ---------- Khung bản mẫu: tab, sáng/tối, nút chọn, tooltip ----------
+function show(p) {
+  document.querySelectorAll('.page').forEach(x => { x.hidden = x.id !== `pg-${p}`; });
+  document.querySelectorAll('.tab').forEach(t => t.dataset.page === p ? t.setAttribute('aria-current', 'page') : t.removeAttribute('aria-current'));
+}
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => show(t.dataset.page)));
+function mark(id, v) { $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v))); }
+function seg(id, v, on) { mark(id, v); $(id).addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; mark(id, b.dataset.v); on(b.dataset.v); }); }
+const theme = v => { if (v === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = v; };
+seg('p-theme', 'auto', theme);
+seg('p-stale', 'yday', v => { stale = v; renderAlert(); show('today'); });
+seg('p-week', '960', v => { weekMin = +v; renderWeek(); });
+seg('p-quote', 'day', v => { qMode = v; other = 0; renderQuote(); });
+stale = 'yday';
+let tipEl = $('tip');
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-tip]');
+  if (!t || !t.dataset.tip) { tipEl.hidden = true; return; }
+  tipEl.textContent = t.dataset.tip; tipEl.hidden = false;
+  const r = t.getBoundingClientRect(), w = Math.min(260, innerWidth - 32);
+  tipEl.style.left = `${Math.max(16, Math.min(innerWidth - w - 16, r.left + r.width / 2 - w / 2))}px`;
+  tipEl.style.top = `${Math.max(8, r.top - tipEl.offsetHeight - 8)}px`;
+});
+
+$('brand-mochi').innerHTML = mochiSvg();
+$('peek').innerHTML = mochiSvg();
+$('peek').addEventListener('click', e => { e.stopPropagation(); jump($('peek')); });
+QUOTES = (await (await fetch('../quotes.json')).json()).quotes;
+$('set-quotes').textContent = `${['co_gang', 'nghi_ngoi', 'khong_nhu_y'].map(g => eligible(QUOTES, g).length).reduce((a, b) => a + b, 0)} câu dùng hằng ngày (bỏ 4 câu chưa đủ nguồn) · mỗi ngày 1 câu`;
+renderAlert(); renderWeek(); renderBadges();
+</script>
+</html>
