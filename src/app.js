@@ -29,13 +29,11 @@ const FORM_DISABLED_REASON = USE_FIXTURE ? 'Đang xem dữ liệu mẫu: tắt f
   : VIEW_REAL ? 'Đang xem Sheet thật ở chế độ chỉ đọc (?nguon=that). Mở trang không có ?nguon=that để thêm, sửa, xóa.'
   : 'Khóa an toàn đang bật: app trỏ vào Sheet thật nhưng chưa cho phép ghi.';
 
-// Banner cố định: luôn cho thấy app đang ghi vào đâu
+// Nhãn nhỏ cuối trang (thay banner đỏ, theo ý Oriana ở L4.5): luôn cho thấy app đang ghi vào đâu
 function renderBanner() {
-  const b = $('banner');
-  b.hidden = false;
-  if (WRITES_REAL && ALLOW_WRITE_TO_REAL_SHEET && !VIEW_REAL) { b.className = 'banner real'; b.textContent = 'ĐANG GHI VÀO SHEET THẬT'; }
-  else if (VIEW_REAL) { b.className = 'banner view'; b.textContent = 'Đang xem Sheet thật · chỉ đọc, không ghi'; }
-  else { b.className = 'banner test'; b.textContent = 'BẢN THỬ NGHIỆM — không ghi vào Sheet thật'; }
+  $('realtag').textContent = WRITES_REAL && ALLOW_WRITE_TO_REAL_SHEET && !VIEW_REAL ? 'Đang ghi vào Sheet thật'
+    : VIEW_REAL ? 'Đang xem Sheet thật · chỉ đọc, không ghi'
+    : 'Bản thử nghiệm · không ghi vào Sheet thật';
   $('footer').textContent = FORM_ENABLED
     ? (WRITES_REAL ? 'Form ghi vào Sheet thật (chỉ cột A–F của tab Ca học).' : 'Form ghi vào BẢN THỬ NGHIỆM của Sheet (chỉ cột A–F của tab Ca học). Số liệu trên trang là của bản thử.')
     : 'Chỉ đọc: app không ghi gì vào Google Sheet.';
@@ -81,7 +79,8 @@ async function load() {
     const raw = await loadRaw();
     model = buildModel({ ...raw, today: today() });
     model.label = raw.label;
-    model.headers = (raw.caRows[0] ?? []).map(c => (c && typeof c === 'object' && 'v' in c ? c.v : c)); // tiêu đề A1:F1
+    const head = raw.caRows[0]; // dữ liệu mẫu (fixture) lưu dòng dạng { rowNumber, cells }
+    model.headers = ((Array.isArray(head) ? head : head?.cells) ?? []).map(c => (c && typeof c === 'object' && 'v' in c ? c.v : c)); // tiêu đề A1:F1
     $('updated').textContent = `Cập nhật lúc ${clockNow()}`;
     if (!model.sessions.length) { setState('empty'); return; }
     if (selectedWeek === null || selectedWeek > weekNo(model.stats.today)) selectedWeek = weekNo(model.stats.today);
