@@ -24,3 +24,9 @@ export const OAUTH_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
 export const SHEET_CA_HOC = 'Ca học';
 export const SHEET_TONG_HOP = 'Tổng hợp tuần';
 export const LAST_FORMULA_ROW = 1002;
+
+// L6: tab "Cài đặt" (chỉ đọc) và "Tích lũy" (app ghi A, B, D). Cột C của Tích lũy là công thức = B × 'Cài đặt'!C6,
+// có sẵn ở dòng 2..60 (đã kiểm Sheet thật 26/11/2026) -> app chỉ ghi trong 2..60, KHÔNG BAO GIỜ ghi cột C.
+export const SHEET_CAI_DAT = 'Cài đặt';
+export const SHEET_TICH_LUY = 'Tích lũy';
+export const ACCRUAL_LAST_ROW = 60;

@@ -4,10 +4,13 @@
 export const SPREADSHEET_ID = '1WXuns_F3bjQf7A6ZnG8PsryLsf6AAmDw3IQ3U8Bbf4o'; // Sheet THẬT, chỉ đọc
 export const TAB_SESSIONS = 'Ca học';
 export const TAB_TOPICS = 'Chủ đề';
+export const TAB_SETTINGS = 'Cài đặt';   // L6: chỉ đọc
+export const TAB_ACCRUAL = 'Tích lũy';   // L6: đọc; ghi qua sheets-write.js
 
 // headers=1: ép gviz coi đúng 1 dòng đầu là tiêu đề (nếu để gviz tự đoán, nó có thể nuốt thêm dòng dữ liệu).
-export function gvizUrl(sheet, range, id = SPREADSHEET_ID) {
-  return `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&headers=1` +
+// headers = số dòng tiêu đề (mặc định 1; đọc 1 ô lẻ thì 0).
+export function gvizUrl(sheet, range, id = SPREADSHEET_ID, headers = 1) {
+  return `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&headers=${headers}` +
     `&sheet=${encodeURIComponent(sheet)}&range=${encodeURIComponent(range)}`;
 }
 

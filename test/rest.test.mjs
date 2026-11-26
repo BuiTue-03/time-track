@@ -32,6 +32,8 @@ test('Cài đặt: đọc đủ 5 khóa theo tên, mục tiêu tuần = ngày ×
   assert.equal(r.settings.moneyPerRestDay, 100000);
   assert.equal(r.settings.goalWeekMin, 1440);
   assert.equal(r.fromSheet, true);
+  assert.equal(r.rowOf.restAccrualStart, 5);
+  assert.equal(r.rowOf.moneyPerRestDay, 6);
 });
 test('Cài đặt: thiếu ô (gviz bỏ ô ngày) -> dùng dự phòng cho ô đó + cảnh báo', () => {
   const rows = settingsRows.map(r => [...r]); rows[4][2] = null;

@@ -32,7 +32,7 @@ const valid = {
 // rows: mảng 2 chiều (dòng 0 = tiêu đề) như core.parseTopics; source: 'values' | 'gviz' | 'grid'.
 export function parseSettings(rows, source) {
   const settings = { ...DEFAULT_SETTINGS }, warnings = [];
-  if (!Array.isArray(rows) || rows.length < 2) return { settings, warnings, fromSheet: false };
+  if (!Array.isArray(rows) || rows.length < 2) return { settings, warnings, fromSheet: false, rowOf: {} };
   const seen = {};
   rows.slice(1).forEach((r, i) => {
     const key = rawCell(r?.[0], source);
@@ -49,7 +49,9 @@ export function parseSettings(rows, source) {
   if (seen.moneyPerRestDay && seen.moneyPerRestDay.rowNumber !== MONEY_ROW)
     warnings.push(`money_per_rest_day đang ở hàng ${seen.moneyPerRestDay.rowNumber}, không phải C${MONEY_ROW}: cột "Số tiền" của tab Tích lũy đọc ô C${MONEY_ROW} nên có thể tính sai tiền.`);
   settings.goalWeekMin = settings.goalMinPerDay * settings.goalDaysPerWeek;
-  return { settings, warnings, fromSheet: true };
+  // rowOf: số hàng của từng khóa (app đọc lại riêng 1 ô khi gviz bỏ trống ô ngày nằm chung cột với số)
+  const rowOf = Object.fromEntries(Object.entries(seen).map(([k, v]) => [k, v.rowNumber]));
+  return { settings, warnings, fromSheet: true, rowOf };
 }
 
 // ---------------------------------------------------------------------------------------------
