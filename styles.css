@@ -170,7 +170,6 @@ code { font-size: 16px; background: var(--surface-2); padding: 1px 4px; border-r
 .quote .jp span { display: inline-block; }
 .quote .jp { font-family: var(--f-jp); font-size: 28px; line-height: 1.45; margin: 0; max-width: 15em; position: relative; z-index: 1; }
 .quote .vi { font-size: 17px; margin: 10px 0 0; max-width: 24em; position: relative; z-index: 1; padding-right: 72px; }
-.quote .src { color: var(--text-2); margin: 10px 0 0; position: relative; z-index: 1; }
 .quote .peek { position: absolute; right: -10px; bottom: -12px; width: 108px; cursor: pointer; border: 0; background: none; padding: 0; }
 .quote .peek svg { width: 100%; height: auto; display: block; }
 .open-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

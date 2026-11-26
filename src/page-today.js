@@ -20,7 +20,6 @@ export const chip = (category, text = category) => {
 export function initToday({ onAdd, onFinish }) {
   $('quote-jp').innerHTML = QUOTE.jp.map(p => `<span>${esc(p)}</span>`).join('');
   $('quote-vi').textContent = QUOTE.vi;
-  $('quote-src').textContent = QUOTE.src;
   $('peek').innerHTML = mochiSvg();
   $('peek').addEventListener('click', () => jump($('peek')));
   $('add').addEventListener('click', onAdd);
