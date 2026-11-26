@@ -13,81 +13,118 @@
 </head>
 <body>
 <div class="app">
-<header class="top">
-  <div>
-    <h1>Thời gian học</h1>
-    <p class="muted" id="today-line"></p>
-  </div>
-  <div class="top-right">
-    <span class="muted" id="updated"></span>
-    <button id="reload" type="button">Tải lại</button>
-  </div>
-</header>
-<p class="notice" id="notice" hidden></p>
+  <header class="topbar">
+    <button class="brand" type="button" id="brand" aria-label="time-track"><span id="brand-mochi"></span>time-track</button>
+    <div class="stats">
+      <!-- CHỖ TRỐNG cho L6 (chuỗi ngày + kho ngày nghỉ): chưa có logic -->
+      <button class="pill" type="button" data-tip="Chuỗi ngày học · sẽ làm ở L6&#10;Chạm vào sẽ xem hành trình giữ chuỗi." aria-label="Chuỗi ngày học, sắp có">
+        <svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M5 0h1v1h1v1h1v2h1v4h-1v1h-1v1H4V9H3V8H2V5h1V4h1V2h1z"/></svg>—</button>
+      <button class="pill" type="button" data-tip="Kho ngày nghỉ · sẽ làm ở L6&#10;Số ngày nghỉ còn lại và phần đã quy đổi." aria-label="Kho ngày nghỉ, sắp có">
+        <svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M1 4h9v6H1zM2 2h7v2H2zM5 2h1v8H5z" opacity=".9"/></svg>—</button>
+    </div>
+  </header>
+  <p class="notice" id="notice" hidden></p>
 
-<main>
-  <section id="state-loading" class="state"><p>Đang tải dữ liệu từ Google Sheet…</p></section>
-  <section id="state-error" class="state" hidden>
-    <p><b>Chưa tải được dữ liệu.</b> <span id="error-msg"></span></p>
-    <button id="retry" type="button">Tải lại</button>
-  </section>
-  <section id="state-empty" class="state" hidden><p>Chưa có dữ liệu: tab "Ca học" chưa có dòng nào.</p></section>
-
-  <div id="state-ready" hidden>
-    <p class="muted" id="totals"></p>
-
-    <section class="card" id="ca-card" hidden>
-      <h2>Ca học: thêm, sửa, xóa</h2>
-      <p class="muted" id="ca-disabled" hidden></p>
-      <div id="ca-tools">
-        <div class="signin"><span class="muted" id="ca-signin-state"></span> <button type="button" id="ca-signin">Đăng nhập Google</button></div>
-        <div class="msg" id="ca-result" hidden></div>
-        <label class="select">Tuần <select id="ca-week"></select></label>
-        <div class="strip" id="ca-strip"></div>
-        <p><button type="button" class="primary" id="ca-add">+ Thêm ca</button></p>
-        <p class="why" id="ca-add-why" hidden></p>
-        <div id="ca-list"></div>
-      </div>
-    </section>
-    <details class="issues" id="issues" hidden></details>
-
+  <!-- ===== Hôm nay ===== -->
+  <div id="pg-today" class="page">
+    <div class="hello">
+      <h1 id="hello"></h1>
+      <p id="today-line"></p>
+    </div>
     <div class="grid two">
       <section class="card"><h2>Tuần này</h2><div id="this-week"></div></section>
       <section class="card"><h2>Tháng này</h2><div id="this-month"></div></section>
     </div>
+  </div>
 
+  <!-- ===== Lịch ===== -->
+  <div id="pg-cal" class="page" hidden>
+    <div class="hello"><h1>Lịch</h1></div>
+    <div class="grid two">
+      <div class="grid">
+        <section class="card">
+          <h2>Lịch học theo ngày</h2>
+          <div id="a4" class="chart-box"></div>
+          <div id="a4-legend" class="legend"></div>
+        </section>
+        <details class="issues" id="issues" hidden></details>
+      </div>
+      <section class="card" id="ca-card" hidden>
+        <h2>Ca học: thêm, sửa, xóa</h2>
+        <p class="muted" id="ca-disabled" hidden></p>
+        <div id="ca-tools">
+          <div class="signin"><span class="muted" id="ca-signin-state"></span> <button type="button" id="ca-signin">Đăng nhập Google</button></div>
+          <div class="msg" id="ca-result" hidden></div>
+          <label class="select">Tuần <select id="ca-week"></select></label>
+          <div class="strip" id="ca-strip"></div>
+          <p><button type="button" class="primary" id="ca-add">+ Thêm ca</button></p>
+          <p class="why" id="ca-add-why" hidden></p>
+          <div id="ca-list"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ===== Thống kê ===== -->
+  <div id="pg-stats" class="page" hidden>
+    <div class="hello"><h1>Thống kê</h1><p id="totals"></p></div>
     <section class="card">
       <h2>Tổng giờ theo tuần</h2>
       <div id="a1" class="chart-box"></div>
       <p class="muted" id="a1-note"></p>
     </section>
-
-    <div class="grid two">
-      <section class="card">
-        <h2>Lịch học theo ngày</h2>
-        <p class="muted">Mỗi hàng là 1 tuần (thứ Tư → thứ Ba). Di chuột vào ô để xem chi tiết.</p>
-        <div id="a4" class="chart-box"></div>
-        <div id="a4-legend" class="legend"></div>
-      </section>
-      <section class="card">
-        <h2>Tỷ lệ theo hoạt động</h2>
-        <div id="a3" class="chart-box"></div>
-        <div id="a3-legend"></div>
-      </section>
-    </div>
-
+    <section class="card">
+      <h2>Tỷ lệ theo hoạt động</h2>
+      <div id="a3" class="chart-box"></div>
+      <div id="a3-legend"></div>
+    </section>
     <div class="grid two">
       <section class="card"><h2>Xếp hạng tuần</h2><div id="rank-weeks"></div></section>
       <section class="card"><h2>Xếp hạng theo thứ</h2><div id="rank-weekdays"></div></section>
     </div>
-
     <section class="card">
       <h2>Chủ đề và nhóm trong tuần</h2>
       <label class="select">Chọn tuần <select id="week-select"></select></label>
       <div id="rank-topics"></div>
     </section>
   </div>
-</main>
+
+  <!-- ===== Cài đặt ===== -->
+  <div id="pg-settings" class="page" hidden>
+    <div class="hello"><h1>Cài đặt</h1></div>
+    <div class="grid two">
+      <section class="card set">
+        <h2>Giao diện</h2>
+        <div class="set-row"><span>Màu nền</span><span class="seg" id="set-theme"><button type="button" data-v="auto">Theo máy</button><button type="button" data-v="light">Sáng</button><button type="button" data-v="dark">Tối</button></span></div>
+      </section>
+      <section class="card set">
+        <h2>Số liệu</h2>
+        <div class="set-row"><span>Số liệu<br><span class="muted" id="updated"></span></span><button class="btn3d small ghost" type="button" id="reload">Tải lại</button></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ===== Đang tải / lỗi / trống / mất mạng ===== -->
+  <div id="pg-state" class="page state-page" hidden>
+    <div class="state-box">
+      <div class="state-mochi" id="state-mochi"></div>
+      <h2 id="state-title"></h2>
+      <p id="state-text" class="muted"></p>
+      <button class="btn3d small" type="button" id="state-retry" hidden>Tải lại</button>
+      <button class="btn3d small" type="button" id="state-add" hidden>＋ Thêm ca</button>
+    </div>
+  </div>
+
+  <footer class="realtag"><span id="realtag"></span><p class="muted" id="footer"></p></footer>
+</div>
+
+<nav class="tabs" aria-label="Các trang">
+  <button class="tab" type="button" data-page="today"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M5 1h1v1h1v1h1v1h1v1h1v1H9v4H6V7H5v3H2V6H1V5h1V4h1V3h1V2h1z"/></svg></span>Hôm nay</button>
+  <button class="tab" type="button" data-page="cal"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M1 2h9v8H1zM2 4v5h7V4zM3 5h1v1H3zm2 0h1v1H5zm2 0h1v1H7zM3 7h1v1H3zm2 0h1v1H5zM3 1h1v2H3zm4 0h1v2H7z"/></svg></span>Lịch</button>
+  <button class="tab" type="button" data-page="stats"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M1 6h2v4H1zm3-3h2v7H4zm3 2h2v5H7zM1 10h9v1H1z"/></svg></span>Thống kê</button>
+  <button class="tab" type="button" data-page="settings"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M4 0h3v2h1l1-1 1 1-1 1v1h2v3H9v1l1 1-1 1-1-1H7v2H4V9H3l-1 1-1-1 1-1V7H0V4h2V3L1 2l1-1 1 1h1zm1 4v3h1V4z"/></svg></span>Cài đặt</button>
+</nav>
+
 <dialog id="f-dialog" aria-labelledby="f-title">
   <form id="ca-form" novalidate>
     <h3 id="f-title">Thêm ca học</h3>
@@ -126,8 +163,6 @@
   </div>
 </dialog>
 
-<footer class="realtag"><span id="realtag"></span><p class="muted" id="footer"></p></footer>
-</div>
 <script type="module" src="src/app.js"></script>
 </body>
 </html>

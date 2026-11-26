@@ -12,6 +12,9 @@ import {
   fmtMin, fmtHours, fmtPct, fmtSignedPct, fmtSignedMin, fmtRange, fmtDayShort, fmtTime, clockNow, monthLabel,
 } from './format.js';
 import { WEEKDAY_NAMES } from './core.js';
+import { initShell, setScreen, seg, applyTheme, getTheme } from './shell.js';
+import { mochiSvg, jump } from './mochi.js';
+import { UI } from './ui-config.js';
 
 const TIMEOUT_MS = 8000;
 const params = new URLSearchParams(location.search);
@@ -68,10 +71,12 @@ function today() {
 
 // ---------- Trạng thái trang ----------
 let model = null, selectedWeek = null;
+let screen = 'loading';
 function setState(state, msg = '') {
-  for (const s of ['loading', 'error', 'empty', 'ready']) $(`state-${s}`).hidden = s !== state;
-  if (state === 'error') $('error-msg').textContent = msg;
+  // Mất mạng: báo riêng, không hiện số liệu cũ (app không lưu số liệu)
+  screen = state === 'error' && navigator.onLine === false ? 'offline' : state === 'ready' ? 'ok' : state;
   $('reload').disabled = state === 'loading';
+  setScreen(screen, screen === 'error' ? msg : '');
 }
 async function load() {
   setState('loading');
@@ -196,11 +201,16 @@ function renderWeekBreakdown() {
 
 // ---------- Gắn sự kiện ----------
 $('reload').addEventListener('click', load);
-$('retry').addEventListener('click', load);
+$('state-retry').addEventListener('click', load);
+$('state-add').addEventListener('click', () => { setState('ready'); });
 $('week-select').addEventListener('change', e => { selectedWeek = Number(e.target.value); renderWeekBreakdown(); });
 let rt;
-window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => model && !$('state-ready').hidden && render(), 150); });
-installTooltip(document.body);
+window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => model && screen === 'ok' && render(), 150); });
+initShell({ onPage: () => { if (model && screen === 'ok') render(); } });
+seg($('set-theme'), getTheme(), applyTheme);
+$('brand-mochi').innerHTML = mochiSvg();
+$('brand').addEventListener('click', () => jump($('brand-mochi')));
+$('hello').textContent = `Chào ${UI.name} ヾ(＾∇＾)`;
 renderBanner();
 initForm({ getModel: () => model, reload: load }, { enabled: FORM_ENABLED, disabledReason: FORM_DISABLED_REASON });
 load();
