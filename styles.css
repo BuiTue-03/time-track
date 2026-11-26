@@ -338,3 +338,21 @@ details.issues ul { margin: 6px 0 10px; padding-left: 20px; }
 /* Công tắc giả cho chỗ trống L6 (không bấm được) */
 .switch { width: 52px; height: 30px; border-radius: 99px; background: var(--surface-2); position: relative; flex: none; border: 2px dashed var(--border); }
 .switch i { position: absolute; width: 22px; height: 22px; border-radius: 50%; background: var(--grey-cat); top: 2px; left: 2px; }
+
+/* ============================================================
+   L5 (Oriana duyệt bản mẫu design/vong-l5.html, 26/11/2026)
+   ============================================================ */
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* Thanh báo "ca chưa đóng" */
+.alert { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; background: var(--prov-bg); box-shadow: inset 4px 0 0 var(--prov-line);
+  border-radius: 16px; padding: 12px 14px 12px 18px; margin: 0 0 16px; }
+.alert .kao { font-weight: 800; white-space: nowrap; }
+.alert .txt { flex: 1; min-width: 200px; margin: 0; }
+.alert .txt b { display: block; }
+.tab .ico { position: relative; }
+.tab .ndot { position: absolute; top: 2px; right: 6px; width: 12px; height: 12px; border-radius: 50%; background: var(--prov-line); border: 2px solid var(--surface); }
+/* Đóng ca: form gọn, chỉ còn ô giờ kết thúc */
+.closing .not-close { display: none; }
+.closing .row2 { grid-template-columns: 1fr; }
+.close-info { background: var(--surface-2); border-radius: 14px; padding: 10px 14px; margin: 10px 0 0; display: grid; gap: 4px; justify-items: start; }
+.close-info .t { font-family: var(--f-head); font-size: 18px; }

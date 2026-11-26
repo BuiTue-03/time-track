@@ -100,7 +100,7 @@ function render() {
   const { stats } = model;
   const t = stats.today;
   const nowMin = (() => { const [h, mm] = clockNow().split(':').map(Number); return h * 60 + mm; })();
-  renderToday(model, { nowMin: TODAY_OVERRIDE ? null : nowMin, canFinish: formEnabled() });
+  renderToday(model, { nowMin: TODAY_OVERRIDE ? null : nowMin, canFinish: formEnabled(), sheetUrl: `https://docs.google.com/spreadsheets/d/${DATA_SHEET_ID}/edit` });
   $('notice').hidden = !(model.label || TODAY_OVERRIDE);
   $('notice').textContent = [model.label && `Đang xem ${model.label}.`, TODAY_OVERRIDE && `Đang giả lập hôm nay = ${fmtDate(t)}.`].filter(Boolean).join(' ');
 

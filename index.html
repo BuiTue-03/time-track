@@ -37,6 +37,8 @@
       <h1 id="hello"></h1>
       <p id="today-line"></p>
     </div>
+    <!-- L5: thanh báo "ca chưa đóng" (ca mở của ngày trước, từ 06:00) -->
+    <div id="alert" class="alert" role="status" hidden></div>
     <div class="grid two">
       <div class="grid">
         <section class="card quote" aria-label="Câu khích lệ hôm nay">
@@ -201,7 +203,7 @@
 </div>
 
 <nav class="tabs" aria-label="Các trang">
-  <button class="tab" type="button" data-page="today"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M5 1h1v1h1v1h1v1h1v1h1v1H9v4H6V7H5v3H2V6H1V5h1V4h1V3h1V2h1z"/></svg></span>Hôm nay</button>
+  <button class="tab" type="button" data-page="today"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M5 1h1v1h1v1h1v1h1v1h1v1H9v4H6V7H5v3H2V6H1V5h1V4h1V3h1V2h1z"/></svg><i class="ndot" id="ndot" hidden></i></span>Hôm nay<span class="sr" id="ndot-sr" hidden>, có ca chưa đóng</span></button>
   <button class="tab" type="button" data-page="cal"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M1 2h9v8H1zM2 4v5h7V4zM3 5h1v1H3zm2 0h1v1H5zm2 0h1v1H7zM3 7h1v1H3zm2 0h1v1H5zM3 1h1v2H3zm4 0h1v2H7z"/></svg></span>Lịch</button>
   <button class="tab" type="button" data-page="stats"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M1 6h2v4H1zm3-3h2v7H4zm3 2h2v5H7zM1 10h9v1H1z"/></svg></span>Thống kê</button>
   <button class="tab" type="button" data-page="settings"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M4 0h3v2h1l1-1 1 1-1 1v1h2v3H9v1l1 1-1 1-1-1H7v2H4V9H3l-1 1-1-1 1-1V7H0V4h2V3L1 2l1-1 1 1h1zm1 4v3h1V4z"/></svg></span>Cài đặt</button>
@@ -216,19 +218,20 @@
   <form id="ca-form" novalidate>
     <h2 id="f-title">Thêm ca học</h2>
     <div class="state-strip" id="f-strip"></div>
-    <label class="fld">Ngày <span class="hint" id="f-date-hint"></span>
+    <div class="close-info" id="f-close-info" hidden></div>
+    <label class="fld not-close">Ngày <span class="hint" id="f-date-hint"></span>
       <input type="text" id="f-date" inputmode="numeric" placeholder="dd/mm/yyyy" autocomplete="off" required></label>
     <div class="row2">
-      <label class="fld">Bắt đầu <span class="hint">(24 giờ)</span> <input type="text" id="f-start" inputmode="numeric" placeholder="hh:mm" autocomplete="off"></label>
-      <label class="fld">Kết thúc <span class="hint">(trống nếu chưa xong)</span> <input type="text" id="f-end" inputmode="numeric" placeholder="hh:mm" autocomplete="off"></label>
+      <label class="fld not-close">Bắt đầu <span class="hint">(24 giờ)</span> <input type="text" id="f-start" inputmode="numeric" placeholder="hh:mm" autocomplete="off"></label>
+      <label class="fld">Kết thúc <span class="hint" id="f-end-hint">(trống nếu chưa xong)</span> <input type="text" id="f-end" inputmode="numeric" placeholder="hh:mm" autocomplete="off"></label>
     </div>
     <p class="dur" id="f-dur"></p>
     <p class="why" id="f-time-why" hidden></p>
-    <label class="fld">Chủ đề <select id="f-topic"></select></label>
-    <label class="fld">Hoạt động <select id="f-activity"></select></label>
-    <label class="check"><input type="checkbox" id="f-offset"><span>Đây là ca ghi bù <span class="hint" id="f-offset-why"></span></span></label>
-    <label class="fld">Ghi chú (tùy chọn) <textarea id="f-note" rows="2"></textarea></label>
-    <p class="hint" id="f-note-preview"></p>
+    <label class="fld not-close">Chủ đề <select id="f-topic"></select></label>
+    <label class="fld not-close">Hoạt động <select id="f-activity"></select></label>
+    <label class="check not-close"><input type="checkbox" id="f-offset"><span>Đây là ca ghi bù <span class="hint" id="f-offset-why"></span></span></label>
+    <label class="fld not-close">Ghi chú (tùy chọn) <textarea id="f-note" rows="2"></textarea></label>
+    <p class="hint not-close" id="f-note-preview"></p>
     <ul class="errors" id="f-errors"></ul>
     <ul class="warnings" id="f-warnings"></ul>
     <div class="msg" id="ca-msg" hidden></div>

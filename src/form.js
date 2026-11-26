@@ -15,6 +15,7 @@ import { esc } from './ui-charts.js';
 import { mochiSvg, jump } from './mochi.js';
 import { catStyle } from './ui-config.js';
 import { fmtHM } from './format.js';
+import { closeAction, closePrefillNow } from './stats-extra.js';
 
 const $ = id => document.getElementById(id);
 const ymdInput = s => fmtDate(s); // ô ngày là ô chữ dd/mm/yyyy
@@ -110,7 +111,7 @@ export function openAddCurrentWeek() {
 export function openFinish(rowNumber) {
   if (!formEnabled() || busy) return false;
   const s = app.getModel().sessions.find(x => x.rowNumber === rowNumber);
-  if (!s || !s.open || weekStatusOfDate(s.date, currentToday()) !== WEEK_STATUS.CURRENT) return false; // giống điều kiện nút "Kết thúc ca" trong danh sách
+  if (closeAction(s, currentToday()) !== 'close') return false; // L5: cùng luật với nút "Kết thúc ca" trong danh sách và thanh báo
   listWeek = weekNo(s.date);
   onModel();
   openForm({ mode: 'edit', original: s, finish: true });
@@ -191,7 +192,7 @@ function renderList() {
     const p = permissions(status, { isOffset: off });
     const note = splitNote(s.note).text;
     const time = s.start === null ? 'không có giờ' : `${fmtTime(s.start)}–${s.end === null ? '…' : fmtTime(s.end)}`;
-    const canFinish = s.open && status === WEEK_STATUS.CURRENT;
+    const canFinish = closeAction(s, today) === 'close'; // L5: ca hôm nay, hoặc ca hôm qua ở tuần Đang diễn ra / Tạm chốt
     const cs = catStyle(s.category);
     const btns = !enabled ? '' : [
       canFinish ? `<button type="button" class="btn3d small" data-act="finish" data-row="${s.rowNumber}">Kết thúc ca</button>` : '',
@@ -230,9 +231,20 @@ function openForm({ mode, original = null, finish = false }) {
   const m = app.getModel();
   const today = currentToday();
   pending = null;
-  editing = { mode, original, rowNumber: original?.rowNumber ?? null, snapshot: original ? [...original.raw] : null };
+  // L5: đóng ca của NGÀY TRƯỚC -> form gọn (chỉ ô giờ kết thúc), mọi trường khác giữ nguyên giá trị gốc.
+  // Đóng ca của hôm nay vẫn như L4.5 (form đủ trường, giờ kết thúc điền sẵn bây giờ).
+  const closing = mode === 'edit' && finish && original.date !== today;
+  editing = { mode, original, closing, rowNumber: original?.rowNumber ?? null, snapshot: original ? [...original.raw] : null };
   fillTopics(original?.topic ?? '');
-  $('f-title').textContent = mode === 'add' ? 'Thêm ca học' : `Sửa ca · dòng ${original.rowNumber}`;
+  $('f-title').textContent = mode === 'add' ? 'Thêm ca học' : closing ? 'Đóng ca' : `Sửa ca · dòng ${original.rowNumber}`;
+  $('ca-form').classList.toggle('closing', closing);
+  $('f-close-info').hidden = !closing;
+  $('f-end-hint').textContent = closing ? 'hh:mm, 24 giờ. Nhỏ hơn giờ bắt đầu thì tính sang hôm sau.' : '(trống nếu chưa xong)';
+  if (closing) {
+    const cs = catStyle(original.category);
+    $('f-close-info').innerHTML = `<span class="t">${WEEKDAY_NAMES[weekday(original.date)]} ${fmtDate(original.date)} · từ ${fmtTime(original.start)}</span>` +
+      `<span class="chip ${cs.cls}">${cs.kao ? `${cs.kao} ` : ''}${esc(original.topic ?? '')}</span><span class="muted">Chủ đề, hoạt động, ghi chú giữ nguyên.</span>`;
+  }
   const wk = m.stats.weeks.find(w => w.week === listWeek);
   if (mode === 'add') {
     // Mặc định: tuần đang xem. Tuần Đang diễn ra -> hôm nay; Tạm chốt -> ngày cuối của tuần đó.
@@ -245,7 +257,8 @@ function openForm({ mode, original = null, finish = false }) {
     const { isOffset, text } = splitNote(original.note);
     $('f-date').value = ymdInput(original.date);
     $('f-start').value = timeInput(original.start);
-    $('f-end').value = finish ? fmtTime(nowFraction()) : timeInput(original.end);
+    const nowMin = Math.round(nowFraction() * 1440);
+    $('f-end').value = finish ? (closePrefillNow(original, today, nowMin) ? fmtTime(nowFraction()) : '') : timeInput(original.end);
     $('f-activity').value = original.activity ?? '';
     $('f-note').value = text;
     $('f-offset').checked = isOffset;
@@ -306,11 +319,16 @@ function refreshForm() {
   $('f-strip').innerHTML = `<span class="kao">${STATUS_KAO[statusKey(status)] ?? ''}</span><span><b>Tuần ${weekNo(date)} · ${esc(status)}</b>` + esc(
     status === WEEK_STATUS.FINAL ? MSG_FINAL
       : status === WEEK_STATUS.PROVISIONAL
-        ? (editing.mode === 'add' ? `Tuần tạm chốt: ca thêm vào là ca ghi bù, tự gắn nhãn ${OFFSET_LABEL}.` : (isOff ? 'Ca ghi bù: sửa được mọi trường, ngày phải trong tuần này.' : p.reasons.canEditTime))
+        ? (editing.mode === 'add' ? `Tuần tạm chốt: ca thêm vào là ca ghi bù, tự gắn nhãn ${OFFSET_LABEL}.`
+          : editing.closing ? 'Tuần tạm chốt: chỉ điền giờ kết thúc, không sửa trường khác. Tổng giờ của tuần đó sẽ đổi theo.'
+          : (isOff ? 'Ca ghi bù: sửa được mọi trường, ngày phải trong tuần này.' : p.reasons.canEditTime))
         : 'Tuần đang diễn ra: sửa được mọi trường.') + '</span>';
   // Khóa ngày/giờ khi không được sửa giờ (ca thường ở tuần Tạm chốt), kèm lý do
-  const lockTime = editing.mode === 'edit' && !p.canEditTime;
+  const lockTime = editing.mode === 'edit' && !p.canEditTime && !editing.closing;
   for (const id of ['f-date', 'f-start', 'f-end']) $(id).disabled = lockTime;
+  // Đóng ca ngày trước: chỉ ô giờ kết thúc mở; các trường khác khóa và giữ giá trị gốc
+  for (const id of ['f-topic', 'f-activity', 'f-note']) $(id).disabled = !!editing.closing;
+  if (editing.closing) { $('f-date').disabled = true; $('f-start').disabled = true; $('f-end').disabled = false; }
   $('f-time-why').hidden = !lockTime;
   $('f-time-why').textContent = lockTime ? p.reasons.canEditTime : '';
   // Ô tick ghi bù: thêm ở tuần Tạm chốt -> bắt buộc; khi sửa -> không đổi được (Q6a)
@@ -325,7 +343,8 @@ function refreshForm() {
   $('f-note-preview').innerHTML = `Ô "Ghi chú" (cột F) sẽ lưu: <code>${note ? esc(note) : '(trống)'}</code>`;
   // Thời lượng
   const dur = durationMin(input.start, input.end);
-  $('f-dur').textContent = dur === null ? (input.start !== null && input.end === null ? 'Chưa có giờ kết thúc: lưu thành ca đang mở (không tính phút).' : '') : `Thời lượng: ${dur} phút`;
+  $('f-dur').textContent = editing.closing ? closeSummary(editing.original, input.end, dur)
+    : dur === null ? (input.start !== null && input.end === null ? 'Chưa có giờ kết thúc: lưu thành ca đang mở (không tính phút).' : '') : `Thời lượng: ${dur} phút`;
   // Lỗi / cảnh báo
   const v = validateRow(readFormForValidate(input), context());
   $('f-errors').innerHTML = v.errors.map(e => `<li>${esc(e)}</li>`).join('');
@@ -333,8 +352,19 @@ function refreshForm() {
   $('f-save').disabled = busy || v.errors.length > 0;
   return v;
 }
+// L5: dòng tóm tắt khi đóng ca ngày trước
+function closeSummary(o, end, dur) {
+  if (end === null) return 'Nhập giờ kết thúc thật của ca.';
+  if (Number.isNaN(end) || dur === null) return '';
+  const next = (end % 1) < (o.start % 1);
+  return `Kết thúc ${fmtTime(end)} ngày ${fmtDate(o.date + (next ? 1 : 0))}${next ? ' (hôm sau)' : ''} · ${fmtHM(dur)}, tính vào ngày ${fmtDate(o.date)}.`;
+}
 // Trường bị khóa (disabled) vẫn lấy giá trị gốc
 function readFormForValidate(input) {
+  if (editing.closing) { // đóng ca: chỉ lấy giờ kết thúc từ form, ngày + giờ bắt đầu giữ như gốc
+    const o = editing.original;
+    return { ...input, date: o.date, start: o.start };
+  }
   if (editing.mode === 'edit' && $('f-date').disabled) {
     const o = editing.original;
     return { ...input, date: o.date, start: o.start, end: o.end };
@@ -348,7 +378,7 @@ function setBusy(b) {
   $('f-cancel').disabled = b;
   $('del-ok').disabled = b;
   $('del-cancel').disabled = b;
-  $('f-save').textContent = b ? 'Đang lưu…' : 'Lưu';
+  $('f-save').textContent = b ? 'Đang lưu…' : editing?.closing ? 'Lưu giờ kết thúc' : 'Lưu';
   $('del-ok').textContent = b ? 'Đang xóa…' : 'Xóa nội dung dòng';
 }
 

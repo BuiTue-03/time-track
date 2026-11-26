@@ -2,7 +2,7 @@
 // Chỉ vẽ. Số liệu lấy từ core.js / insights.js / stats-extra.js. Nút chỉ MỞ form (luồng ghi vẫn ở form.js).
 import { WEEK_STATUS, WEEKDAY_NAMES, weekday, weekNo, fmtDate } from './core.js';
 import { breakdown } from './insights.js';
-import { dayMinutes, weekDays, weekVsPrevByDay, latestOpen } from './stats-extra.js';
+import { dayMinutes, weekDays, weekVsPrevByDay, latestOpen, staleOpen, closeAction } from './stats-extra.js';
 import { fmtH1, fmtHM, fmtDiff, fmtTime, fmtDayShort } from './format.js';
 import { UI, QUOTE, catStyle } from './ui-config.js';
 import { mochiSvg, party, jump } from './mochi.js';
@@ -27,30 +27,36 @@ export function initToday({ onAdd, onFinish }) {
     const b = e.target.closest('button[data-finish]');
     if (b) onFinish(Number(b.dataset.finish));
   });
+  $('alert').addEventListener('click', e => {
+    const b = e.target.closest('button[data-finish]');
+    if (b) onFinish(Number(b.dataset.finish));
+  });
   $('week').addEventListener('click', () => { $('sheet').showModal(); renderSheet(); });
   $('sheet-close').addEventListener('click', () => $('sheet').close());
 }
 
 let model = null, lastTodayMin = null;
 
-// nowMin: phút hiện tại trong ngày (giờ VN); canFinish: form đang bật (không phải chế độ xem mẫu)
-export function renderToday(m, { nowMin, canFinish }) {
+// nowMin: phút hiện tại trong ngày (giờ VN); canFinish: form đang bật (không phải chế độ xem mẫu); sheetUrl: link mở Sheet
+export function renderToday(m, { nowMin, canFinish, sheetUrl }) {
   model = m;
   const { stats, sessions } = m, t = stats.today;
   $('today-line').textContent = `${WEEKDAY_NAMES[weekday(t)]}, ${fmtDate(t)} · tuần ${weekNo(t)}`;
+
+  renderAlert(stats, nowMin, canFinish, sheetUrl);
 
   // --- Ca đang mở (mới nhất) ---
   const o = latestOpen(stats, nowMin);
   $('open-card').hidden = !o;
   if (o) {
-    const s = o.session, sameWeek = weekNo(s.date) === weekNo(t);
+    const s = o.session, closable = closeAction(s, t) === 'close';
     $('open-body').innerHTML = `<div>
         <p class="time">${s.date === t ? '' : `${fmtDayShort(s.date)} · `}từ ${fmtTime(s.start)}${o.runningMin !== null ? ` · ${fmtHM(o.runningMin)}` : ''}</p>
         ${chip(s.category, s.topic ?? '')}
         <p class="muted">Ca chưa đóng thì chưa tính giờ: phút đang chạy chưa cộng vào tổng, vòng và huy hiệu.</p>
         ${o.others ? `<p class="muted">Còn ${o.others} ca đang mở khác, xem ở tab Lịch.</p>` : ''}
       </div>
-      ${canFinish && sameWeek ? `<button class="btn3d small" type="button" data-finish="${s.rowNumber}">Kết thúc ca</button>` : ''}`;
+      ${canFinish && closable ? `<button class="btn3d small" type="button" data-finish="${s.rowNumber}">Kết thúc ca</button>` : ''}`;
   }
 
   // --- Vòng tiến độ hôm nay ---
@@ -91,4 +97,23 @@ function renderSheet() {
     barChart($('sheet-chart'), stats.weeks.slice(-6).map(w => ({ v: w.min, label: `T${w.week}`, partial: w.status === WEEK_STATUS.CURRENT,
       tip: `Tuần ${w.week} (${fmtDayShort(w.start)}–${fmtDayShort(w.end)}): ${fmtHM(w.min)}${w.status === WEEK_STATUS.CURRENT ? ' (đến hôm nay)' : ''}` })), { h: 190 });
   }
+}
+
+// L5: thanh báo "ca chưa đóng" — ca mở của NGÀY TRƯỚC, chỉ từ 06:00 (giờ VN). Không bao giờ tự đóng ca.
+// Ca hôm qua (tuần Đang diễn ra / Tạm chốt): nút "Đóng ca" mở form gọn. Ca cũ hơn hoặc tuần Chốt hẳn: nút "Mở Sheet".
+function renderAlert(stats, nowMin, canFinish, sheetUrl) {
+  const list = staleOpen(stats, nowMin);
+  $('alert').hidden = !list.length;
+  $('ndot').hidden = !list.length;
+  $('ndot-sr').hidden = !list.length;
+  if (!list.length) { $('alert').innerHTML = ''; return; }
+  const { session: s, status, action } = list[0];
+  const more = list.length > 1 ? ` Còn ${list.length - 1} ca chưa đóng khác, xem ở tab Lịch.` : '';
+  const what = `${WEEKDAY_NAMES[weekday(s.date)]} ${fmtDayShort(s.date)}, từ ${fmtTime(s.start)} · ${esc(s.topic ?? '')}.`;
+  const title = `<b>Có ${list.length} ca chưa đóng</b>`;
+  $('alert').innerHTML = action === 'close'
+    ? `<span class="kao">(・・?)</span><p class="txt">${title}${what} Ca chưa đóng thì chưa tính giờ.${status === WEEK_STATUS.PROVISIONAL ? ' Tuần đó đang <span class="tagp">tạm chốt</span>: chỉ điền được giờ kết thúc.' : ''}${more}</p>` +
+      (canFinish ? `<button class="btn3d small" type="button" data-finish="${s.rowNumber}">Đóng ca</button>` : '')
+    : `<span class="kao">(・・?)</span><p class="txt">${title}${what} ${status === WEEK_STATUS.FINAL ? 'Tuần này đã chốt hẳn.' : 'Ca này từ 2 ngày trước trở lên.'} Muốn sửa, hãy sửa trực tiếp trên Sheet.${more}</p>` +
+      (sheetUrl ? `<a class="btn3d small ghost" href="${esc(sheetUrl)}" target="_blank" rel="noopener">Mở Sheet</a>` : '');
 }
