@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="vi">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>time-track bản mẫu L6</title>
+<link rel="stylesheet" href="../styles.css">
+<style>
+/* ============================================================
+   BẢN MẪU L6 (vòng 1) — ngày nghỉ, tích lũy, quy đổi, chuỗi ngày học.
+   Không đọc / ghi Google Sheet. Số liệu = dữ liệu mẫu (test/fixtures, tới 23/11) + vài dòng giả theo từng tình huống,
+   tính bằng ĐÚNG hàm của app (src/core.js, src/rest.js, src/streak.js) đã duyệt ở Phần B.
+   Dùng lại styles.css của app thật; quy tắc mới ở dưới.
+   ============================================================ */
+:root { --proto-bg: #E9ECF5; --streak: #A86F12; --streak-on: #F2C14E; --slot-on: #8A90A0; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --proto-bg: #0D0F15; --streak: #E8B661; --streak-on: #F2C14E; } }
+:root[data-theme="dark"] { --proto-bg: #0D0F15; --streak: #E8B661; --streak-on: #F2C14E; }
+
+/* Thanh điều khiển bản mẫu (không có trong app thật) */
+.proto { background: var(--proto-bg); border-bottom: 1px solid var(--border); padding-block: 4px 10px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.proto summary { max-width: 1180px; margin: 0 auto; cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 6px; color: var(--text-2); }
+.proto b { color: var(--text); }
+.proto-in { max-width: 1180px; margin: 8px auto 0; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; color: var(--text-2); }
+.proto-in > span { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; max-width: 100%; }
+.proto .seg { flex-wrap: wrap; max-width: 100%; }
+.proto .seg button { white-space: normal; text-align: left; }
+
+/* Thanh trên: 2 nút tròn có số */
+.pill b { font-family: var(--f-head); font-variant-numeric: tabular-nums; }
+.pill .ic-streak { color: var(--streak); }
+
+/* Thanh báo: ngày bỏ lỡ (cùng chỗ thanh "ca chưa đóng" của L5, màu trung tính, không đỏ) */
+.alert.soft { background: var(--surface-2); box-shadow: inset 4px 0 0 var(--border); }
+.alert .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Thẻ nhắc nghỉ + thẻ gợi ý quy đổi */
+.note-card { display: flex; gap: 14px; align-items: center; }
+.note-card .mo { width: 72px; flex: none; }
+.note-card .mo svg { width: 100%; height: auto; display: block; }
+.note-card p { margin: 0; }
+.note-card .big { font-family: var(--f-head); font-size: 19px; line-height: 1.45; }
+.conv .amt { font-family: var(--f-head); font-size: 26px; font-variant-numeric: tabular-nums; }
+.conv .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.linkbtn { border: 0; background: none; color: var(--accent-text); font-weight: 700; min-height: 44px; padding: 0 4px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; font-size: 16px; }
+
+/* Tấm chi tiết (chạm nút tròn): chuỗi + ngày nghỉ */
+.kpi { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.kpi .n { font-family: var(--f-head); font-size: 40px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.kpi .u { font-size: 18px; }
+.sub-line { margin: 4px 0 0; color: var(--text-2); }
+.mrow { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--border); }
+.mrow .mk { font-family: var(--f-head); }
+.slots { display: flex; flex-wrap: wrap; gap: 6px; }
+.slot { width: 32px; height: 32px; border-radius: 9px; border: 2px solid var(--border); display: grid; place-items: center; background: var(--surface); }
+.slot.used { background: var(--surface-2); border-color: var(--slot-on); }
+.slot.used svg, .slot.over svg { width: 20px; height: 20px; color: var(--text); }
+.slot.over { border-style: dashed; border-color: var(--text-2); }
+.slot.conv { background: var(--surface); border-color: var(--text-2); }
+.slot.conv svg { width: 18px; height: 18px; color: var(--text-2); }
+.mtxt { grid-column: 2; margin: 4px 0 0; color: var(--text-2); }
+.legend6 { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0 0; color: var(--text-2); align-items: center; }
+.legend6 .slot { width: 24px; height: 24px; display: inline-grid; vertical-align: middle; margin-right: 4px; }
+.legend6 .slot svg { width: 14px; height: 14px; }
+
+/* Mốc chuỗi (5 huy hiệu ngọn lửa pixel, thiết kế gốc) */
+.smiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.smile { border: 0; background: none; padding: 6px 0 4px; border-radius: 14px; cursor: pointer; color: var(--text); display: grid; justify-items: center; gap: 2px; min-height: 44px; }
+.smile svg { width: 100%; max-width: 44px; height: auto; }
+.smile b { font-family: var(--f-head); font-size: 17px; line-height: 1.1; }
+.smile span { color: var(--text-2); line-height: 1.1; }
+.smile.lock b { color: var(--text-2); }
+.next6 { margin: 12px 0 0; display: grid; gap: 6px; }
+.next6 .bar { height: 14px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.next6 .bar i { display: block; height: 100%; background: var(--accent-edge); border-radius: 99px; }
+.next6 .row { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+
+/* Heatmap: ký hiệu ngày nghỉ (trăng khuyết) và "chờ đóng ca" (3 chấm) — không chỉ dựa vào màu */
+.heat-legend6 { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; color: var(--text-2); margin-top: 8px; }
+.heat-legend6 i { display: inline-block; width: 18px; height: 18px; border-radius: 5px; vertical-align: middle; }
+.heat-legend6 svg { width: 22px; height: 22px; vertical-align: middle; }
+
+/* Danh sách ngày trong tuần (tab Lịch) */
+.drow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--border); }
+.drow .d { font-family: var(--f-head); }
+.drow .k { color: var(--text-2); margin: 2px 0 0; }
+.drow .btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.tool-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.tool-row .btn3d { flex: 1 1 180px; }
+
+/* Hộp xác nhận */
+.confirm { background: var(--surface-2); border-radius: 14px; padding: 12px 14px; margin: 12px 0 0; }
+.confirm b { display: block; font-family: var(--f-head); font-size: 18px; line-height: 1.45; }
+.stepper { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.stepper button { width: 48px; height: 48px; border-radius: 14px; border: 2px solid var(--border); background: var(--surface); color: var(--text); font-size: 22px; font-weight: 800; cursor: pointer; }
+.stepper button:disabled { opacity: .45; cursor: not-allowed; }
+.stepper output { font-family: var(--f-head); font-size: 26px; min-width: 3ch; text-align: center; font-variant-numeric: tabular-nums; }
+.msg6 { margin: 12px 0 0; padding: 10px 14px; border-radius: 14px; background: var(--surface-2); }
+.msg6.warn { background: var(--prov-bg); box-shadow: inset 4px 0 0 var(--prov-line); }
+.msg6.ok { box-shadow: inset 4px 0 0 var(--accent-edge); }
+.pick { display: grid; gap: 8px; margin-top: 8px; }
+.pick label { display: flex; gap: 10px; align-items: center; min-height: 48px; padding: 6px 12px; border: 2px solid var(--border); border-radius: 14px; cursor: pointer; font-weight: 700; }
+.pick input { width: 22px; height: 22px; accent-color: var(--accent-edge); }
+.pick label:has(input:checked) { border-color: var(--accent-edge); background: var(--cur-bg); }
+
+/* Ăn mừng mốc chuỗi */
+.party .say .row { display: flex; align-items: center; gap: 10px; }
+.party .say .fl svg { width: 52px; height: 64px; }
+</style>
+
+<details class="proto" id="proto" open>
+  <summary><b>Bản mẫu L6</b> · dữ liệu mẫu + dòng giả, không ghi Sheet · chạm để ẩn/hiện</summary>
+  <div class="proto-in">
+    <span>Giao diện <span class="seg" id="p-theme"><button data-v="auto">Theo máy</button><button data-v="light">Sáng</button><button data-v="dark">Tối</button></span></span>
+    <span>Tình huống <span class="seg" id="p-scn">
+      <button data-v="now">26/11 như Sheet thật (số dư −1)</button>
+      <button data-v="missY">27/11: hôm qua trống</button>
+      <button data-v="missP">26/11: 22/11 trống (tạm chốt)</button>
+      <button data-v="seven">23/11: 8 ngày học liền</button>
+      <button data-v="conv">01/12: gợi ý quy đổi (giả)</button>
+      <button data-v="pend">26/11: có ca chưa đóng</button></span></span>
+    <span>Kết quả khi lưu (giả) <span class="seg" id="p-res"><button data-v="ok">Lưu được</button><button data-v="timeout">Quá 8 giây</button></span></span>
+    <span>Thử <button class="btn3d small ghost" type="button" id="p-party">Ăn mừng mốc chuỗi 30 ngày</button></span>
+  </div>
+</details>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><span id="brand-mochi"></span>time-track</div>
+    <div class="stats">
+      <button class="pill" type="button" id="pill-streak"></button>
+      <button class="pill" type="button" id="pill-rest"></button>
+    </div>
+  </header>
+  <p class="notice" id="notice"></p>
+
+  <!-- ===== Hôm nay ===== -->
+  <div id="pg-today" class="page">
+    <div class="hello"><h1>Chào Oriana ヾ(＾∇＾)</h1><p id="today-line"></p></div>
+    <div id="alert" class="alert" role="status" hidden></div>
+    <div class="grid two">
+      <div class="grid">
+        <section class="card conv" id="conv-card" hidden></section>
+        <section class="card note-card" id="remind-card" hidden></section>
+        <section class="card quote" aria-label="Câu khích lệ hôm nay">
+          <span class="tag">Câu của hôm nay</span>
+          <p class="vi only">Bước đi hôm nay là món quà cho chính mình ngày mai.</p>
+          <p class="muted" style="position:relative;z-index:1">(thẻ câu của L5 giữ nguyên)</p>
+          <span class="peek" id="peek"></span>
+        </section>
+      </div>
+      <div class="grid">
+        <section class="card soon"><h2>Hôm nay · Tuần này</h2><p class="muted">Vòng tiến độ, thẻ Tuần này của L5 giữ nguyên.</p></section>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Lịch ===== -->
+  <div id="pg-cal" class="page" hidden>
+    <div class="hello"><h1>Lịch</h1><p>Chạm một ô để xem tuần đó</p></div>
+    <div class="grid two cal-grid">
+      <section class="card">
+        <div class="chart" id="cal-heat"></div>
+        <div class="heat-legend6" id="heat-legend"></div>
+      </section>
+      <section class="card week-card">
+        <div class="week-nav">
+          <button class="navbtn" type="button" id="cal-prev" aria-label="Tuần trước">‹</button>
+          <div class="week-title"><b id="cal-wtitle"></b><span id="cal-wrange" class="muted"></span></div>
+          <button class="navbtn" type="button" id="cal-next" aria-label="Tuần sau">›</button>
+        </div>
+        <div class="tool-row" style="margin-top:12px"><button class="btn3d" type="button" disabled>＋ Thêm ca</button><button class="btn3d ghost" type="button" id="mark-btn">Đánh dấu ngày nghỉ</button></div>
+        <p class="why muted" id="mark-why" hidden></p>
+        <div id="day-list" style="margin-top:8px"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ===== Cài đặt ===== -->
+  <div id="pg-settings" class="page" hidden>
+    <div class="hello"><h1>Cài đặt</h1></div>
+    <div class="grid two">
+      <section class="card set">
+        <h2>Ngày nghỉ và tích lũy</h2>
+        <div class="set-row"><span>Số dư ngày nghỉ</span><b id="set-bal"></b></div>
+        <div class="set-row"><span>Đã quy đổi</span><b id="set-conv"></b></div>
+        <div class="set-row"><span>Hạn mức<br><span class="muted" id="set-quota"></span></span></div>
+        <div class="set-row"><span id="lb-remind">Nhắc nghỉ sau 7 ngày học liền<br><span class="muted">Một câu nhẹ ở trang Hôm nay</span></span>
+          <button class="sw" type="button" role="switch" aria-checked="true" aria-labelledby="lb-remind" id="sw-remind"><span class="trk"><i></i></span></button></div>
+        <div class="set-row"><span id="lb-miss">Báo ngày chưa có ca<br><span class="muted">Chỉ những ngày còn ghi bù được</span></span>
+          <button class="sw" type="button" role="switch" aria-checked="true" aria-labelledby="lb-miss" id="sw-miss"><span class="trk"><i></i></span></button></div>
+        <div class="set-row"><span class="muted">Số tiền chỉ để ghi nhận. App không chuyển tiền, không kết nối ngân hàng.</span></div>
+      </section>
+      <section class="card set">
+        <h2>Chuỗi ngày học</h2>
+        <div class="set-row"><span>Chuỗi hiện tại</span><b id="set-cur"></b></div>
+        <div class="set-row"><span>Dài nhất</span><b id="set-long"></b></div>
+        <div class="set-row"><span>Mốc chuỗi<br><span class="muted" id="set-miles"></span></span></div>
+        <div class="set-row"><span>Sửa chuỗi<br><span class="muted">Ghi bù ca đã học, hoặc đánh dấu nghỉ cho ngày trống, trong tuần đang diễn ra và tuần tạm chốt</span></span></div>
+      </section>
+      <section class="card set soon">
+        <h2>Bấm giờ học <span class="later">L7</span></h2>
+        <div class="set-row"><span>Nút Bắt đầu / Kết thúc</span><b class="muted">—</b></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<nav class="tabs" aria-label="Các trang">
+  <button class="tab" type="button" data-page="today" aria-current="page"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M5 1h1v1h1v1h1v1h1v1h1v1H9v4H6V7H5v3H2V6H1V5h1V4h1V3h1V2h1z"/></svg></span>Hôm nay</button>
+  <button class="tab" type="button" data-page="cal"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M1 2h9v8H1zM2 4v5h7V4zM3 5h1v1H3zm2 0h1v1H5zm2 0h1v1H7zM3 7h1v1H3zm2 0h1v1H5zM3 1h1v2H3zm4 0h1v2H7z"/></svg></span>Lịch</button>
+  <button class="tab" type="button" data-page="stats" disabled><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M1 6h2v4H1zm3-3h2v7H4zm3 2h2v5H7zM1 10h9v1H1z"/></svg></span>Thống kê</button>
+  <button class="tab" type="button" data-page="settings"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M4 0h3v2h1l1-1 1 1-1 1v1h2v3H9v1l1 1-1 1-1-1H7v2H4V9H3l-1 1-1-1 1-1V7H0V4h2V3L1 2l1-1 1 1h1zm1 4v3h1V4z"/></svg></span>Cài đặt</button>
+</nav>
+
+<!-- Tấm chi tiết: chuỗi + ngày nghỉ -->
+<dialog class="sheet" id="detail" aria-labelledby="detail-title">
+  <h2 id="detail-title">Chuỗi và ngày nghỉ</h2>
+  <div id="detail-body"></div>
+  <div class="sheet-actions"><button class="btn3d small ghost" type="button" id="detail-close">Đóng</button></div>
+</dialog>
+
+<!-- Hộp đánh dấu ngày nghỉ -->
+<dialog class="sheet" id="mark-dlg" aria-labelledby="mark-title">
+  <h2 id="mark-title">Đánh dấu ngày nghỉ</h2>
+  <div class="state-strip" id="mark-strip"></div>
+  <label class="fld" for="mark-date">Ngày <span class="hint">dd/mm/yyyy</span><input id="mark-date" inputmode="numeric" autocomplete="off"></label>
+  <div class="fld" role="radiogroup" aria-label="Loại ngày nghỉ">Loại
+    <div class="pick"><label><input type="radio" name="kind" value="Nghỉ ngơi" checked> Nghỉ ngơi</label>
+      <label><input type="radio" name="kind" value="Bận đi làm, không học, có ôn tập ngắn"> Bận đi làm, không học, có ôn tập ngắn</label></div></div>
+  <div class="confirm" id="mark-confirm"></div>
+  <ul class="errors" id="mark-err"></ul>
+  <div id="mark-msg"></div>
+  <div class="actions"><button class="btn3d small ghost" type="button" id="mark-cancel">Hủy</button><button class="btn3d small" type="button" id="mark-save">Ghi ngày nghỉ</button></div>
+</dialog>
+
+<!-- Hộp quy đổi -->
+<dialog class="sheet" id="conv-dlg" aria-labelledby="conv-title">
+  <h2 id="conv-title">Quy đổi ngày nghỉ</h2>
+  <p class="muted" id="conv-sub" style="margin:0"></p>
+  <div class="fld">Số ngày quy đổi
+    <div class="stepper"><button type="button" id="st-minus" aria-label="Bớt 1 ngày">−</button><output id="st-val" aria-live="polite"></output><button type="button" id="st-plus" aria-label="Thêm 1 ngày">＋</button></div></div>
+  <label class="fld" for="conv-note">Ghi chú <span class="hint">không bắt buộc</span><input id="conv-note" autocomplete="off" placeholder="ví dụ: bỏ ống heo"></label>
+  <div class="confirm" id="conv-confirm"></div>
+  <div id="conv-msg"></div>
+  <div class="actions"><button class="btn3d small ghost" type="button" id="conv-cancel">Hủy</button><button class="btn3d small" type="button" id="conv-save">Ghi nhận</button></div>
+</dialog>
+<div class="tip" id="tip" hidden></div>
+
+<script type="module">
+import { buildModel, serialFromYMD as D, fmtDate, weekNo, weekStart, weekEnd, weekday, WEEKDAY_NAMES, WEEK_STATUS, weekStatus, BUSY_TOPIC } from '../src/core.js';
+import { restSummary, conversionSuggestion, canMarkRest, fmtVnd, DEFAULT_SETTINGS as S } from '../src/rest.js';
+import { DAY, classifyDays, streaks, restReminder, missedToFix, STREAK_MILESTONES, streakMilestonesReached } from '../src/streak.js';
+import { mochiSvg, jump } from '../src/mochi.js';
+import { fmtHM, fmtDayShort } from '../src/format.js';
+import { esc, W } from '../src/ui-charts.js';
+const $ = id => document.getElementById(id);
+const H = (h, m = 0) => (h * 60 + m) / 1440;
+
+// ---------- Ký hiệu pixel (thiết kế gốc) ----------
+// Trăng khuyết 11×11: ô nằm trong hình tròn lớn nhưng ngoài hình tròn nhỏ lệch phải-trên
+const MOON_RECTS = (() => { let r = ''; for (let y = 0; y < 11; y++) for (let x = 0; x < 11; x++) {
+  const a = (x + .5 - 5.5) ** 2 + (y + .5 - 5.5) ** 2 <= 5.3 ** 2, b = (x + .5 - 8) ** 2 + (y + .5 - 3.6) ** 2 <= 4.6 ** 2;
+  if (a && !b) r += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="currentColor"/>`; } return r; })();
+const MOON = `<svg viewBox="0 0 11 11" class="pixel" aria-hidden="true">${MOON_RECTS}</svg>`;
+const COIN = '<svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M3 1h5v1h1v1h1v5H9v1H8v1H3V9H2V8H1V3h1V2h1zm0 2v5h5V3zm2 1h1v3H5z"/></svg>';
+const FLAME = '<svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M5 0h1v1h1v1h1v2h1v4h-1v1h-1v1H4V9H3V8H2V5h1V4h1V2h1z"/></svg>';
+const BOX = '<svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M1 4h9v6H1zM2 2h7v2H2zM5 2h1v8H5z" opacity=".9"/></svg>';
+// Huy hiệu ngọn lửa 11×14 cho mốc chuỗi: o viền, f lửa, y lõi sáng
+const FL = ['....o......', '...ofo..o..', '...offo.ofo', '..offfoofo.', '..offffffo.', '.offfyfffo.', '.offfyyffo.', 'offfyyyfffo', 'offyyyyyffo', 'offyyyyyffo', 'offyyyyyffo', '.offyyyffo.', '..offfffo..', '...ooooo...'];
+function flameBadge(on) {
+  const C = on ? { o: 'var(--mochi-line)', f: 'var(--streak)', y: 'var(--streak-on)' } : { o: 'var(--grey-cat)', f: 'var(--surface-2)', y: 'var(--border)' };
+  let r = '';
+  FL.forEach((row, y) => [...row].forEach((ch, x) => { if (C[ch]) r += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${C[ch]}"/>`; }));
+  return `<svg viewBox="0 0 11 14" class="pixel" aria-hidden="true">${r}</svg>`;
+}
+
+// ---------- Tình huống: dữ liệu mẫu (tới 23/11) + dòng giả ----------
+let FX = null;
+const BA = 'BA - Thực hành làm ứng dụng cá nhân';
+const real24to26 = [[D(2026, 11, 24), null, null, BUSY_TOPIC, null, null], [D(2026, 11, 25), H(8, 40), H(11, 15), BA, 'Nhờ AI', ''], [D(2026, 11, 25), H(14, 15), H(15, 50), 'JP - Bài tập', 'Ôn tập', ''],
+  [D(2026, 11, 26), H(7, 35), H(11, 30), BA, 'Nhờ AI', ''], [D(2026, 11, 26), H(12, 40), H(14, 5), BA, 'Nhờ AI', '']];
+const SCN = {
+  now:   { today: D(2026, 11, 26), nowMin: 14 * 60 + 40, extra: real24to26, label: 'Dữ liệu mẫu tới 23/11 + các dòng 24–26/11 như Sheet thật.' },
+  missY: { today: D(2026, 11, 27), nowMin: 9 * 60, extra: real24to26.filter(r => r[0] !== D(2026, 11, 26)), label: 'Giả: hôm nay 27/11 09:00, ngày 26/11 không có dòng nào.' },
+  missP: { today: D(2026, 11, 26), nowMin: 14 * 60 + 40, extra: real24to26, drop: [D(2026, 11, 22)], label: 'Giả: bỏ các ca 22/11 (tuần 5, tạm chốt).' },
+  seven: { today: D(2026, 11, 23), nowMin: 20 * 60, extra: [], label: 'Dữ liệu mẫu tới 23/11: 16–23/11 là 8 ngày học liền.' },
+  conv:  { today: D(2026, 12, 1), nowMin: 7 * 60, extra: [...real24to26.filter(r => r[3] !== BUSY_TOPIC),
+           ...[24, 27, 28, 29, 30].map(d => [D(2026, 11, d), H(9), H(11), 'JP - Từ vựng', 'Lý thuyết', ''])], toStudy: [D(2026, 11, 8), D(2026, 11, 15)],
+           label: 'Giả: hôm nay 01/12 07:00; tháng 11 chỉ nghỉ 06 và 07/11 (2/4 ngày) để thấy gợi ý quy đổi.' },
+  pend:  { today: D(2026, 11, 26), nowMin: 14 * 60 + 40, extra: [...real24to26.filter(r => r[0] !== D(2026, 11, 25)), [D(2026, 11, 25), H(20, 10), null, 'JP - Từ vựng', 'Lý thuyết', '']], label: 'Giả: 25/11 chỉ có 1 ca chưa đóng.' },
+};
+let scn = 'now', M = null, sel = null;
+const settingsOn = { remind: true, miss: true };
+function build() {
+  const sc = SCN[scn];
+  let rows = FX.caHoc.filter(r => !(sc.drop ?? []).includes(r.cells[0]));
+  if (sc.toStudy) rows = rows.map(r => sc.toStudy.includes(r.cells[0]) ? { ...r, cells: [r.cells[0], H(9), H(10), 'JP - Từ vựng', 'Ôn tập', ''] } : r);
+  let n = 900;
+  const caRows = [...rows, ...sc.extra.map(c => ({ rowNumber: n++, cells: c }))];
+  const m = buildModel({ caRows, cdRows: FX.chuDe, source: 'values', today: sc.today });
+  m.today = sc.today; m.nowMin = sc.nowMin;
+  m.days = classifyDays(m.stats, sc.nowMin);
+  m.streak = streaks(m.days);
+  m.rest = restSummary(m.sessions, [], sc.today, S);
+  m.conv = conversionSuggestion(m.rest, sc.today, sc.nowMin, S);
+  m.remind = restReminder(m.days);
+  m.missed = missedToFix(m.days, sc.today);
+  M = m; sel = weekNo(sc.today);
+  $('notice').textContent = `Bản mẫu · ${sc.label}`;
+  render();
+}
+
+// ---------- Định dạng ----------
+const fmtBal = b => (b < 0 ? `−${Math.abs(b)}` : String(b));
+const dayLabel = d => `${WEEKDAY_NAMES[weekday(d)]} ${fmtDayShort(d)}`;
+const kindText = { [DAY.STUDY]: 'Ngày học', [DAY.REST]: 'Ngày nghỉ', [DAY.PENDING]: 'Chờ đóng ca', [DAY.NOT_YET]: 'Hôm nay chưa có ca', [DAY.MISSED]: 'Chưa có ca nào' };
+const REMIND = [
+  '7 ngày học liền rồi đó (˘ω˘) Mai nghỉ một ngày cũng được nha.',
+  'Chăm quá trời! Nhớ chừa một ngày cho mình thở nhé.',
+  'Học đều 7 ngày rồi. Nghỉ cũng là một phần của học đó (・ω・)',
+];
+
+function render() {
+  const t = M.today, { streak: st, rest: r } = M;
+  $('today-line').textContent = `${WEEKDAY_NAMES[weekday(t)]}, ${fmtDate(t)} · tuần ${weekNo(t)}`;
+  // Nút tròn góc trên
+  $('pill-streak').innerHTML = `<span class="ic-streak">${FLAME}</span><b>${st.current}</b>`;
+  $('pill-streak').setAttribute('aria-label', `Chuỗi ${st.current} ngày học. Chạm để xem chi tiết`);
+  $('pill-rest').innerHTML = `${BOX}<b>${fmtBal(r.balance)}</b>`;
+  $('pill-rest').setAttribute('aria-label', `Số dư ngày nghỉ ${fmtBal(r.balance)} ngày. Chạm để xem chi tiết`);
+
+  // Thanh báo ngày bỏ lỡ (ngày gần nhất còn sửa được)
+  const miss = settingsOn.miss ? M.missed.at(-1) : null;
+  $('alert').hidden = !miss;
+  if (miss) {
+    $('alert').className = 'alert soft';
+    const yday = miss.date === t - 1, more = M.missed.length > 1 ? ` Còn ${M.missed.length - 1} ngày khác như vậy, xem ở tab Lịch.` : '';
+    $('alert').innerHTML = `<span class="kao">(・ω・)</span><p class="txt"><b>${yday ? 'Hôm qua' : dayLabel(miss.date)} chưa có ca nào.</b>Muốn ghi bù ca hoặc đánh dấu nghỉ không?${miss.offset ? ' Tuần đó đang <span class="tagp">tạm chốt</span>: ghi vào sẽ có nhãn [OFFSET].' : ''}${more}</p>
+      <span class="acts"><button class="btn3d small ghost" type="button" data-fix-add="${miss.date}">Ghi bù ca</button><button class="btn3d small" type="button" data-fix-rest="${miss.date}">Đánh dấu nghỉ</button></span>`;
+  }
+
+  // Thẻ gợi ý quy đổi
+  $('conv-card').hidden = !M.conv;
+  if (M.conv) {
+    const c = M.conv;
+    $('conv-card').innerHTML = `<h2>Tháng ${c.m}/${c.y} còn ${c.unused} ngày nghỉ chưa dùng</h2>
+      <p class="muted" style="margin:0">Có thể quy đổi tối đa ${c.days} ngày, mỗi ngày ${fmtVnd(S.moneyPerRestDay)}. Phần chưa quy đổi vẫn giữ lại, cộng dồn sang tháng sau.</p>
+      <p class="amt" style="margin:10px 0 0">${fmtVnd(c.amount)}</p>
+      <div class="row"><button class="btn3d small" type="button" id="conv-open">Quy đổi…</button><button class="btn3d small ghost" type="button" id="conv-later">Để sau</button></div>`;
+    $('conv-open').addEventListener('click', openConv);
+    $('conv-later').addEventListener('click', () => { $('conv-card').hidden = true; });
+  }
+
+  // Thẻ nhắc nghỉ (xoay vòng 3 câu theo ngày)
+  const showRemind = settingsOn.remind && M.remind.show;
+  $('remind-card').hidden = !showRemind;
+  if (showRemind) $('remind-card').innerHTML = `<span class="mo">${mochiSvg()}</span><div><p class="big">${esc(REMIND[t % REMIND.length])}</p><p class="muted">${M.remind.count} ngày học liền · tắt được ở Cài đặt</p></div>`;
+
+  // Cài đặt
+  $('set-bal').textContent = `${fmtBal(r.balance)} ngày`;
+  $('set-conv').textContent = `${r.converted} ngày · ${fmtVnd(r.converted * S.moneyPerRestDay)}`;
+  $('set-quota').textContent = `${S.restQuotaPerMonth} ngày mỗi tháng từ ${fmtDate(S.restAccrualStart)} · ${fmtVnd(S.moneyPerRestDay)}/ngày · đọc từ tab Cài đặt của Sheet`;
+  $('set-cur').textContent = `${st.current} ngày học`;
+  $('set-long').textContent = `${st.longest} ngày học`;
+  $('set-miles').textContent = `${streakMilestonesReached(st.longest).length}/${STREAK_MILESTONES.length} mốc đã đạt (${STREAK_MILESTONES.join(', ')} ngày) · mỗi mốc ăn mừng 1 lần trên máy này`;
+  renderCal();
+  if ($('detail').open) renderDetail();
+}
+
+// ---------- Tấm chi tiết ----------
+function renderDetail() {
+  const { streak: st, rest: r } = M;
+  const miles = STREAK_MILESTONES.map(m => `<button class="smile ${st.longest >= m ? '' : 'lock'}" type="button" data-tip="${st.longest >= m ? `${m} ngày học liền · đã đạt` : `${m} ngày học liền · chuỗi hiện tại cần thêm ${m - st.current} ngày`}">${flameBadge(st.longest >= m)}<b>${m}</b><span>ngày</span></button>`).join('');
+  const nx = STREAK_MILESTONES.find(m => m > st.longest); // mốc chưa từng đạt
+  const months = r.months.map(mo => {
+    const used = mo.dates.length, over = Math.max(0, used - mo.quota);
+    const slots = Array.from({ length: Math.max(mo.quota, used) }, (_, i) => i < Math.min(used, mo.quota) ? `<span class="slot used" data-tip="${fmtDate(mo.dates[i])}">${MOON}</span>`
+      : i < mo.quota ? `<span class="slot" aria-hidden="true"></span>` : `<span class="slot over" data-tip="${fmtDate(mo.dates[i])} · dùng trước">${MOON}</span>`).join('') +
+      Array.from({ length: mo.converted }, () => `<span class="slot conv">${COIN}</span>`).join('');
+    return `<div class="mrow"><span class="mk">${String(mo.m).padStart(2, '0')}/${mo.y}</span><span class="slots" aria-label="Tháng ${mo.m}: dùng ${used} trên ${mo.quota} ngày">${slots}</span>
+      <p class="mtxt">Dùng ${used}/${mo.quota} ngày${used ? ` (${mo.dates.map(fmtDayShort).join(', ')})` : ''}${over ? ` · dùng trước ${over} ngày của tháng sau` : ''}${mo.converted ? ` · đã quy đổi ${mo.converted}` : ''}</p></div>`;
+  }).join('');
+  $('detail-body').innerHTML = `
+    <section><h3 style="margin:0 0 4px">Chuỗi ngày học</h3>
+      <div class="kpi"><span class="n">${st.current}</span><span class="u">ngày học</span></div>
+      <p class="sub-line">${st.current ? `Từ ${fmtDate(st.currentFrom)}` : 'Bắt đầu lại từ hôm nay nhé (＾▽＾)'} · dài nhất ${st.longest} ngày${st.longestFrom ? ` (${fmtDayShort(st.longestFrom)}–${fmtDate(st.longestTo)})` : ''}</p>
+      <p class="sub-line">Ngày nghỉ không cộng vào chuỗi và cũng không làm đứt chuỗi.</p>
+      <div class="smiles">${miles}</div>
+      ${nx ? `<div class="next6"><div class="row"><b>Mốc mới tiếp theo: ${nx} ngày</b><span class="muted">chuỗi hiện tại cần thêm ${nx - st.current} ngày học</span></div><div class="bar" role="img" aria-label="${st.current} trên ${nx} ngày"><i style="width:${(st.current / nx) * 100}%"></i></div></div>` : ''}
+    </section>
+    <section style="margin-top:20px"><h3 style="margin:0 0 4px">Ngày nghỉ</h3>
+      <div class="kpi"><span class="n">${fmtBal(r.balance)}</span><span class="u">ngày còn lại</span></div>
+      <p class="sub-line">${r.balance < 0 ? `Đã dùng trước ${Math.abs(r.balance)} ngày. Mỗi tháng mới cộng thêm ${S.restQuotaPerMonth} ngày.` : `Mỗi tháng ${S.restQuotaPerMonth} ngày, ngày chưa dùng cộng dồn sang tháng sau.`}</p>
+      ${months}
+      <div class="mrow"><span class="mk">Quy đổi</span><span>${r.converted} ngày · ${fmtVnd(r.converted * S.moneyPerRestDay)}</span></div>
+      <div class="legend6"><span><span class="slot used">${MOON}</span>đã nghỉ</span><span><span class="slot"></span>còn trống</span><span><span class="slot over">${MOON}</span>dùng trước</span><span><span class="slot conv">${COIN}</span>đã quy đổi</span></div>
+    </section>`;
+}
+const openDetail = () => { renderDetail(); $('detail').showModal(); };
+$('pill-streak').addEventListener('click', openDetail);
+$('pill-rest').addEventListener('click', openDetail);
+$('detail-close').addEventListener('click', () => $('detail').close());
+
+// ---------- Lịch: heatmap có ký hiệu ngày nghỉ + danh sách ngày ----------
+const HEAT = [[0], [59], [119], [179], [239], [Infinity]];
+const level = v => HEAT.findIndex(([mx]) => v <= mx);
+function renderCal() {
+  const cur = weekNo(M.today), el = $('cal-heat');
+  const n = Math.max(4, Math.min(cur, Math.floor((W(el) - 40) / 44)));
+  const end = sel >= cur - n + 1 ? cur : sel + n - 1, start = Math.max(1, end - n + 1);
+  const kinds = new Map(M.days.map(d => [d.date, d.kind]));
+  const lab = 40, w = W(el), cols = end - start + 1, cell = Math.min(52, Math.max(44, Math.floor((w - lab) / cols))), Hh = 26 + cell * 7;
+  let s = `<svg viewBox="0 0 ${lab + cell * cols} ${Hh}" style="max-width:${lab + cell * cols}px" role="img" aria-label="Lịch học theo ngày">`;
+  for (let wk = start; wk <= end; wk++) {
+    const i = wk - start, isSel = wk === sel;
+    if (isSel) s += `<rect x="${lab + i * cell}" y="22" width="${cell}" height="${cell * 7 + 4}" rx="10" fill="var(--surface-2)"/>`;
+    s += `<text x="${lab + i * cell + cell / 2}" y="16" text-anchor="middle" style="${isSel ? 'fill:var(--text);font-weight:800' : ''}">T${wk}</text>`;
+    for (let r = 0; r < 7; r++) {
+      const d = weekStart(wk) + r, x = lab + i * cell, y = 26 + r * cell, k = kinds.get(d), min = M.stats.days[d]?.min ?? 0;
+      if (d > M.today) { s += `<rect x="${x + 4}" y="${y + 4}" width="${cell - 8}" height="${cell - 8}" rx="6" fill="none" stroke="var(--border)" stroke-dasharray="3 3"/>`; continue; }
+      const tip = [`${WEEKDAY_NAMES[weekday(d)]}, ${fmtDate(d)}`, `${fmtHM(min)} · ${kindText[k]}`, k === DAY.MISSED && M.missed.some(m => m.date === d) ? 'Có thể ghi bù ca hoặc đánh dấu nghỉ' : ''].filter(Boolean).join('\n');
+      s += `<g class="mk calcell" tabindex="0" data-week="${wk}" data-tip="${esc(tip)}"><rect class="hit" x="${x}" y="${y}" width="${cell}" height="${cell}"/>` +
+        `<rect class="b" x="${x + 4}" y="${y + 4}" width="${cell - 8}" height="${cell - 8}" rx="6" fill="var(--h${level(min)})"/>`;
+      if (k === DAY.REST) { // trăng khuyết trên nền tròn: thấy được cả khi ô có màu đậm
+        const cx = x + cell / 2, cy = y + cell / 2;
+        s += `<circle cx="${cx}" cy="${cy}" r="${cell * 0.27}" fill="var(--surface)" stroke="var(--text-2)" stroke-width="1.5"/>` +
+          `<g transform="translate(${cx - cell * 0.18} ${cy - cell * 0.18}) scale(${(cell * 0.36) / 11})" style="color:var(--text)">${MOON_RECTS}</g>`;
+      }
+      if (k === DAY.PENDING) for (let j = -1; j <= 1; j++) s += `<rect x="${x + cell / 2 + j * 8 - 2.5}" y="${y + cell / 2 - 2.5}" width="5" height="5" fill="var(--text)"/>`;
+      if (d === M.today) s += `<rect x="${x + 2}" y="${y + 2}" width="${cell - 4}" height="${cell - 4}" rx="8" fill="none" stroke="var(--text)" stroke-width="2.5"/>`;
+      s += '</g>';
+    }
+  }
+  el.innerHTML = s + '</svg>';
+  $('heat-legend').innerHTML = `<span>Ít ${[0, 1, 2, 3, 4, 5].map(k => `<i style="background:var(--h${k})"></i>`).join(' ')} Nhiều</span>` +
+    `<span><svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="9" fill="var(--surface)" stroke="var(--text-2)" stroke-width="1.5"/><g transform="translate(5 5) scale(1.09)" style="color:var(--text)">${MOON_RECTS}</g></svg> Ngày nghỉ</span>` +
+    `<span><svg viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="9" width="4" height="4" fill="var(--text)"/><rect x="9" y="9" width="4" height="4" fill="var(--text)"/><rect x="16" y="9" width="4" height="4" fill="var(--text)"/></svg> Chờ đóng ca</span>`;
+
+  const ws = weekStart(sel), status = weekStatus(sel, M.today);
+  $('cal-wtitle').textContent = `Tuần ${sel}`;
+  $('cal-wrange').textContent = `${fmtDayShort(ws)}–${fmtDate(weekEnd(sel))} · ${status}`;
+  $('cal-prev').disabled = sel <= 1; $('cal-next').disabled = sel >= cur;
+  const canAny = status === WEEK_STATUS.CURRENT || status === WEEK_STATUS.PROVISIONAL;
+  $('mark-btn').disabled = !canAny;
+  $('mark-why').hidden = canAny;
+  $('mark-why').textContent = canAny ? '' : 'Tuần này đã chốt hẳn. Muốn đánh dấu nghỉ, hãy sửa trực tiếp trên Sheet.';
+  let h = '';
+  for (let r = 0; r < 7; r++) {
+    const d = ws + r; if (d > M.today) break;
+    const k = kinds.get(d), min = M.stats.days[d]?.min ?? 0, fix = M.missed.find(m => m.date === d);
+    const restTopic = M.sessions.find(x => x.rest && x.date === d)?.topic;
+    h += `<div class="drow"><div><span class="d">${dayLabel(d)}${d === M.today ? ' · hôm nay' : ''}</span><p class="k">${kindText[k]}${restTopic ? ` · ${esc(restTopic === BUSY_TOPIC ? 'Bận đi làm' : restTopic)}` : ''}${min ? ` · ${fmtHM(min)}` : ''}</p></div>` +
+      (fix ? `<span class="btns"><button class="btn3d small ghost" type="button" data-fix-add="${d}">Ghi bù ca</button><button class="btn3d small" type="button" data-fix-rest="${d}">Đánh dấu nghỉ</button></span>` : '<span></span>') + '</div>';
+  }
+  $('day-list').innerHTML = h;
+}
+$('cal-prev').addEventListener('click', () => { sel--; renderCal(); });
+$('cal-next').addEventListener('click', () => { sel++; renderCal(); });
+$('cal-heat').addEventListener('click', e => { const c = e.target.closest('.calcell'); if (c) { sel = +c.dataset.week; renderCal(); } });
+
+// ---------- Hộp đánh dấu ngày nghỉ ----------
+let markDate = null;
+const parseD = s => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s.trim()); return m ? D(+m[3], +m[2], +m[1]) : null; };
+function openMark(d) {
+  markDate = d ?? M.today;
+  $('mark-date').value = fmtDate(markDate);
+  $('mark-msg').innerHTML = ''; $('mark-save').disabled = false; $('mark-save').textContent = 'Ghi ngày nghỉ';
+  refreshMark(); $('mark-dlg').showModal();
+}
+function refreshMark() {
+  const d = parseD($('mark-date').value), kind = document.querySelector('input[name="kind"]:checked').value;
+  const c = d === null ? { ok: false, isOffset: false, errors: ['Ngày chưa đúng dạng dd/mm/yyyy.'] } : canMarkRest(d, M.today, M.sessions);
+  const status = d === null ? null : weekStatus(weekNo(d), M.today);
+  $('mark-strip').className = `state-strip s-${status === WEEK_STATUS.PROVISIONAL ? 'prov' : status === WEEK_STATUS.CURRENT ? 'cur' : 'final'}`;
+  $('mark-strip').innerHTML = d === null ? '' : `<span class="kao">${status === WEEK_STATUS.PROVISIONAL ? '(•ω•)' : '(＾▽＾)'}</span><span><b>Tuần ${weekNo(d)} · ${status}</b>${status === WEEK_STATUS.PROVISIONAL ? 'Tuần tạm chốt: dòng ghi vào sẽ có nhãn [OFFSET].' : status === WEEK_STATUS.CURRENT ? 'Tuần đang diễn ra.' : ''}</span>`;
+  $('mark-confirm').innerHTML = c.ok ? `<b>Ghi 1 dòng vào tab Ca học: ${fmtDate(d)} · ${esc(kind)} · không có giờ${c.isOffset ? ' · ghi chú [OFFSET]' : ''}.</b>
+    <span class="muted">Ngày này tính là 1 ngày nghỉ (trừ vào số dư, hiện còn ${fmtBal(M.rest.balance)}). Ngày nghỉ không làm đứt chuỗi. Muốn bỏ đánh dấu thì xóa dòng như xóa ca.</span>` : '';
+  $('mark-err').innerHTML = c.errors.map(e => `<li>${esc(e)}</li>`).join('');
+  $('mark-save').disabled = !c.ok;
+}
+$('mark-date').addEventListener('input', refreshMark);
+document.querySelectorAll('input[name="kind"]').forEach(x => x.addEventListener('change', refreshMark));
+$('mark-btn').addEventListener('click', () => openMark(sel === weekNo(M.today) ? M.today : weekEnd(sel)));
+$('mark-cancel').addEventListener('click', () => $('mark-dlg').close());
+$('mark-save').addEventListener('click', () => fakeSave('mark', () => {
+  const d = parseD($('mark-date').value), kind = document.querySelector('input[name="kind"]:checked').value;
+  SCN[scn].extra = [...SCN[scn].extra, [d, null, null, kind, null, weekStatus(weekNo(d), M.today) === WEEK_STATUS.PROVISIONAL ? '[OFFSET]' : '']];
+  build();
+}));
+document.addEventListener('click', e => {
+  const r = e.target.closest('[data-fix-rest]'); if (r) openMark(+r.dataset.fixRest);
+  const a = e.target.closest('[data-fix-add]'); if (a) { show('cal'); sel = weekNo(+a.dataset.fixAdd); renderCal(); }
+});
+
+// ---------- Hộp quy đổi ----------
+let convN = 1;
+function openConv() {
+  const c = M.conv; convN = c.days;
+  $('conv-sub').textContent = `Tháng ${c.m}/${c.y}: dùng ${S.restQuotaPerMonth - c.unused}/${S.restQuotaPerMonth} ngày nghỉ, còn ${c.unused} ngày chưa dùng. Tối đa ${c.days} ngày.`;
+  $('conv-note').value = ''; $('conv-msg').innerHTML = ''; $('conv-save').textContent = 'Ghi nhận';
+  refreshConv(); $('conv-dlg').showModal();
+}
+function refreshConv() {
+  const c = M.conv;
+  $('st-val').textContent = convN;
+  $('st-minus').disabled = convN <= 1; $('st-plus').disabled = convN >= c.days;
+  $('conv-confirm').innerHTML = `<b>Ghi nhận đã quy đổi ${convN} ngày nghỉ, ${fmtVnd(convN * S.moneyPerRestDay)}. App chỉ ghi nhận, không chuyển tiền.</b>
+    <span class="muted">Ghi 1 dòng vào tab Tích lũy (cột A, B, D; cột Số tiền do Sheet tự tính). Số dư sau khi ghi: ${fmtBal(M.rest.balance - convN)} ngày.${c.days - convN ? ` ${c.days - convN} ngày còn lại vẫn giữ, cộng dồn.` : ''}</span>`;
+}
+$('st-minus').addEventListener('click', () => { convN = Math.max(1, convN - 1); refreshConv(); });
+$('st-plus').addEventListener('click', () => { convN = Math.min(M.conv.days, convN + 1); refreshConv(); });
+$('conv-cancel').addEventListener('click', () => $('conv-dlg').close());
+$('conv-save').addEventListener('click', () => fakeSave('conv', () => { $('conv-card').hidden = true; }));
+
+// ---------- Lưu giả: khóa nút, quá 8 giây thì "chưa chắc đã lưu" + đọc lại trước khi cho thử lại ----------
+let res = 'ok';
+function fakeSave(kind, done) {
+  const btn = $(`${kind}-save`), box = $(`${kind}-msg`), cancel = $(`${kind}-cancel`);
+  btn.disabled = true; cancel.disabled = true; btn.textContent = 'Đang gửi…';
+  box.innerHTML = '<p class="msg6">Đang đọc lại Sheet rồi ghi… (đừng đóng app)</p>';
+  setTimeout(() => {
+    cancel.disabled = false;
+    if (res === 'timeout') {
+      btn.textContent = 'Thử lại'; btn.disabled = true;
+      box.innerHTML = `<p class="msg6 warn"><b>Chưa chắc đã lưu.</b> Quá 8 giây chưa có trả lời từ Google. App KHÔNG tự gửi lại. Bấm "Kiểm tra trong Sheet" để đọc lại trước khi thử lại (tránh ghi trùng).</p>
+        <div class="actions" style="position:static"><button class="btn3d small ghost" type="button" id="${kind}-check">Kiểm tra trong Sheet</button></div>`;
+      $(`${kind}-check`).addEventListener('click', () => { box.innerHTML = '<p class="msg6">Đã đọc lại: chưa thấy dòng mới. Có thể bấm "Thử lại".</p>'; btn.disabled = false; });
+      return;
+    }
+    box.innerHTML = `<p class="msg6 ok">Đã lưu và đọc lại thấy đúng${kind === 'conv' ? ' (cột Số tiền đã tự tính)' : ''}. (＾▽＾)</p>`;
+    setTimeout(() => { $(`${kind}-dlg`).close(); done(); }, 900);
+  }, 1200);
+}
+
+// ---------- Ăn mừng mốc chuỗi (≤ 3 giây) ----------
+function party(html) {
+  const box = document.createElement('div');
+  box.className = 'party'; box.setAttribute('aria-hidden', 'true');
+  const colors = ['var(--accent)', 'var(--accent-edge)', 'var(--pink-l)', 'var(--pink-d)', 'var(--streak-on)'];
+  for (let i = 0; i < 40; i++) {
+    const p = document.createElement('i'), a = Math.random() * Math.PI * 2, d = 120 + Math.random() * 260;
+    p.style.left = '50%'; p.style.top = '38%'; p.style.background = colors[i % colors.length];
+    p.style.setProperty('--dx', `${Math.cos(a) * d}px`); p.style.setProperty('--dy', `${Math.sin(a) * d + 120}px`); p.style.setProperty('--r', `${Math.random() * 540}deg`);
+    box.appendChild(p);
+  }
+  const say = document.createElement('div'); say.className = 'say col'; say.innerHTML = html;
+  box.appendChild(say); document.body.appendChild(box);
+  setTimeout(() => jump(say), 250);
+  setTimeout(() => box.remove(), 3000);
+}
+$('p-party').addEventListener('click', () => party(`<span class="row"><span class="fl">${flameBadge(true)}</span>${mochiSvg()}</span><span>30 ngày học rồi đó, Oriana! ＼(＾▽＾)／</span><small>Mốc chuỗi mới · ${fmtDate(M.today)}</small>`));
+
+// ---------- Cài đặt: công tắc ----------
+for (const [id, key] of [['sw-remind', 'remind'], ['sw-miss', 'miss']])
+  $(id).addEventListener('click', () => { settingsOn[key] = !settingsOn[key]; $(id).setAttribute('aria-checked', String(settingsOn[key])); render(); });
+
+// ---------- Khung bản mẫu ----------
+function show(p) {
+  document.querySelectorAll('.page').forEach(x => { x.hidden = x.id !== `pg-${p}`; });
+  document.querySelectorAll('.tab').forEach(t => t.dataset.page === p ? t.setAttribute('aria-current', 'page') : t.removeAttribute('aria-current'));
+  if (p === 'cal') renderCal();
+}
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => show(t.dataset.page)));
+function mark(id, v) { $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v))); }
+function seg(id, v, on) { mark(id, v); $(id).addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; mark(id, b.dataset.v); on(b.dataset.v); }); }
+seg('p-theme', 'auto', v => { if (v === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = v; });
+seg('p-scn', 'now', v => { scn = v; build(); });
+seg('p-res', 'ok', v => { res = v; });
+const tipEl = $('tip');
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-tip]');
+  if (!t || !t.dataset.tip) { tipEl.hidden = true; return; }
+  tipEl.textContent = t.dataset.tip; tipEl.hidden = false;
+  const r = t.getBoundingClientRect(), w = Math.min(260, innerWidth - 32);
+  tipEl.style.left = `${Math.max(16, Math.min(innerWidth - w - 16, r.left + r.width / 2 - w / 2))}px`;
+  tipEl.style.top = `${Math.max(8, r.top - tipEl.offsetHeight - 8)}px`;
+});
+let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => M && renderCal(), 150); });
+$('brand-mochi').innerHTML = mochiSvg();
+$('peek').innerHTML = mochiSvg();
+
+// Tham số địa chỉ để chụp màn hình: ?tinhhuong=conv&trang=cal&mo=detail|mark|conv
+const q = new URLSearchParams(location.search);
+if (SCN[q.get('tinhhuong')]) { scn = q.get('tinhhuong'); mark('p-scn', scn); }
+FX = await (await fetch('../test/fixtures/sheet-to-2026-11-23.json')).json();
+build();
+if (q.get('trang')) show(q.get('trang'));
+if (q.get('mo') === 'detail') openDetail();
+if (q.get('mo') === 'mark') openMark(M.missed.at(-1)?.date);
+if (q.get('mo') === 'conv' && M.conv) openConv();
+</script>
