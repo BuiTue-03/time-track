@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>L2 – Thử ghi Google Sheet</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; max-width: 1000px; margin: 0 auto; padding: 16px; background: #fff; color: #111; }
+  table { border-collapse: collapse; margin: 8px 0; width: 100%; } td, th { border: 1px solid #ccc; padding: 4px 8px; text-align: left; vertical-align: top; }
+  button { margin: 4px 4px 4px 0; padding: 6px 12px; font-size: 15px; }
+  .ok { color: #0a7d2c; } .fail { color: #b3261e; } .warn { color: #8a5a00; }
+  .box { border: 1px solid #ccc; padding: 8px 12px; margin: 12px 0; border-radius: 6px; }
+  pre { white-space: pre-wrap; background: #f4f4f4; padding: 8px; font-size: 13px; }
+</style>
+<!-- Thư viện đăng nhập chính thức của Google (Google Identity Services) -->
+<script src="https://accounts.google.com/gsi/client" async></script>
+</head>
+<body>
+<h1>L2 – Thử ghi / sửa / xóa trên bản thử nghiệm</h1>
+<div id="cfg" class="box"></div>
+
+<div class="box">
+  <b>Bước 1.</b> <button id="login">Đăng nhập Google</button> <span id="tok"></span>
+</div>
+<div class="box">
+  <b>Bước 2. Bộ thử chính</b> (ghi 1 dòng thử → đo độ trễ gviz → kiểm tra G–K và Tổng hợp tuần → sửa → xóa). Mất khoảng 1–2 phút.<br>
+  <button id="main">Chạy bộ thử chính</button>
+</div>
+<div class="box">
+  <b>Bước 3. Thử lỗi</b> (làm lần lượt, mỗi nút một tình huống)<br>
+  <button id="eCancel">3a. Đăng nhập rồi bấm Hủy/đóng cửa sổ</button>
+  <button id="eOffline">3b. Thử đọc khi đã tắt mạng</button>
+  <button id="eExpired">3c. Thu hồi token rồi thử đọc</button>
+</div>
+<div class="box">
+  <b>Dọn dẹp.</b> Xóa nội dung A–F của mọi dòng có ghi chú bắt đầu bằng <code>[L2-test</code>.
+  <button id="clean">Dọn dòng thử</button>
+</div>
+
+<h2>Kết quả</h2>
+<table><thead><tr><th>#</th><th>Thao tác</th><th>Kết quả</th><th>Thời gian</th><th>Lỗi gặp</th><th>Cách xử lý</th></tr></thead><tbody id="res"></tbody></table>
+<button id="copy">Sao chép kết quả (để dán cho Claude)</button>
+<pre id="detail"></pre>
+
+<script type="module">
+import { SPREADSHEET_ID, REAL_SPREADSHEET_ID, OAUTH_CLIENT_ID, SHEET_CA_HOC, SHEET_TONG_HOP } from '../src/config.js';
+import { signIn, tokenInfo, revokeToken, forgetToken, readRange, findFirstEmptyRow, writeRow, clearRow } from '../src/sheets-write.js';
+import { rawCell, serialFromYMD, weekNo, fmtDate } from '../src/core.js';
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const MARK = '[L2-test';
+
+// ---- Hiển thị cấu hình: để chắc chắn đang trỏ vào BẢN THỬ ----
+$('cfg').innerHTML = `Sheet đang dùng: <code>${SPREADSHEET_ID}</code> ` +
+  (SPREADSHEET_ID === REAL_SPREADSHEET_ID ? '<b class="fail">(SHEET THẬT!)</b>' : '<b class="ok">(bản thử nghiệm)</b>') +
+  `<br>Client ID: ${OAUTH_CLIENT_ID ? '<span class="ok">đã điền</span>' : '<span class="fail">CHƯA điền trong src/config.js</span>'}` +
+  `<br>Origin trang: <code>${esc(location.origin)}</code>`;
+
+// ---- Chốt chặn (L4 Phần D): trang thử L2 KHÔNG được chạy vào Sheet thật ----
+if (SPREADSHEET_ID === REAL_SPREADSHEET_ID) {
+  document.querySelectorAll('button').forEach(b => { b.disabled = true; });
+  document.body.insertAdjacentHTML('afterbegin', '<p style="background:#b3261e;color:#fff;padding:8px">Trang thử L2 đã tắt: app đang trỏ vào Sheet THẬT. Muốn dùng lại, đổi SPREADSHEET_ID trong src/config.js về TEST_SPREADSHEET_ID.</p>');
+  throw new Error('Trang thử L2 bị chặn vì đang trỏ vào Sheet thật');
+}
+
+// ---- Bảng kết quả + phần chi tiết (chỉ chứa dữ liệu thử, không bao giờ chứa token) ----
+const log = [];
+const detail = t => { $('detail').textContent += t + '\n'; };
+// Gợi ý cách xử lý theo mã lỗi
+const FIX = {
+  POPUP_popup_closed: 'Bình thường khi bấm đóng/hủy: app báo "chưa đăng nhập", cho bấm lại.',
+  POPUP_popup_failed_to_open: 'Trình duyệt chặn popup: cho phép popup cho buitue-03.github.io rồi bấm lại.',
+  AUTH_access_denied: 'Bấm "Hủy"/không cho quyền: app báo cần cấp quyền, cho bấm lại.',
+  AUTH_SCOPE: 'Đăng nhập lại và tick ô quyền Google Sheets.',
+  OFFLINE: 'Mất mạng: báo người dùng, giữ dữ liệu form, thử lại khi có mạng.',
+  NETWORK: 'Không tới được Google: thử lại sau; nếu luôn lỗi xem Console (có thể bị chặn).',
+  HTTP_401: 'Token hết hạn/bị thu hồi: xin token mới (bấm Đăng nhập), rồi làm lại thao tác.',
+  NO_TOKEN: 'Bấm Đăng nhập trước.',
+  HTTP_403: 'Không có quyền: kiểm tra đúng tài khoản chủ Sheet, đã bật Sheets API, là test user.',
+  HTTP_429: 'Gọi quá nhiều: chờ 1 phút rồi thử lại.',
+  NOT_EMPTY: 'Dòng đã có dữ liệu: tìm lại dòng trống rồi ghi.',
+  GUARD: 'Đúng như thiết kế: khóa an toàn chặn ghi vào Sheet thật.',
+  CONFIG: 'Điền Client ID vào src/config.js.',
+};
+function add(op, ok, ms, error = '', fix = '') {
+  log.push({ op, ok, ms, error, fix });
+  $('res').insertAdjacentHTML('beforeend', `<tr><td>${log.length}</td><td>${esc(op)}</td>` +
+    `<td class="${ok === true ? 'ok' : ok === false ? 'fail' : 'warn'}">${ok === true ? 'OK' : ok === false ? 'LỖI' : esc(ok)}</td>` +
+    `<td>${ms == null ? '' : ms + ' ms'}</td><td>${esc(error)}</td><td>${esc(fix)}</td></tr>`);
+}
+// Chạy 1 thao tác, đo thời gian, ghi kết quả; lỗi thì ghi kèm cách xử lý rồi ném tiếp
+async function step(op, fn, { expectOk = true } = {}) {
+  const t = performance.now();
+  try { const v = await fn(); add(op, true, Math.round(performance.now() - t)); return v; }
+  catch (e) { add(op, false, Math.round(performance.now() - t), `${e.code ?? ''} ${e.message}`, FIX[e.code] ?? ''); if (expectOk) throw e; return e; }
+}
+// Kiểm tra một điều kiện (không gọi mạng)
+const check = (op, cond, info) => add(op, cond ? true : false, null, cond ? '' : info, cond ? '' : 'Báo Claude kèm phần chi tiết');
+
+// ---- Đọc qua gviz (đường đọc công khai của L1) để đo độ trễ sau khi ghi ----
+async function gvizRows() {
+  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&headers=1` +
+    `&sheet=${encodeURIComponent(SHEET_CA_HOC)}&range=A1:F&_=${Date.now()}`; // _= tránh cache trình duyệt
+  const text = await (await fetch(url, { cache: 'no-store' })).text();
+  const resp = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
+  return resp.table.rows.map(r => (r.c ?? []).map(c => rawCell(c, 'gviz')));
+}
+// Tìm dòng thử theo ghi chú; trả về giá trị đọc được (hoặc null nếu chưa thấy)
+const gvizFind = async note => (await gvizRows()).find(r => r[5] === note) ?? null;
+// Đo: ngay sau khi ghi, sau 5 giây, sau 30 giây (tính từ lúc lệnh ghi xong)
+async function measureLag(label, t0, isVisible) {
+  for (const sec of [0, 5, 30]) {
+    const wait = t0 + sec * 1000 - Date.now();
+    if (wait > 0) await sleep(wait);
+    try { const r = await gvizFind(label.note); const vis = isVisible(r);
+      add(`gviz đọc lại sau ${sec}s (${label.what})`, vis ? true : 'CHƯA THẤY', null, vis ? '' : JSON.stringify(r)); }
+    catch (e) { add(`gviz đọc lại sau ${sec}s (${label.what})`, false, null, e.message, 'Xem Console'); }
+  }
+}
+
+// ---- Ảnh chụp tab Tổng hợp tuần (A8:I20: tuần, từ, đến, giai đoạn, ngày có học, số ca, tổng phút, LT, TH) ----
+const summary = () => readRange('A8:I20', SHEET_TONG_HOP);
+function diffSummary(before, after) {
+  const out = [];
+  after.forEach((r, i) => r.forEach((v, j) => { if (v !== before[i]?.[j]) out.push(`dòng ${i + 8} cột ${'ABCDEFGHI'[j]}: ${before[i]?.[j]} → ${v}`); }));
+  return out;
+}
+
+// Ngày hôm nay theo giờ Việt Nam, dạng serial
+function todaySerial() {
+  const [y, m, d] = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Saigon' }).format(new Date()).split('-').map(Number);
+  return serialFromYMD(y, m, d);
+}
+const hm = (h, m) => (h * 60 + m) / 1440; // giờ -> phần của ngày (23:00 = 0.958333...)
+
+// Bật/tắt nút trong lúc chạy
+const busy = on => document.querySelectorAll('button').forEach(b => { if (b.id !== 'copy') b.disabled = on; });
+const showTok = () => { const t = tokenInfo(); $('tok').innerHTML = t ? `<span class="ok">đã đăng nhập</span>, token còn ~${Math.round(t.secondsLeft / 60)} phút (chỉ trong bộ nhớ)` : '<span class="warn">chưa đăng nhập</span>'; };
+showTok();
+
+$('login').onclick = async () => {
+  busy(true);
+  try { const r = await step('Đăng nhập (initTokenClient)', signIn); detail(`Token sống ${r.expiresInSec} giây.`); } catch {}
+  showTok(); busy(false);
+};
+
+// ================= BỘ THỬ CHÍNH =================
+$('main').onclick = async () => {
+  busy(true);
+  try {
+    // 0) Chuẩn bị: bảng Chủ đề (để biết nhóm mong đợi) và ảnh chụp Tổng hợp tuần trước khi ghi
+    const topics = new Map((await step('Đọc tab Chủ đề', () => readRange('A2:B64', 'Chủ đề'))).map(r => [r[0], r[1]]));
+    const before = await step('Ảnh chụp Tổng hợp tuần (trước)', summary);
+    const { row } = await step('Tìm dòng trống đầu tiên A:F', findFirstEmptyRow);
+    detail(`Dòng trống đầu tiên: ${row}`);
+
+    const date = todaySerial(), wk = weekNo(date);
+    const topic = 'JP - Từ vựng', activity = 'Thực hành';
+    const note = `${MARK} ${new Date().toISOString()}] dòng thử, sẽ xóa`;
+    const vals = [date, hm(23, 0), hm(23, 30), topic, activity, note];
+    detail(`Ghi vào dòng ${row}: ${fmtDate(date)} 23:00–23:30, ${topic}, ${activity}, tuần ${wk}`);
+
+    // 1) GHI
+    await step(`Ghi dòng ${row} (RAW, ngày/giờ dạng số serial)`, () => writeRow(row, vals));
+    const tWrite = Date.now();
+
+    // 2) Đọc lại bằng Sheets API: A–F phải là SỐ (không thành chữ), G–K phải tự tính
+    const raw = (await step('Đọc lại A:K (giá trị thô)', () => readRange(`A${row}:K${row}`)))[0];
+    const shown = (await step('Đọc lại A:K (chuỗi hiển thị)', () => readRange(`A${row}:K${row}`, SHEET_CA_HOC, 'FORMATTED_VALUE')))[0];
+    detail(`Thô: ${JSON.stringify(raw)}\nHiển thị: ${JSON.stringify(shown)}`);
+    check('A–C là số (ngày/giờ không thành chữ)', [0, 1, 2].every(i => typeof raw[i] === 'number'), JSON.stringify(raw.slice(0, 3)));
+    check('Hiển thị ngày dd/mm/yyyy, giờ 23:00 / 23:30', shown[0] === fmtDate(date) && shown[1] === '23:00' && shown[2] === '23:30', JSON.stringify(shown.slice(0, 3)));
+    check('G (phút) = 30', raw[6] === 30, `G = ${raw[6]}`);
+    check(`H (nhóm) = ${topics.get(topic)}`, raw[7] === topics.get(topic), `H = ${raw[7]}`);
+    check(`I (tuần) = ${wk}`, raw[8] === wk, `I = ${raw[8]}`);
+    check('J (giai đoạn) = Sau baseline', raw[9] === 'Sau baseline', `J = ${raw[9]}`);
+
+    // 3) Tổng hợp tuần sau khi ghi
+    const afterW = await step('Ảnh chụp Tổng hợp tuần (sau ghi)', summary);
+    const dW = diffSummary(before, afterW); detail('Thay đổi Tổng hợp tuần sau GHI:\n  ' + (dW.join('\n  ') || '(không đổi)'));
+    const wi = afterW.findIndex(r => r[0] === wk); // dòng của tuần hiện tại trong bảng
+    check(`Tổng hợp tuần: tuần ${wk} tổng phút +30, số ca +1`, wi >= 0 && afterW[wi][6] - before[wi][6] === 30 && afterW[wi][5] - before[wi][5] === 1, dW.join('; '));
+
+    // 4) Độ trễ gviz sau GHI
+    await measureLag({ note, what: 'sau ghi' }, tWrite, r => r && r[0] === date && Math.abs(r[2] - hm(23, 30)) < 1e-6);
+
+    // 5) SỬA: đổi giờ kết thúc 23:30 -> 23:45 và ghi chú (chỉ sửa dòng có dấu [L2-test)
+    const cur = (await readRange(`F${row}`))[0]?.[0];
+    if (!String(cur).startsWith(MARK)) throw Object.assign(new Error(`Dòng ${row} không phải dòng thử, dừng`), { code: 'NOT_TEST_ROW' });
+    const note2 = note + ' (đã sửa)';
+    await step(`Sửa dòng ${row}: kết thúc 23:45`, () => writeRow(row, [date, hm(23, 0), hm(23, 45), topic, activity, note2], { mustBeEmpty: false }));
+    const tEdit = Date.now();
+    const raw2 = (await readRange(`A${row}:K${row}`))[0];
+    check('Sau sửa: G (phút) = 45', raw2[6] === 45, `G = ${raw2[6]}`);
+    const afterE = await step('Ảnh chụp Tổng hợp tuần (sau sửa)', summary);
+    check(`Tổng hợp tuần: tuần ${wk} tổng phút = trước + 45`, afterE[wi][6] - before[wi][6] === 45, diffSummary(before, afterE).join('; '));
+    await measureLag({ note: note2, what: 'sau sửa' }, tEdit, r => r && Math.abs(r[2] - hm(23, 45)) < 1e-6);
+
+    // 6) XÓA: hỏi xác nhận, rồi xóa NỘI DUNG A:F (không xóa hàng)
+    if (!confirm(`Xóa nội dung A–F của dòng ${row} (dòng thử ${fmtDate(date)} 23:00–23:45)?\nCột G–K giữ nguyên công thức.`)) {
+      add('Xóa dòng thử', 'BỎ QUA', null, 'Bạn bấm Hủy ở hộp xác nhận', 'Dòng thử vẫn còn: bấm "Dọn dòng thử" khi muốn xóa');
+    } else {
+      await step(`Xóa nội dung A:F dòng ${row}`, () => clearRow(row));
+      const tDel = Date.now();
+      const left = (await readRange(`A${row}:F${row}`))[0] ?? [];
+      check('Sau xóa: A–F trống', left.every(v => v === '' || v == null), JSON.stringify(left));
+      const f = (await step('Đọc công thức G:K sau xóa', () => readRange(`G${row}:K${row}`, SHEET_CA_HOC, 'FORMULA')))[0] ?? [];
+      check('Sau xóa: G–K vẫn còn công thức', f.length === 5 && f.every(x => String(x).startsWith('=')), JSON.stringify(f));
+      const afterD = await step('Ảnh chụp Tổng hợp tuần (sau xóa)', summary);
+      const dD = diffSummary(before, afterD);
+      check('Tổng hợp tuần trở về đúng như trước khi thử', dD.length === 0, dD.join('; '));
+      await measureLag({ note: note2, what: 'sau xóa' }, tDel, r => r === null);
+    }
+  } catch (e) { detail('Dừng bộ thử: ' + e.message); }
+  showTok(); busy(false);
+};
+
+// ================= THỬ LỖI =================
+// 3a: bấm Đăng nhập, rồi đóng cửa sổ hoặc bấm Hủy -> mong đợi lỗi popup_closed hoặc access_denied
+$('eCancel').onclick = async () => {
+  busy(true);
+  await step('3a. Đăng nhập rồi Hủy (mong đợi: lỗi, app không treo)', signIn, { expectOk: false });
+  showTok(); busy(false);
+};
+// 3b: tắt Wi-Fi/mạng trước khi bấm -> mong đợi lỗi OFFLINE/NETWORK
+$('eOffline').onclick = async () => {
+  busy(true);
+  detail(`3b: navigator.onLine = ${navigator.onLine}`);
+  await step('3b. Đọc khi mất mạng (mong đợi: lỗi OFFLINE)', () => readRange('A1:F1'), { expectOk: false });
+  busy(false);
+};
+// 3c: thu hồi token ở Google -> lần gọi kế tiếp mong đợi lỗi 401 (giống token hết hạn)
+$('eExpired').onclick = async () => {
+  busy(true);
+  if (!tokenInfo()) { add('3c. Thu hồi token', false, null, 'Chưa đăng nhập', 'Bấm Đăng nhập trước'); busy(false); return; }
+  const saved = tokenInfo();
+  await revokeToken();
+  detail(`3c: đã thu hồi token (lúc đó còn ${saved.secondsLeft}s). Chờ 3 giây để Google ghi nhận…`);
+  await sleep(3000);
+  await step('3c. Đọc bằng token đã thu hồi (mong đợi: 401)', () => readRange('A1:F1'), { expectOk: false });
+  forgetToken(); showTok(); busy(false);
+};
+
+// ================= DỌN DẸP =================
+$('clean').onclick = async () => {
+  busy(true);
+  try {
+    const rows = await step('Đọc A:F để tìm dòng thử', () => readRange('A2:F1002'));
+    const hits = rows.map((r, i) => [i + 2, r?.[5]]).filter(([, n]) => String(n ?? '').startsWith(MARK));
+    if (!hits.length) add('Dọn dòng thử', true, null, 'Không còn dòng thử nào');
+    else if (confirm(`Xóa nội dung A–F của ${hits.length} dòng thử: ${hits.map(h => h[0]).join(', ')}?`))
+      for (const [r] of hits) await step(`Dọn dòng ${r}`, () => clearRow(r));
+    else add('Dọn dòng thử', 'BỎ QUA', null, 'Bạn bấm Hủy');
+  } catch {}
+  busy(false);
+};
+
+// Sao chép bảng kết quả + chi tiết dạng chữ (không có token)
+$('copy').onclick = async () => {
+  const text = `L2 write-test · ${new Date().toString()} · origin ${location.origin}\n` +
+    log.map((l, i) => `${i + 1}. ${l.op} | ${l.ok === true ? 'OK' : l.ok === false ? 'LỖI' : l.ok} | ${l.ms ?? ''}${l.ms != null ? ' ms' : ''} | ${l.error} | ${l.fix}`).join('\n') +
+    '\n--- chi tiết ---\n' + $('detail').textContent;
+  try { await navigator.clipboard.writeText(text); $('copy').textContent = 'Đã sao chép ✓'; }
+  catch { $('detail').textContent = text; $('copy').textContent = 'Không sao chép được: hãy bôi đen phần chi tiết bên dưới'; }
+};
+</script>
+</body>
+</html>
