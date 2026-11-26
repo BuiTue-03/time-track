@@ -8,7 +8,7 @@ import { SPREADSHEET_ID, REAL_SPREADSHEET_ID, ALLOW_WRITE_TO_REAL_SHEET } from '
 import { initForm, onModel, openAddCurrentWeek, openFinish, formEnabled, getListWeek, setListWeek } from './form.js';
 import { initCal, renderCal, onWeek } from './page-cal.js';
 import { initToday, renderToday } from './page-today.js';
-import { clockNow } from './format.js';
+import { clockNow, fmtHM } from './format.js';
 import { initShell, setScreen, seg, applyTheme, getTheme, showPage, currentPage } from './shell.js';
 import { initStats, renderStats } from './page-stats.js';
 import { mochiSvg, jump } from './mochi.js';
@@ -85,7 +85,7 @@ async function load() {
     const head = raw.caRows[0]; // dữ liệu mẫu (fixture) lưu dòng dạng { rowNumber, cells }
     model.headers = ((Array.isArray(head) ? head : head?.cells) ?? []).map(c => (c && typeof c === 'object' && 'v' in c ? c.v : c)); // tiêu đề A1:F1
     $('updated').textContent = `Cập nhật lúc ${clockNow()}`;
-    if (!model.sessions.length) { setState('empty'); return; }
+    if (!model.sessions.length) { setState('empty'); onModel(); return; } // vẫn chuẩn bị form để nút "Thêm ca" dùng được
     setState('ready');
     render();
     onModel();
@@ -112,7 +112,7 @@ function render() {
 // ---------- Gắn sự kiện ----------
 $('reload').addEventListener('click', load);
 $('state-retry').addEventListener('click', load);
-$('state-add').addEventListener('click', () => { setState('ready'); });
+$('state-add').addEventListener('click', () => openAddCurrentWeek());
 let rt;
 window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => model && screen === 'ok' && render(), 150); });
 initStats();
@@ -126,6 +126,14 @@ seg($('set-theme'), getTheme(), applyTheme);
 $('brand-mochi').innerHTML = mochiSvg();
 $('brand').addEventListener('click', () => jump($('brand-mochi')));
 $('hello').textContent = `Chào ${UI.name} ヾ(＾∇＾)`;
+// Cài đặt: chỉ hiển thị (tên, mục tiêu ở ui-config.js); Google dùng chung nút đăng nhập của tab Lịch
+$('set-name').textContent = UI.name;
+$('set-goal-day').textContent = fmtHM(UI.goalDayMin);
+$('set-goal-week').textContent = `${UI.goalWeekDays} ngày · ${fmtHM(UI.goalWeekMin)}`;
+$('set-source').textContent = `${DATA_SHEET_ID === REAL_SPREADSHEET_ID ? 'Sheet "Dữ liệu học tập"' : 'Bản thử nghiệm của Sheet'}${FORM_ENABLED ? ' · ghi cột A–F' : ' · chỉ đọc'}`;
+$('set-sheet').href = `https://docs.google.com/spreadsheets/d/${DATA_SHEET_ID}/edit`;
+$('set-google').hidden = !FORM_ENABLED;
+$('set-signin').addEventListener('click', () => $('ca-signin').click());
 renderBanner();
 initForm({ getModel: () => model, reload: load, onListWeek: onWeek }, { enabled: FORM_ENABLED, disabledReason: FORM_DISABLED_REASON });
 load();

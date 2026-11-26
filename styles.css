@@ -249,12 +249,12 @@ div.chart text { font-family: var(--f-body); font-size: 16px; fill: var(--text-2
 .pace .done { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 10px 0 0 10px; background: var(--a1); }
 .pace .more { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, var(--a1) 0 4px, transparent 4px 9px); border: 2px solid var(--a1); border-left: 0; border-radius: 0 10px 10px 0; }
 .pace .goal { position: absolute; top: -8px; bottom: -8px; width: 3px; background: var(--text); border-radius: 2px; }
-.pace .goal span { position: absolute; top: -26px; transform: translateX(-50%); white-space: nowrap; color: var(--text); font-weight: 700; }
+.pace .goal span { position: absolute; top: -28px; transform: translateX(-50%); white-space: nowrap; color: var(--text); font-weight: 700; background: var(--surface); padding: 0 4px; border-radius: 6px; }
 .pace .end { position: absolute; bottom: -28px; transform: translateX(-50%); white-space: nowrap; font-weight: 800; }
 .pace .al-r { transform: translateX(-100%) !important; } .pace .goal .al-r { transform: translateX(calc(-100% + 3px)) !important; } .pace .al-l { transform: none !important; }
 .card .legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
 .rows { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 6px; }
-.rows li { display: grid; grid-template-columns: 16px 1fr auto; gap: 10px; align-items: center; min-height: 32px; cursor: pointer; }
+.rows li { display: grid; grid-template-columns: 16px 1fr auto; gap: 10px; align-items: center; min-height: 44px; cursor: pointer; }
 .rows i { width: 16px; height: 16px; border-radius: 5px; display: block; }
 .rows b { font-variant-numeric: tabular-nums; }
 .inseg { margin-bottom: 10px; }
@@ -305,81 +305,37 @@ details.issues ul { margin: 6px 0 10px; padding-left: 20px; }
 .empty-week { text-align: center; color: var(--text-2); padding: 18px 0 6px; }
 .empty-week svg { width: 72px; height: 62px; }
 
-/* ---------- TẠM THỜI (bước 1 Phần C): kiểu cũ của L3/L4 đổi sang biến màu mới.
-   Các bước sau thay dần bằng giao diện mới rồi xóa khối này. ---------- */
-:root { --grid: var(--border); --bar: var(--a1); --bar-cur: var(--cur-bg); --hatch: var(--a1);
-  --series-1: var(--a1); --series-2: var(--a2); --series-3: var(--a3); --series-4: var(--a4); --series-5: var(--a5); --series-6: var(--grey-cat);
-  --busy-bg: var(--h0); --busy-line: var(--grey-cat); --tag-bg: var(--surface-2); --tag-text: var(--accent-text); }
-.top { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.top-right { display: flex; gap: 10px; align-items: center; }
-.state { background: var(--surface); border-radius: 20px; padding: 18px; box-shadow: var(--shadow); }
-.grid.two { margin-bottom: 16px; } .card { margin-bottom: 16px; } .grid.two > .card { margin-bottom: 0; }
-.big { font-family: var(--f-head); font-size: 28px; margin: 0; font-variant-numeric: tabular-nums; }
-.cmp { margin: 10px 0 0; } .cmp dt { color: var(--text-2); margin-top: 8px; } .cmp dd { margin: 2px 0 0; }
-.tag { display: inline-block; padding: 0 8px; border-radius: 8px; background: var(--tag-bg); color: var(--tag-text); white-space: nowrap; font-weight: 700; }
-.forecast { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 8px; }
-details summary { cursor: pointer; color: var(--text-2); min-height: 44px; display: flex; align-items: center; }
-.issues { background: var(--surface); border-radius: 20px; padding: 4px 18px; margin-bottom: 16px; box-shadow: var(--shadow); }
-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-th, td { text-align: left; padding: 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
-th { font-weight: 700; color: var(--text-2); }
-.num { text-align: right; white-space: nowrap; }
-.sw { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 6px; }
-.select { display: inline-flex; gap: 8px; align-items: center; max-width: 100%; flex-wrap: wrap; }
-select { padding: 8px 10px; min-height: 44px; max-width: 100%; border-radius: 12px; border: 2px solid var(--border); background: var(--surface); }
-.chart-box { width: 100%; overflow: hidden; }
-.chart { display: block; max-width: 100%; height: auto; }
-.chart text { font-size: 14px; fill: var(--text-2); font-variant-numeric: tabular-nums; font-family: var(--f-body); }
-.chart .val { fill: var(--text); font-weight: 700; } .chart .sub { font-size: 13px; }
-.chart .grid { stroke: var(--grid); stroke-width: 1; } .chart .axis-line { stroke: var(--text-2); stroke-width: 1; }
-.chart .bar { fill: var(--bar); } .chart .bar-cur { fill: url(#hatch); stroke: var(--bar); stroke-width: 1; }
-.chart .cur-fill { fill: var(--bar-cur); } .chart .hatch-line { stroke: var(--hatch); stroke-width: 2; }
-.chart .avg { stroke: var(--text); stroke-width: 2; stroke-dasharray: 6 4; }
-.chart .avg-label { fill: var(--text); font-weight: 700; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; }
-.chart .hit { fill: transparent; } .chart .mark { outline: none; }
-.chart .mark:focus-visible rect { stroke: var(--text); stroke-width: 2; }
-.chart .empty { fill: var(--surface-2); }
-.h0 { fill: var(--h0); background: var(--h0); } .h1 { fill: var(--h1); background: var(--h1); } .h2 { fill: var(--h2); background: var(--h2); }
-.h3 { fill: var(--h3); background: var(--h3); } .h4 { fill: var(--h4); background: var(--h4); } .h5 { fill: var(--h5); background: var(--h5); }
-.chart .busy { fill: url(#busy); } .chart .busy-bg { fill: var(--busy-bg); } .chart .busy-line { stroke: var(--busy-line); stroke-width: 2; }
-.chart .busy-mark { fill: var(--text); font-weight: 700; pointer-events: none; }
-.chart .future { fill: none; stroke: var(--border); stroke-dasharray: 3 3; }
-.chart .today { fill: none; stroke: var(--text); stroke-width: 2.5; pointer-events: none; }
-.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--text-2); margin-top: 8px; }
-.legend span { display: inline-flex; align-items: center; gap: 5px; }
-.cell-sw { display: inline-block; width: 16px; height: 16px; border-radius: 4px; }
-.cell-sw.busy { background: repeating-linear-gradient(45deg, var(--busy-bg) 0 3px, var(--busy-line) 3px 5px); }
-.cell-sw.today-sw { border: 2.5px solid var(--text); }
-.tooltip { position: fixed; z-index: 30; pointer-events: none; white-space: pre-line; max-width: 280px;
-  background: var(--tip-bg); color: var(--tip-text); font-size: 15px; line-height: 1.45; padding: 8px 12px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
-.nowrap { white-space: nowrap; }
-:where(#ca-tools, dialog) button:not(.btn3d) { padding: 6px 14px; min-height: 44px; border-radius: 12px; border: 2px solid var(--border); background: var(--surface); cursor: pointer; }
-button:disabled { opacity: .5; cursor: default; }
-button.primary { background: var(--accent); border-color: var(--accent-edge); color: var(--on-accent); font-weight: 700; }
-button.danger { background: var(--danger); border-color: var(--danger-edge); color: var(--on-danger); font-weight: 700; }
-.signin { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin-bottom: 10px; }
-.strip { padding: 10px 14px; border-radius: 14px; margin: 10px 0; }
-.strip b { margin-right: 6px; }
-.strip.s-cur { background: var(--cur-bg); } .strip.s-prov { background: var(--prov-bg); box-shadow: inset 4px 0 0 var(--prov-line); } .strip.s-final { background: var(--final-bg); }
-.why { color: var(--warn); margin: 4px 0; }
-.ca-row { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 10px 0; border-top: 1px solid var(--border); }
-.ca-row .why { grid-column: 1 / -1; } .ca-main { min-width: 0; } .ca-main .tag { margin-left: 4px; }
-.ca-btns { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start; justify-content: flex-end; }
-dialog { width: min(560px, calc(100vw - 16px)); max-height: calc(100dvh - 16px); border: 0; border-radius: 24px; background: var(--surface); color: var(--text); padding: 20px; }
-dialog::backdrop { background: rgba(10, 12, 20, .5); }
-dialog h3 { margin: 0 0 6px; font-size: 20px; }
-#ca-form label { display: block; margin: 10px 0 0; font-weight: 700; }
-#ca-form input:not([type=checkbox]), #ca-form select, #ca-form textarea { display: block; width: 100%; margin-top: 4px; min-height: 48px;
-  padding: 10px 12px; border-radius: 14px; border: 2px solid var(--border); background: var(--bg); color: var(--text); font-weight: 400; }
-#ca-form input:disabled, #ca-form select:disabled { opacity: .55; }
-#ca-form label.check { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; min-height: 48px; }
-#ca-form label.check input { width: 24px; height: 24px; }
+
+/* ---------- Form thêm / sửa và hộp xóa (tấm trượt) ---------- */
+.fld { display: grid; gap: 4px; margin-top: 12px; font-weight: 700; }
+.fld input, .fld select, .fld textarea { font: 16px/1.4 var(--f-body); min-height: 48px; padding: 10px 12px; border-radius: 14px; border: 2px solid var(--border);
+  background: var(--bg); color: var(--text); width: 100%; }
+.fld input:focus, .fld select:focus, .fld textarea:focus { border-color: var(--accent-edge); outline: none; }
+.fld input:disabled, .fld select:disabled { opacity: .55; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.errors { color: var(--err); padding-left: 20px; margin: 8px 0; } .warnings { color: var(--warn); padding-left: 20px; margin: 8px 0; }
+.hint { font-weight: 400; color: var(--text-2); }
+.dur { margin: 8px 0 0; font-weight: 700; color: var(--accent-text); }
+.dur:empty { display: none; }
+.why { color: var(--warn); margin: 6px 0 0; }
+.check { display: flex; gap: 10px; align-items: center; min-height: 48px; margin-top: 10px; cursor: pointer; }
+.check input { width: 24px; height: 24px; flex: none; accent-color: var(--accent-edge); }
+.errors { color: var(--err); padding-left: 20px; margin: 10px 0 0; }
+.warnings { color: var(--warn); padding-left: 20px; margin: 10px 0 0; }
 .errors:empty, .warnings:empty { display: none; }
-.actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; position: sticky; bottom: -20px; background: var(--surface); padding: 8px 0; }
-.actions button { flex: 1; }
-.msg { border-radius: 14px; padding: 10px 14px; margin: 10px 0; }
-.msg p { margin: 0 0 6px; }
-.msg.ok { background: var(--cur-bg); } .msg.error { border: 2px solid var(--err); } .msg.warn { border: 2px solid var(--warn); } .msg.info { border: 2px solid var(--border); }
-.card:has(> table), .card > div:has(> table) { overflow-x: auto; } #rank-weeks, #rank-weekdays, #rank-topics, #a3-legend { overflow-x: auto; }
+.actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; padding: 8px 0 4px; position: sticky; bottom: -20px; background: var(--surface); }
+.actions .btn3d { flex: 1; max-width: 220px; }
+.delwhat { background: var(--surface-2); border-radius: 14px; padding: 10px 14px; }
+
+/* ---------- Thông báo kết quả (giữ nguyên nội dung chữ của L4) ---------- */
+.msg { border-radius: 14px; padding: 10px 14px; margin: 10px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.msg .grow1 { flex: 1; min-width: 160px; margin: 0; }
+.msg svg { width: 44px; height: 38px; flex: none; }
+.msg .ic { font-weight: 800; white-space: nowrap; }
+.msg.ok { background: var(--cur-bg); }
+.msg.error { background: var(--surface); border: 2px solid var(--err); } .msg.error .ic { color: var(--err); }
+.msg.warn { background: var(--prov-bg); box-shadow: inset 4px 0 0 var(--prov-line); }
+.msg.info { background: var(--surface-2); }
+
+/* Công tắc giả cho chỗ trống L6 (không bấm được) */
+.switch { width: 52px; height: 30px; border-radius: 99px; background: var(--surface-2); position: relative; flex: none; border: 2px dashed var(--border); }
+.switch i { position: absolute; width: 22px; height: 22px; border-radius: 50%; background: var(--grey-cat); top: 2px; left: 2px; }

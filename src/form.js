@@ -206,6 +206,7 @@ function renderList() {
   }
   $('ca-list').innerHTML = h;
 }
+const MSG_ICON = { error: '(・_・;)', warn: '(・・?)', info: '(・ω・)' };
 const STATUS_KAO = { cur: '(＾▽＾)', prov: '(•ω•)', final: '(˘ω˘)' };
 const statusKey = s => ({ [WEEK_STATUS.CURRENT]: 'cur', [WEEK_STATUS.PROVISIONAL]: 'prov', [WEEK_STATUS.FINAL]: 'final' }[s] ?? 'final');
 
@@ -301,12 +302,12 @@ function refreshForm() {
   const isOff = editing.mode === 'edit' ? isOffsetNote(editing.original.note) : input.isOffset;
   const p = permissions(status, { isOffset: isOff });
   // Dải trạng thái tuần ngay trên form
-  $('f-strip').className = `strip s-${statusKey(status)}`;
-  $('f-strip').innerHTML = `<b>Tuần ${weekNo(date)} · ${status}</b> ` + esc(
+  $('f-strip').className = `state-strip s-${statusKey(status)}`;
+  $('f-strip').innerHTML = `<span class="kao">${STATUS_KAO[statusKey(status)] ?? ''}</span><span><b>Tuần ${weekNo(date)} · ${esc(status)}</b>` + esc(
     status === WEEK_STATUS.FINAL ? MSG_FINAL
       : status === WEEK_STATUS.PROVISIONAL
         ? (editing.mode === 'add' ? `Tuần tạm chốt: ca thêm vào là ca ghi bù, tự gắn nhãn ${OFFSET_LABEL}.` : (isOff ? 'Ca ghi bù: sửa được mọi trường, ngày phải trong tuần này.' : p.reasons.canEditTime))
-        : 'Tuần đang diễn ra: sửa được mọi trường.');
+        : 'Tuần đang diễn ra: sửa được mọi trường.') + '</span>';
   // Khóa ngày/giờ khi không được sửa giờ (ca thường ở tuần Tạm chốt), kèm lý do
   const lockTime = editing.mode === 'edit' && !p.canEditTime;
   for (const id of ['f-date', 'f-start', 'f-end']) $(id).disabled = lockTime;
@@ -537,7 +538,10 @@ function showMsg(box, kind, text, buttons = []) {
   if (!kind) { box.hidden = true; box.innerHTML = ''; return; }
   box.hidden = false;
   box.className = `msg ${kind}`;
-  box.innerHTML = `<p>${esc(text)}</p>` + buttons.map(([k, label]) => `<button type="button" data-do="${k}">${esc(label)}</button>`).join(' ');
+  // L4.5: thông báo thành công có nhân vật nhảy; nút kiểu mới. Nội dung chữ không đổi.
+  box.innerHTML = (kind === 'ok' ? mochiSvg() : `<span class="ic" aria-hidden="true">${MSG_ICON[kind] ?? ''}</span>`) +
+    `<p class="grow1">${esc(text)}</p>` + buttons.map(([k, label]) => `<button type="button" class="btn3d small ghost" data-do="${k}">${esc(label)}</button>`).join(' ');
+  if (kind === 'ok') jump(box);
 }
 
 // ---------------------------------------------------------------------------------------------

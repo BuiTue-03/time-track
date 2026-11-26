@@ -138,14 +138,45 @@
   <div id="pg-settings" class="page" hidden>
     <div class="hello"><h1>Cài đặt</h1></div>
     <div class="grid two">
-      <section class="card set">
-        <h2>Giao diện</h2>
-        <div class="set-row"><span>Màu nền</span><span class="seg" id="set-theme"><button type="button" data-v="auto">Theo máy</button><button type="button" data-v="light">Sáng</button><button type="button" data-v="dark">Tối</button></span></div>
-      </section>
-      <section class="card set">
-        <h2>Số liệu</h2>
-        <div class="set-row"><span>Số liệu<br><span class="muted" id="updated"></span></span><button class="btn3d small ghost" type="button" id="reload">Tải lại</button></div>
-      </section>
+      <div class="grid">
+        <section class="card set">
+          <h2>Giao diện</h2>
+          <div class="set-row"><span>Màu nền</span><span class="seg" id="set-theme"><button type="button" data-v="auto">Theo máy</button><button type="button" data-v="light">Sáng</button><button type="button" data-v="dark">Tối</button></span></div>
+          <div class="set-row"><span>Tên hiển thị</span><b id="set-name"></b></div>
+        </section>
+        <section class="card set">
+          <h2>Tài khoản và dữ liệu</h2>
+          <div class="set-row" id="set-google"><span>Google<br><span class="muted" id="set-signin-state"></span></span><button class="btn3d small ghost" type="button" id="set-signin">Đăng nhập Google</button></div>
+          <div class="set-row"><span>Nguồn dữ liệu<br><span class="muted" id="set-source"></span></span><a class="btn3d small ghost" id="set-sheet" target="_blank" rel="noopener">Mở Sheet</a></div>
+          <div class="set-row"><span>Số liệu<br><span class="muted" id="updated"></span></span><button class="btn3d small ghost" type="button" id="reload">Tải lại</button></div>
+        </section>
+        <section class="card set">
+          <h2>Mục tiêu</h2>
+          <div class="set-row"><span>Mỗi ngày</span><b id="set-goal-day"></b></div>
+          <div class="set-row"><span>Mỗi tuần</span><b id="set-goal-week"></b></div>
+        </section>
+      </div>
+      <!-- CHỖ TRỐNG cho L5–L7: chỉ hiển thị, chưa có logic, không bấm được -->
+      <div class="grid">
+        <section class="card set soon">
+          <h2>Ngày nghỉ và tích lũy <span class="later">L6</span></h2>
+          <div class="set-row"><span>Số dư ngày nghỉ</span><b class="muted">—</b></div>
+          <div class="set-row"><span>Đã quy đổi</span><b class="muted">—</b></div>
+          <div class="set-row"><span>Nhắc nghỉ sau 7 ngày học liền</span><span class="switch" aria-hidden="true"><i></i></span></div>
+        </section>
+        <section class="card set soon">
+          <h2>Chuỗi ngày học <span class="later">L6</span></h2>
+          <div class="set-row"><span>Sửa chuỗi</span><b class="muted">—</b></div>
+        </section>
+        <section class="card set soon">
+          <h2>Câu khích lệ và huy hiệu <span class="later">L5</span></h2>
+          <div class="set-row"><span>Danh sách câu</span><b class="muted">—</b></div>
+        </section>
+        <section class="card set soon">
+          <h2>Bấm giờ học <span class="later">L7</span></h2>
+          <div class="set-row"><span>Nút Bắt đầu / Kết thúc</span><b class="muted">—</b></div>
+        </section>
+      </div>
     </div>
   </div>
 
@@ -175,41 +206,41 @@
   <div class="sheet-actions"><button class="btn3d small ghost" type="button" id="sheet-close">Đóng</button></div>
 </dialog>
 
-<dialog id="f-dialog" aria-labelledby="f-title">
+<dialog class="sheet formsheet" id="f-dialog" aria-labelledby="f-title">
   <form id="ca-form" novalidate>
-    <h3 id="f-title">Thêm ca học</h3>
-    <div class="strip" id="f-strip"></div>
-    <label>Ngày <span class="muted" id="f-date-hint"></span>
+    <h2 id="f-title">Thêm ca học</h2>
+    <div class="state-strip" id="f-strip"></div>
+    <label class="fld">Ngày <span class="hint" id="f-date-hint"></span>
       <input type="text" id="f-date" inputmode="numeric" placeholder="dd/mm/yyyy" autocomplete="off" required></label>
     <div class="row2">
-      <label>Bắt đầu <span class="muted">(24 giờ)</span> <input type="text" id="f-start" inputmode="numeric" placeholder="hh:mm" autocomplete="off"></label>
-      <label>Kết thúc <span class="muted">(để trống nếu chưa xong)</span> <input type="text" id="f-end" inputmode="numeric" placeholder="hh:mm" autocomplete="off"></label>
+      <label class="fld">Bắt đầu <span class="hint">(24 giờ)</span> <input type="text" id="f-start" inputmode="numeric" placeholder="hh:mm" autocomplete="off"></label>
+      <label class="fld">Kết thúc <span class="hint">(trống nếu chưa xong)</span> <input type="text" id="f-end" inputmode="numeric" placeholder="hh:mm" autocomplete="off"></label>
     </div>
-    <p class="muted" id="f-dur"></p>
+    <p class="dur" id="f-dur"></p>
     <p class="why" id="f-time-why" hidden></p>
-    <label>Chủ đề <select id="f-topic"></select></label>
-    <label>Hoạt động <select id="f-activity"></select></label>
-    <label class="check"><input type="checkbox" id="f-offset"> Đây là ca ghi bù <span class="muted" id="f-offset-why"></span></label>
-    <label>Ghi chú (tùy chọn) <textarea id="f-note" rows="2"></textarea></label>
-    <p class="muted" id="f-note-preview"></p>
+    <label class="fld">Chủ đề <select id="f-topic"></select></label>
+    <label class="fld">Hoạt động <select id="f-activity"></select></label>
+    <label class="check"><input type="checkbox" id="f-offset"><span>Đây là ca ghi bù <span class="hint" id="f-offset-why"></span></span></label>
+    <label class="fld">Ghi chú (tùy chọn) <textarea id="f-note" rows="2"></textarea></label>
+    <p class="hint" id="f-note-preview"></p>
     <ul class="errors" id="f-errors"></ul>
     <ul class="warnings" id="f-warnings"></ul>
     <div class="msg" id="ca-msg" hidden></div>
     <div class="actions">
-      <button type="button" id="f-cancel">Đóng</button>
-      <button type="submit" class="primary" id="f-save">Lưu</button>
+      <button type="button" class="btn3d small ghost" id="f-cancel">Đóng</button>
+      <button type="submit" class="btn3d small" id="f-save">Lưu</button>
     </div>
   </form>
 </dialog>
 
-<dialog id="del-dialog" aria-labelledby="del-title">
-  <h3 id="del-title">Xóa ca này?</h3>
-  <p id="del-what"></p>
+<dialog class="sheet" id="del-dialog" aria-labelledby="del-title">
+  <h2 id="del-title">Xóa ca này?</h2>
+  <p id="del-what" class="delwhat"></p>
   <p><b>Xóa nội dung dòng, không thể khôi phục từ app.</b> App xóa nội dung cột A–F của dòng này; công thức cột G–K giữ nguyên. Muốn lấy lại, phải mở lịch sử phiên bản (Version history) của Sheet.</p>
   <div class="msg" id="del-msg" hidden></div>
   <div class="actions">
-    <button type="button" id="del-cancel">Không xóa</button>
-    <button type="button" class="danger" id="del-ok">Xóa nội dung dòng</button>
+    <button type="button" class="btn3d small ghost" id="del-cancel">Không xóa</button>
+    <button type="button" class="btn3d small danger" id="del-ok">Xóa nội dung dòng</button>
   </div>
 </dialog>
 
