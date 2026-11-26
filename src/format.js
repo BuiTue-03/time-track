@@ -21,3 +21,14 @@ export const fmtTime = t => { const m = Math.round((t % 1) * 1440); return `${St
 export const clockNow = (now = new Date()) =>
   new Intl.DateTimeFormat('en-GB', { timeZone: TIME_ZONE, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(now);
 export const monthLabel = (y, m) => `${String(m).padStart(2, '0')}/${y}`;
+
+// L4.5: cách ghi thân thiện ở giao diện mới
+const nf1x = new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+export const fmtH1 = m => `${nf1x.format(m / 60)} giờ`;                         // 15,9 giờ
+export const fmtH1Short = m => nf1x.format(m / 60);                             // 15,9 (số trên cột)
+export const fmtHM = m => {                                                     // 2 giờ 15 phút · 45 phút
+  const t = Math.round(m), h = Math.floor(t / 60), r = t % 60;
+  return h ? `${h} giờ${r ? ` ${r} phút` : ''}` : `${r} phút`;
+};
+// So sánh không phán xét: "nhiều hơn 1 giờ 5 phút" / "ít hơn 20 phút" / "bằng nhau" (không màu đỏ/xanh)
+export const fmtDiff = d => (Math.round(d) === 0 ? 'bằng nhau' : `${d > 0 ? 'nhiều hơn' : 'ít hơn'} ${fmtHM(Math.abs(d))}`);

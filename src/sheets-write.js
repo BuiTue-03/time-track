@@ -4,7 +4,7 @@ import {
   SPREADSHEET_ID, REAL_SPREADSHEET_ID, ALLOW_WRITE_TO_REAL_SHEET,
   OAUTH_CLIENT_ID, OAUTH_SCOPE, SHEET_CA_HOC, LAST_FORMULA_ROW,
 } from './config.js';
-import { buildWriteRange, assertWriteRange, findFirstEmptyRow as pickEmptyRow } from './write-core.js';
+import { buildWriteRange, assertWriteRange, findFirstEmptyRow as pickEmptyRow, buildFormatRequests } from './write-core.js';
 
 const API = 'https://sheets.googleapis.com/v4/spreadsheets';
 let token = null;        // { access_token, expiresAt } — chỉ trong bộ nhớ
@@ -127,4 +127,20 @@ export async function clearRow(rowNumber) {
   const a1 = buildWriteRange(rowNumber);
   assertWriteRange(a1);
   return api('POST', `/values/${encodeURIComponent(a1)}:clear`, {});
+}
+
+// L4.5: đặt định dạng ngày/giờ cho A–C của 1 dòng (xem write-core B7). sheetId của tab "Ca học" đọc từ Google
+// (không ghi cứng: bản sao và Sheet thật có sheetId khác nhau), nhớ trong bộ nhớ trang.
+let sheetIdCache = null;
+async function caHocSheetId() {
+  if (sheetIdCache !== null) return sheetIdCache;
+  const j = await api('GET', `?fields=${encodeURIComponent('sheets.properties(sheetId,title)')}`);
+  const s = (j.sheets ?? []).find(x => x.properties?.title === SHEET_CA_HOC);
+  if (!s) throw err('RANGE', `Không thấy tab "${SHEET_CA_HOC}" trong Sheet`);
+  return (sheetIdCache = s.properties.sheetId);
+}
+export async function formatRow(rowNumber) {
+  assertWritable();
+  const requests = buildFormatRequests(await caHocSheetId(), rowNumber);
+  return api('POST', ':batchUpdate', { requests });
 }

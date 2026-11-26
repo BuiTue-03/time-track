@@ -112,3 +112,26 @@ export function findFirstEmptyRow(rowsFrom2, last = LAST_FORMULA_ROW) {
     : null;
   return { row: first + FIRST_DATA_ROW, emptyLeft, warning };
 }
+
+// ---------------------------------------------------------------------------------------------
+// B7 (L4.5, Oriana duyệt 26/11/2026). Đặt định dạng hiển thị cho A–C của ĐÚNG dòng vừa ghi.
+//   Lý do: app ghi RAW (số serial). Nếu ô chưa có định dạng ngày/giờ, Sheet hiện số thô (0,479166…) và gviz
+//   bỏ ô đó -> app tưởng ca chưa đóng (sự cố dòng 168, 26/11/2026). Chỉ đổi ĐỊNH DẠNG, không đổi giá trị.
+//   Chỉ cột A (dd/MM/yyyy) và B–C (hh:mm), chỉ 1 dòng, cùng giới hạn 2..1002 như ghi giá trị.
+// ---------------------------------------------------------------------------------------------
+export const ROW_FORMATS = [
+  { col: 0, numberFormat: { type: 'DATE', pattern: 'dd/MM/yyyy' } },
+  { col: 1, numberFormat: { type: 'TIME', pattern: 'hh:mm' } },
+  { col: 2, numberFormat: { type: 'TIME', pattern: 'hh:mm' } },
+];
+export function buildFormatRequests(sheetId, rowIndex) {
+  buildWriteRange(rowIndex); // cùng kiểm tra số dòng (2..1002) như khi ghi giá trị
+  if (!Number.isInteger(sheetId) || sheetId < 0) throw err('RANGE', `sheetId không hợp lệ: ${JSON.stringify(sheetId)}`);
+  return ROW_FORMATS.map(({ col, numberFormat }) => ({
+    repeatCell: {
+      range: { sheetId, startRowIndex: rowIndex - 1, endRowIndex: rowIndex, startColumnIndex: col, endColumnIndex: col + 1 },
+      cell: { userEnteredFormat: { numberFormat } },
+      fields: 'userEnteredFormat.numberFormat', // chỉ định dạng số; giữ nguyên màu, viền, data validation, giá trị
+    },
+  }));
+}
