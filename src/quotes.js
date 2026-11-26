@@ -2,12 +2,12 @@
 // Dữ liệu: quotes.json (v3, 120 câu, do Oriana gửi) ở gốc repo; app tải 1 lần khi mở.
 // Không lưu trạng thái: câu của ngày tính ra từ (ngày, nhóm, danh sách câu) -> cùng ngày + cùng dữ liệu
 // thì cùng câu trên mọi thiết bị.
-import { CONFIG, BUSY_TOPIC } from './core.js';
+import { CONFIG, REST_TOPICS } from './core.js';
 import { weekRing } from './stats-extra.js';
 
 export const SALT = 'tt-quotes-v3';
 export const EXCLUDED_STATUS = ['verified_weak', 'unverified']; // Oriana chọn loại khỏi "câu của ngày" (Phần A, o)
-export const REST_TOPICS = [BUSY_TOPIC, 'Nghỉ ngơi'];          // ngày nghỉ theo Hướng dẫn mục 7 (L5 chỉ dùng để chọn nhóm câu)
+export { REST_TOPICS };                                         // ngày nghỉ (L6: danh sách chung ở core.js)
 
 // Kho câu của 1 nhóm, xếp theo id để không phụ thuộc thứ tự trong file
 export const eligible = (quotes, group) =>

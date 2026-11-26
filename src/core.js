@@ -13,6 +13,9 @@ export const ACTIVITIES = ['Lý thuyết', 'Thực hành', 'Ôn tập', 'Kiểm 
 export const CATEGORIES = ['Ngoại ngữ', 'Chuyên môn BA', 'Không học'];
 export const BUSY_TOPIC = 'Bận đi làm, không học, có ôn tập ngắn';
 export const UNCATEGORIZED = 'Chưa phân loại';
+// L6 (Oriana duyệt Phần A câu m, 26/11/2026): chủ đề đánh dấu NGÀY NGHỈ = ngày không học (Hướng dẫn mục 6–7).
+// Danh sách duy nhất cho cả app (core, quotes, rest, streak). Giờ của ca ghi trong ngày nghỉ vẫn cộng vào tổng giờ.
+export const REST_TOPICS = [BUSY_TOPIC, 'Nghỉ ngơi'];
 export const WEEK_STATUS = { CURRENT: 'Đang diễn ra', PROVISIONAL: 'Tạm chốt', FINAL: 'Chốt hẳn', FUTURE: 'Chưa tới' };
 export const WEEKDAY_NAMES = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy']; // chỉ số 0 = Chủ nhật
 
@@ -121,7 +124,7 @@ export function parseSessions(rows, source, topics, cfg = CONFIG) {
       topic: typeof topic === 'string' ? topic.trim() : topic,
       activity: typeof activity === 'string' ? activity.trim() : activity,
       note: typeof note === 'string' ? note : '',
-      busy: false, open: false,
+      busy: false, rest: false, open: false,
     };
     const problem = msg => issues.push({ rowNumber, msg });
     if (typeof date !== 'number') { problem(`Ngày không phải giá trị ngày (đọc được: ${JSON.stringify(date)})`); return; }
@@ -134,10 +137,13 @@ export function parseSessions(rows, source, topics, cfg = CONFIG) {
     s.open = hasStart && !hasEnd; // ca đang mở: chưa có giờ kết thúc -> không tính phút
     s.duration = durationMin(start, end);
     s.busy = s.topic === BUSY_TOPIC;
+    s.rest = REST_TOPICS.includes(s.topic); // L6: dòng đánh dấu ngày nghỉ ("Bận đi làm…" hoặc "Nghỉ ngơi")
     if (!s.topic) problem('Thiếu chủ đề');
     s.category = topics.get(s.topic) ?? UNCATEGORIZED;
     if (s.topic && !topics.has(s.topic)) problem(`Chủ đề chưa có trong bảng Chủ đề: "${s.topic}" (tính vào "${UNCATEGORIZED}")`);
-    if (!s.busy && !ACTIVITIES.includes(s.activity)) problem(`Hoạt động không hợp lệ: ${JSON.stringify(s.activity)}`);
+    // Hoạt động bắt buộc với ca học. Miễn: dòng "Bận đi làm", và (L6) dòng nhóm "Không học" không có giờ (đánh dấu nghỉ).
+    const noTimeNotStudy = s.category === 'Không học' && !hasStart && !hasEnd;
+    if (!s.busy && !noTimeNotStudy && !ACTIVITIES.includes(s.activity)) problem(`Hoạt động không hợp lệ: ${JSON.stringify(s.activity)}`);
     if (s.duration !== null && s.duration <= 0) problem(`Thời lượng ${s.duration} phút (giờ kết thúc = giờ bắt đầu?)`);
     if (s.duration !== null && s.duration > 600) problem(`Thời lượng bất thường: ${s.duration} phút`);
     sessions.push(s);
@@ -176,7 +182,8 @@ export const monthKey = (y, m) => `${y}-${String(m).padStart(2, '0')}`;
 // 5. Thống kê. today = "hôm nay" (serial, giờ VN); chỉ tính các ca có date <= toDate (mặc định = today).
 // Định nghĩa:
 //   - "ca" (count) = dòng có đủ giờ bắt đầu + kết thúc. Dòng "Bận đi làm" không giờ và ca đang mở không phải ca.
-//   - "ngày có học" = ngày có ≥1 ca ĐÃ ĐÓNG (đủ giờ bắt đầu + kết thúc) và KHÔNG có dòng topic "Bận đi làm".
+//   - "ngày có học" = ngày có ≥1 ca ĐÃ ĐÓNG (đủ giờ bắt đầu + kết thúc) và KHÔNG có dòng topic thuộc REST_TOPICS
+//     ("Bận đi làm…", "Nghỉ ngơi" — L6, Oriana duyệt 26/11/2026).
 //     Quy tắc ca mở (L5, Oriana chốt 26/11/2026): ngày chỉ có ca mở KHÔNG tính là có học; ca mở không tính phút.
 //     Khi ca được đóng (điền giờ kết thúc), lần tải sau tính cả phút lẫn ngày có học.
 // ---------------------------------------------------------------------------------------------
@@ -188,9 +195,10 @@ export function computeStats(sessions, today, { toDate = today, cfg = CONFIG } =
   const st = { today, toDate, rows: list.length, rowsWithTime: 0, busyRowsNoTime: 0, otherRowsNoTime: 0, totalMin: 0, openSessions: [] };
 
   for (const s of list) {
-    const day = (days[s.date] ??= { date: s.date, min: 0, count: 0, rows: 0, busy: false, open: 0 });
+    const day = (days[s.date] ??= { date: s.date, min: 0, count: 0, rows: 0, busy: false, rest: false, open: 0 });
     day.rows++;
     if (s.busy) day.busy = true;
+    if (s.rest) day.rest = true;
     if (s.open) { day.open++; st.openSessions.push(s); }
     if (s.duration === null) { s.busy ? st.busyRowsNoTime++ : st.otherRowsNoTime++; continue; }
     st.rowsWithTime++;
@@ -204,7 +212,8 @@ export function computeStats(sessions, today, { toDate = today, cfg = CONFIG } =
     bump(g.phase, phase(s.date, cfg), s.duration);
     bump(g.month, monthKey(y, m), s.duration);
   }
-  for (const d of Object.values(days)) d.studyDay = !d.busy && d.count > 0; // ≥1 ca đã đóng và không có "Bận đi làm"
+  // ≥1 ca đã đóng và không có dòng ngày nghỉ ("Bận đi làm…" hoặc, từ L6, "Nghỉ ngơi")
+  for (const d of Object.values(days)) d.studyDay = !d.rest && d.count > 0;
   st.groups = g;
   st.days = days;
 
