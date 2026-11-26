@@ -238,6 +238,7 @@ function openForm({ mode, original = null, finish = false }) {
   fillTopics(original?.topic ?? '');
   $('f-title').textContent = mode === 'add' ? 'Thêm ca học' : closing ? 'Đóng ca' : `Sửa ca · dòng ${original.rowNumber}`;
   $('ca-form').classList.toggle('closing', closing);
+  $('f-cancel').textContent = closing ? 'Hủy' : 'Đóng';
   $('f-close-info').hidden = !closing;
   $('f-end-hint').textContent = closing ? 'hh:mm, 24 giờ. Nhỏ hơn giờ bắt đầu thì tính sang hôm sau.' : '(trống nếu chưa xong)';
   if (closing) {
@@ -322,7 +323,7 @@ function refreshForm() {
         ? (editing.mode === 'add' ? `Tuần tạm chốt: ca thêm vào là ca ghi bù, tự gắn nhãn ${OFFSET_LABEL}.`
           : editing.closing ? 'Tuần tạm chốt: chỉ điền giờ kết thúc, không sửa trường khác. Tổng giờ của tuần đó sẽ đổi theo.'
           : (isOff ? 'Ca ghi bù: sửa được mọi trường, ngày phải trong tuần này.' : p.reasons.canEditTime))
-        : 'Tuần đang diễn ra: sửa được mọi trường.') + '</span>';
+        : editing.closing ? 'Đóng ca: chỉ điền giờ kết thúc. Muốn sửa trường khác, lưu xong rồi bấm Sửa.' : 'Tuần đang diễn ra: sửa được mọi trường.') + '</span>';
   // Khóa ngày/giờ khi không được sửa giờ (ca thường ở tuần Tạm chốt), kèm lý do
   const lockTime = editing.mode === 'edit' && !p.canEditTime && !editing.closing;
   for (const id of ['f-date', 'f-start', 'f-end']) $(id).disabled = lockTime;
