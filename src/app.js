@@ -13,7 +13,8 @@ import {
   fmtMin, fmtHours, fmtPct, fmtSignedPct, fmtSignedMin, fmtRange, fmtDayShort, fmtTime, clockNow, monthLabel,
 } from './format.js';
 import { WEEKDAY_NAMES } from './core.js';
-import { initShell, setScreen, seg, applyTheme, getTheme, showPage } from './shell.js';
+import { initShell, setScreen, seg, applyTheme, getTheme, showPage, currentPage } from './shell.js';
+import { initStats, renderStats } from './page-stats.js';
 import { mochiSvg, jump } from './mochi.js';
 import { UI } from './ui-config.js';
 
@@ -110,79 +111,18 @@ function render() {
   $('notice').hidden = !(model.label || TODAY_OVERRIDE);
   $('notice').textContent = [model.label && `Đang xem ${model.label}.`, TODAY_OVERRIDE && `Đang giả lập hôm nay = ${fmtDate(t)}.`].filter(Boolean).join(' ');
 
-  // --- Tuần này (thống kê tạm thời) + so sánh + dự báo ---
-  const cw = compareWeeks(stats), fc = forecastWeek(stats), cur = rankWeeks(stats).current;
-  let h = '';
-  if (cur) {
-    h += `<p class="big">${fmtHours(cur.min)}</p><p class="muted">Tuần ${cur.week} (${fmtRange(cur.start, cur.end)}) · ${cur.status} · đã qua ${cur.daysElapsed}/7 ngày · ${cur.count} ca · ${cur.studyDays} ngày có học. Số liệu tạm thời, tính đến hôm nay.</p>`;
-  }
-  if (stats.openSessions.length) {
-    h += `<p class="open">${stats.openSessions.length} ca đang mở (chưa có giờ kết thúc, chưa tính phút): ` +
-      stats.openSessions.map(s => `${fmtDayShort(s.date)} từ ${fmtTime(s.start)}, dòng ${s.rowNumber}`).join('; ') + `</p>`;
-  }
-  if (cw) {
-    const prevTag = cw.prevStatus === WEEK_STATUS.PROVISIONAL ? ' <span class="tag">tạm chốt</span>' : '';
-    h += `<dl class="cmp">
-      <dt>So với cùng ${cw.daysElapsed} ngày đầu tuần ${cw.prevWeek}${prevTag}</dt>
-      <dd>${fmtMin(cw.sameDays.cur)} so với ${fmtMin(cw.sameDays.prev)} <span class="muted">(${fmtRange(cw.sameDays.prevFrom, cw.sameDays.prevTo)})</span><br><span class="delta">${deltaText(cw.sameDays)}</span></dd>
-      <dt>So với cả tuần ${cw.prevWeek}${prevTag}</dt>
-      <dd>${fmtMin(cw.fullWeek.cur)} so với ${fmtMin(cw.fullWeek.prev)} <span class="muted">(7 ngày, ${fmtRange(cw.fullWeek.prevFrom, cw.fullWeek.prevTo)})</span><br><span class="delta">${deltaText(cw.fullWeek)}</span></dd>
-    </dl>`;
-  }
-  if (fc) {
-    h += `<div class="forecast"><p><span class="tag">dự báo</span> Nếu những ngày còn lại theo nhịp trung bình của tuần ${fc.baseWeeks.join(', ')}, cuối tuần ${fc.week} khoảng <b>${fmtHours(fc.forecastMin)}</b>.</p>
-      <details><summary>Cách tính</summary><p class="muted">Dự báo = phút các ngày đã qua trước hôm nay (${fmtMin(fc.before)}) + lớn hơn trong hai số: phút hôm nay (${fmtMin(fc.today)}) hoặc nhịp ngày r + r × ${fc.remainingDays} ngày còn lại.
-      r = trung bình phút mỗi ngày lịch của tuần ${fc.baseWeeks.join(', ')} = ${fmtMin(fc.ratePerDay)}/ngày. Giả định: các ngày còn lại giống trung bình đó; app không biết trước ngày bận hay ngày nghỉ.</p></details></div>`;
-  }
-  $('this-week').innerHTML = h;
+  if (currentPage() === 'stats') renderStats(model);
 
-  // --- Tháng này vs tháng trước ---
-  const cm = compareMonths(stats);
-  $('this-month').innerHTML = `<p class="big">${fmtHours(cm.cur)}</p>
-    <p class="muted">Tháng ${monthLabel(cm.y, cm.m)}, ngày 1–${cm.day} (${fmtRange(cm.from, cm.to)})</p>
-    <dl class="cmp"><dt>So với cùng ${cm.day} ngày đầu tháng ${monthLabel(cm.py, cm.pm)}</dt>
-    <dd>${fmtMin(cm.cur)} so với ${fmtMin(cm.prev)} <span class="muted">(${fmtRange(cm.prevFrom, cm.prevTo)})</span><br>
-    ${cm.notEnoughData ? `<span class="tag">chưa đủ tháng</span> <span class="muted">Dữ liệu chỉ có từ ${fmtDate(stats.weeks[0].start)}, nên không tính % tăng/giảm.</span>` : `<span class="delta">${deltaText(cm)}</span>`}</dd></dl>`;
-
-  // --- A1 ---
-  const avg = weeklyAverage(stats);
-  $('a1').innerHTML = weeklyBars(stats.weeks, avg, width('a1'));
-  $('a1-note').textContent = avg
-    ? `Đường đứt nét: trung bình ${fmtHours(avg.avgMin)}/tuần, tính trên ${avg.weeks.length} tuần (tuần ${avg.weeks[0]}–${avg.weeks.at(-1)}${avg.includesProvisional ? ', có tuần tạm chốt' : ''}), không tính tuần Đang diễn ra. Cột sọc = tuần Đang diễn ra (tạm thời).`
-    : 'Chưa có tuần nào đã qua để tính trung bình.';
-
-  // --- A3 ---
-  const acts = breakdown(sessions, stats.weeks[0].start, t, 'activity');
-  $('a3').innerHTML = activityBar(acts, width('a3'));
-  $('a3-legend').innerHTML = `<table><thead><tr><th>Hoạt động</th><th class="num">Giờ</th><th class="num">Tỷ lệ</th><th class="num">Số ca</th></tr></thead><tbody>` +
-    acts.map(a => `<tr><td><span class="sw" style="background:${activityColorVar(a.key)}"></span>${esc(a.key)}</td><td class="num">${fmtHours(a.min)}</td><td class="num">${fmtPct(a.share)}</td><td class="num">${a.count}</td></tr>`).join('') +
-    `</tbody></table><p class="muted">Tính từ ${fmtDate(stats.weeks[0].start)} đến hôm nay; tỷ lệ trên tổng ${fmtHours(stats.totalMin)}.</p>`;
-
-  // --- A4 ---
+  // --- A4 (tạm, bước 5 thay bằng heatmap mới ở tab Lịch) ---
   $('a4').innerHTML = heatmap(stats.weeks, stats.days, t, width('a4'));
   $('a4-legend').innerHTML = HEAT_BINS.map((b, i) => `<span><i class="cell-sw h${i}"></i>${b.label}</span>`).join('') +
     `<span><i class="cell-sw busy"></i>Bận đi làm (B)</span><span><i class="cell-sw today-sw"></i>Hôm nay</span>`;
-
-  // --- Xếp hạng (1): tuần ---
-  const rw = rankWeeks(stats);
-  $('rank-weeks').innerHTML = `<table><thead><tr><th>Hạng</th><th>Tuần</th><th class="num">Giờ</th><th class="num">Số ca</th><th class="num">Ngày<br>có học</th></tr></thead><tbody>` +
-    rw.ranked.map(w => `<tr><td>${w.rank}</td><td class="nowrap">T${w.week} <span class="muted range">${fmtRange(w.start, w.end)}</span>${w.status === WEEK_STATUS.PROVISIONAL ? ' <span class="tag">tạm chốt</span>' : ''}</td><td class="num">${fmtHours(w.min)}</td><td class="num">${w.count}</td><td class="num">${w.studyDays}/7</td></tr>`).join('') +
-    `</tbody></table>` +
-    (rw.current ? `<p class="muted">Tuần ${rw.current.week} đang diễn ra, chưa xếp hạng. Tạm thời: ${fmtHours(rw.current.min)}, ${rw.current.count} ca, ${rw.current.daysElapsed}/7 ngày đã qua.</p>` : '') +
-    (rw.ranked.some(w => w.status === WEEK_STATUS.PROVISIONAL) ? `<p class="muted">"Tạm chốt": tuần liền trước, còn được ghi bù nên tổng có thể đổi.</p>` : '');
 
   // --- Xếp hạng (2): chủ đề / nhóm trong tuần được chọn ---
   $('week-select').innerHTML = stats.weeks.map(w => `<option value="${w.week}" ${w.week === selectedWeek ? 'selected' : ''}>Tuần ${w.week} (${fmtRange(w.start, w.end)}) · ${w.status}</option>`).join('');
   renderWeekBreakdown();
 
-  // --- Xếp hạng (3): thứ trong tuần ---
-  const wd = rankWeekdays(stats);
-  $('rank-weekdays').innerHTML = `<table><thead><tr><th>Hạng</th><th>Thứ</th><th class="num">Tổng</th><th class="num">Số lần<br>xuất hiện</th><th class="num">TB mỗi lần</th></tr></thead><tbody>` +
-    [...wd.rows].sort((a, b) => a.rank - b.rank).map(r => `<tr><td>${r.rank}</td><td class="nowrap">${WEEKDAY_NAMES[r.weekday]}</td><td class="num">${fmtHours(r.min)}</td><td class="num">${r.occurrences}</td><td class="num">${r.avgMin === null ? '—' : fmtHours(r.avgMin)}</td></tr>`).join('') +
-    `</tbody></table><p class="muted">Khoảng tính: ${fmtRange(wd.from, wd.to)} (đến hết hôm qua). "Số lần xuất hiện" = số ngày lịch có thứ đó trong khoảng, kể cả ngày không học; TB mỗi lần = tổng ÷ số lần xuất hiện.</p>`;
-
   // --- Tổng quan + vấn đề dữ liệu ---
-  $('totals').textContent = `Từ ${fmtDate(stats.weeks[0].start)} đến hôm nay: ${fmtHours(stats.totalMin)} · ${stats.rowsWithTime} ca · ${stats.studyDays} ngày có học.`;
   $('issues').hidden = !issues.length;
   $('issues').innerHTML = `<summary>${issues.length} điểm cần xem lại trong Sheet</summary><ul>` +
     issues.map(i => `<li>Dòng ${i.rowNumber}: ${esc(i.msg)}</li>`).join('') + `</ul>`;
@@ -208,6 +148,7 @@ $('state-add').addEventListener('click', () => { setState('ready'); });
 $('week-select').addEventListener('change', e => { selectedWeek = Number(e.target.value); renderWeekBreakdown(); });
 let rt;
 window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => model && screen === 'ok' && render(), 150); });
+initStats();
 initToday({
   onAdd: () => { showPage('cal'); openAddCurrentWeek(); },
   onFinish: row => { showPage('cal'); openFinish(row); },

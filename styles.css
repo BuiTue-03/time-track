@@ -239,6 +239,37 @@ div.chart text { font-family: var(--f-body); font-size: 16px; fill: var(--text-2
 .lg { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); margin-right: 12px; }
 .lg i { width: 16px; height: 16px; border-radius: 5px; display: block; }
 
+/* ---------- Trang Thống kê ---------- */
+@media (min-width: 900px) { .st-grid { grid-template-columns: 1fr 1fr; } }
+.guess { font-family: var(--f-body); font-size: 16px; font-weight: 800; color: var(--accent-text); }
+.tagp { display: inline-block; font-weight: 700; color: var(--text-2); border: 1px solid var(--border); border-radius: 8px; padding: 0 8px; }
+.foot { color: var(--text-2); margin: 8px 0 0; }
+.pace-wrap { cursor: pointer; padding: 1px 0; }
+.pace { position: relative; height: 34px; border-radius: 10px; background: var(--surface-2); margin: 34px 0 30px; }
+.pace .done { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 10px 0 0 10px; background: var(--a1); }
+.pace .more { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, var(--a1) 0 4px, transparent 4px 9px); border: 2px solid var(--a1); border-left: 0; border-radius: 0 10px 10px 0; }
+.pace .goal { position: absolute; top: -8px; bottom: -8px; width: 3px; background: var(--text); border-radius: 2px; }
+.pace .goal span { position: absolute; top: -26px; transform: translateX(-50%); white-space: nowrap; color: var(--text); font-weight: 700; }
+.pace .end { position: absolute; bottom: -28px; transform: translateX(-50%); white-space: nowrap; font-weight: 800; }
+.pace .al-r { transform: translateX(-100%) !important; } .pace .goal .al-r { transform: translateX(calc(-100% + 3px)) !important; } .pace .al-l { transform: none !important; }
+.card .legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.rows { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 6px; }
+.rows li { display: grid; grid-template-columns: 16px 1fr auto; gap: 10px; align-items: center; min-height: 32px; cursor: pointer; }
+.rows i { width: 16px; height: 16px; border-radius: 5px; display: block; }
+.rows b { font-variant-numeric: tabular-nums; }
+.inseg { margin-bottom: 10px; }
+.rank { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.rank li { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; min-height: 44px; border-bottom: 1px solid var(--border); cursor: pointer; padding: 4px 0; }
+.rank li:last-child { border-bottom: 0; }
+.rank .n { font-family: var(--f-head); font-size: 18px; width: 30px; height: 30px; border-radius: 10px; display: grid; place-content: center; background: var(--surface-2); }
+.rank li:first-child .n { background: var(--accent); color: var(--on-accent); }
+.rank .r { font-variant-numeric: tabular-nums; font-weight: 800; text-align: right; }
+/* Chỗ trống cho L5–L7: viền nét đứt, chưa có logic */
+.soon { border: 2px dashed var(--border); box-shadow: none; background: transparent; }
+.later { font-family: var(--f-body); font-size: 16px; color: var(--text-2); border: 1px dashed var(--border); border-radius: 8px; padding: 0 8px; }
+.soon .badges { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.badge { aspect-ratio: 1; border: 2px dashed var(--border); border-radius: 14px; display: grid; place-content: center; text-align: center; color: var(--text-2); font-weight: 800; line-height: 1.1; cursor: pointer; }
+
 /* ---------- TẠM THỜI (bước 1 Phần C): kiểu cũ của L3/L4 đổi sang biến màu mới.
    Các bước sau thay dần bằng giao diện mới rồi xóa khối này. ---------- */
 :root { --grid: var(--border); --bar: var(--a1); --bar-cur: var(--cur-bg); --hatch: var(--a1);
