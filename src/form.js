@@ -174,7 +174,7 @@ function renderList() {
   $('ca-add-why').textContent = canAdd ? '' : pAdd.reasons.canAddBu;
   $('ca-add-why').hidden = canAdd || status === WEEK_STATUS.FINAL; // tuần chốt hẳn: dải trạng thái đã ghi lý do
 
-  const list = m.sessions.filter(s => s.date >= w.start && s.date <= w.end).sort((a, b) => a.date - b.date || (a.start ?? 0) - (b.start ?? 0) || a.rowNumber - b.rowNumber);
+  const list = m.sessions.filter(s => s.date >= w.start && s.date <= w.end).sort((a, b) => b.date - a.date || (b.start ?? -1) - (a.start ?? -1) || b.rowNumber - a.rowNumber); // mới nhất lên đầu (Oriana chọn 26/11/2026)
   if (app.onListWeek) app.onListWeek(listWeek);
   if (!list.length) { $('ca-list').innerHTML = `<div class="empty-week">${mochiSvg()}<p>Tuần này chưa có ca nào.</p></div>`; return; }
   // Gom theo ngày; mỗi ca: giờ, thời lượng, nhóm/chủ đề, hoạt động, nhãn ghi bù / đang mở, ghi chú.
