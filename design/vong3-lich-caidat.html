@@ -1,0 +1,1318 @@
+<!doctype html>
+<html lang="vi">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>time-track bản mẫu</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* ============================================================
+   BẢN MẪU VÒNG 1 — trang "Hôm nay". Dữ liệu GIẢ, không đọc/ghi Google Sheet.
+   Bố cục: điện thoại trước (thanh tab dưới cùng); từ 900px thanh tab thành cột bên trái, nội dung 2 cột.
+   ============================================================ */
+@font-face{font-family:"MPR Bold";src:url(fonts/mplus-rounded-1c-bold.woff2) format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"MPR";src:url(fonts/mplus-rounded-1c-regular.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Nunito TT";src:url(fonts/nunito-var.woff2) format("woff2");font-weight:200 1000;font-display:swap}
+:root {
+  /* Phông: tiêu đề + chữ Nhật = M PLUS Rounded 1c; nội dung = Nunito; ký tự thiếu rơi về phông hệ thống */
+  --f-head: "MPR Bold", "M PLUS Rounded 1c", system-ui, sans-serif;
+  --f-jp: "MPR", "MPR Bold", "Noto Sans JP", system-ui, sans-serif;
+  --f-body: "Nunito TT", "MPR", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Màu chế độ sáng */
+  --bg: #F6F7FB; --surface: #FFFFFF; --surface-2: #EEF1F8; --border: #DCE1EC;
+  --text: #1E2233; --text-2: #525A70;
+  --accent: #8EBBF3; --accent-edge: #3F74C2; --on-accent: #0F2547; --accent-text: #2B5FA8; --ring: #3F74C2;
+  --pink-l: #F7BCD2; --pink-d: #B83D72; --on-pink-d: #FFFFFF; --grey-cat: #8A90A0;
+  --shadow: 0 2px 10px rgba(30, 34, 51, .07), 0 1px 2px rgba(30, 34, 51, .06);
+  --mochi: #FFF8EF; --mochi-shade: #F1E2D0; --mochi-line: #4A4560; --mochi-eye: #2B2840; --mochi-blush: #F59CBD;
+  --tip-bg: #1E2233; --tip-text: #FFFFFF;
+  --proto-bg: #E9ECF5;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #13151D; --surface: #1C1F2B; --surface-2: #272B3B; --border: #343A50;
+  --text: #ECEEF6; --text-2: #A9AFC4;
+  --accent: #8EBBF3; --accent-edge: #4C7FC9; --on-accent: #0F2547; --accent-text: #9CC3F5; --ring: #8EBBF3;
+  --pink-l: #FAD0DF; --pink-d: #C2487B; --on-pink-d: #FFFFFF; --grey-cat: #8A90A0;
+  --shadow: 0 2px 12px rgba(0, 0, 0, .35);
+  --mochi: #FFF8EF; --mochi-shade: #E7D3BE; --mochi-line: #4A4560; --mochi-eye: #2B2840; --mochi-blush: #F59CBD;
+  --tip-bg: #ECEEF6; --tip-text: #1E2233;
+  --proto-bg: #0D0F15;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #13151D; --surface: #1C1F2B; --surface-2: #272B3B; --border: #343A50;
+  --text: #ECEEF6; --text-2: #A9AFC4;
+  --accent: #8EBBF3; --accent-edge: #4C7FC9; --on-accent: #0F2547; --accent-text: #9CC3F5; --ring: #8EBBF3;
+  --pink-l: #FAD0DF; --pink-d: #C2487B; --on-pink-d: #FFFFFF; --grey-cat: #8A90A0;
+  --shadow: 0 2px 12px rgba(0, 0, 0, .35);
+  --mochi: #FFF8EF; --mochi-shade: #E7D3BE; --mochi-line: #4A4560; --mochi-eye: #2B2840; --mochi-blush: #F59CBD;
+  --tip-bg: #ECEEF6; --tip-text: #1E2233;
+  --proto-bg: #0D0F15;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 var(--f-body); }
+button { font: inherit; color: inherit; }
+h1, h2, h3 { font-family: var(--f-head); font-weight: 700; margin: 0; text-wrap: balance; }
+
+/* ---------- Thanh điều khiển của BẢN MẪU (không có trong app thật) ---------- */
+.proto { background: var(--proto-bg); border-bottom: 1px solid var(--border);
+  padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.proto-in { max-width: 1180px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font-size: 14px; color: var(--text-2); }
+.proto b { color: var(--text); }
+.proto summary { max-width: 1180px; margin: 0 auto; cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 6px; font-size: 15px; color: var(--text-2); }
+.proto-in { margin-top: 8px !important; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: none; padding: 0 12px; min-height: 44px; min-width: 44px; cursor: pointer; color: var(--text); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); font-weight: 700; }
+
+/* ---------- Khung app ---------- */
+.app { max-width: 1180px; margin: 0 auto; padding-block: 12px 104px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
+.brand { display: flex; align-items: center; gap: 8px; font-family: var(--f-head); font-size: 20px; }
+.brand svg { width: 40px; height: 34px; }
+.stats { display: flex; gap: 8px; }
+/* Ô chuỗi ngày + kho ngày nghỉ: CHỖ TRỐNG cho L6, chưa có logic */
+.pill { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; min-width: 44px; padding: 0 12px; border-radius: 14px;
+  border: 2px dashed var(--border); background: transparent; color: var(--text-2); font-weight: 700; cursor: pointer; }
+.pill svg { width: 22px; height: 22px; }
+
+.hello { margin: 0 0 14px; }
+.hello h1 { font-size: 24px; }
+.hello p { margin: 2px 0 0; color: var(--text-2); }
+
+.grid { display: grid; gap: 16px; }
+.card { background: var(--surface); border-radius: 20px; padding: 18px; box-shadow: var(--shadow); min-width: 0; }
+.card h2 { font-size: 18px; }
+.muted { color: var(--text-2); }
+
+/* Thẻ câu khích lệ: câu Nhật to, nghĩa Việt nhỏ hơn, nhân vật ló ở góc */
+.quote { position: relative; overflow: hidden; padding: 22px 20px 20px; min-height: 190px;
+  background: linear-gradient(140deg, var(--surface) 55%, var(--surface-2)); }
+.quote .tag { display: inline-block; font-size: 16px; font-weight: 700; color: var(--accent-text); margin-bottom: 8px; }
+.quote .jp span { display: inline-block; }
+.quote .jp { font-family: var(--f-jp); font-size: 28px; line-height: 1.45; margin: 0; max-width: 15em; position: relative; z-index: 1; }
+.quote .vi { font-size: 17px; margin: 10px 0 0; max-width: 24em; position: relative; z-index: 1; padding-right: 72px; }
+.quote .src { font-size: 16px; color: var(--text-2); margin: 10px 0 0; position: relative; z-index: 1; }
+.quote .peek { position: absolute; right: -10px; bottom: -12px; width: 108px; cursor: pointer; border: 0; background: none; padding: 0; }
+.quote .peek svg { width: 100%; height: auto; display: block; }
+
+/* Nút "đáy dày": thân nhạt + mép dưới đậm; khi bấm, nút lún xuống */
+.btn3d { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 56px;
+  border: 0; border-radius: 16px; background: var(--accent); color: var(--on-accent); font-family: var(--f-head); font-size: 19px;
+  box-shadow: 0 5px 0 var(--accent-edge); cursor: pointer; transform: translateY(0); transition: transform .08s, box-shadow .08s; }
+.btn3d:active { transform: translateY(5px); box-shadow: 0 0 0 var(--accent-edge); }
+.btn3d.small { width: auto; min-height: 44px; padding: 0 16px; white-space: nowrap; flex: none; font-size: 16px; box-shadow: 0 4px 0 var(--accent-edge); }
+.btn3d.small:active { transform: translateY(4px); }
+.btn3d.ghost { background: var(--surface); color: var(--text); box-shadow: 0 4px 0 var(--border); border: 2px solid var(--border); }
+.add-wrap { padding-bottom: 5px; }
+:focus-visible { outline: 3px solid var(--accent-edge); outline-offset: 3px; }
+
+/* Ca đang mở */
+.open-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.open h2 { display: flex; align-items: center; gap: 8px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; background: var(--ring); animation: pulse 1.2s ease-in-out 3; }
+@keyframes pulse { 50% { transform: scale(1.5); opacity: .5; } }
+.open .time { font-family: var(--f-head); font-size: 26px; margin: 4px 0 2px; font-variant-numeric: tabular-nums; }
+.chip { display: inline-flex; border-radius: 14px !important; line-height: 1.35; padding-block: 4px !important; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 99px; font-weight: 700; font-size: 16px; }
+.chip.c-nn { background: var(--pink-l); color: #1E2233; }
+.chip.c-ba { background: var(--pink-d); color: var(--on-pink-d); }
+.chip.c-kh { background: var(--grey-cat); color: #1E2233; }
+
+/* Vòng tiến độ hôm nay */
+.ring-card { display: flex; align-items: center; gap: 18px; }
+.ring { position: relative; width: 148px; height: 148px; flex: none; cursor: pointer; border: 0; background: none; padding: 0; }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring .track { stroke: var(--surface-2); }
+.ring .bar { stroke: var(--ring); transition: stroke-dashoffset 1s cubic-bezier(.3, 1.3, .5, 1); }
+.ring .mid { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.ring .mid b { font-family: var(--f-head); font-size: 22px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.ring .mid span { font-size: 16px; color: var(--text-2); }
+.ring-side h2 { margin-bottom: 4px; }
+.ring-side p { margin: 0; }
+@media (max-width: 440px) { .ring { width: 122px; height: 122px; } .ring .mid b { font-size: 19px; } .ring-card { gap: 14px; padding: 16px; } }
+.cats { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+
+/* Tổng giờ tuần này: chạm để xem thêm */
+.week { background: none; padding: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; border: 0; cursor: pointer;
+  color: var(--text); font: inherit; }
+.week .num { font-family: var(--f-head); font-size: 30px; font-variant-numeric: tabular-nums; }
+.days { display: flex; gap: 5px; margin-top: 8px; }
+.days i { width: 22px; height: 22px; border-radius: 6px; background: var(--surface-2); display: block; }
+.days i.on { background: var(--accent); } .days i.full { background: var(--accent-edge); } .days i.today { outline: 2px solid var(--text); outline-offset: 1px; }
+.chev { width: 44px; height: 44px; flex: none; display: grid; place-content: center; border-radius: 14px; background: var(--surface-2); font-size: 22px; }
+
+.realtag { text-align: center; color: var(--text-2); font-size: 16px; margin: 28px 0 0; }
+.realtag span { display: inline-block; border: 1px solid var(--border); border-radius: 99px; padding: 4px 12px; }
+
+/* Thanh tab dưới cùng (điện thoại) */
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: var(--surface); border-top: 1px solid var(--border);
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+.tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 64px; border: 0; background: none;
+  color: var(--text-2); font-size: 16px; font-weight: 700; cursor: pointer; }
+.tab svg { width: 26px; height: 26px; }
+.tab[aria-current="page"] { color: var(--accent-text); }
+.tab[aria-current="page"] .ico { background: var(--surface-2); }
+.tab .ico { display: grid; place-content: center; width: 48px; height: 30px; border-radius: 12px; }
+
+/* Máy tính: thanh tab thành cột trái, nội dung 2 cột */
+@media (min-width: 900px) {
+  .app { padding-left: 120px; padding-bottom: 40px; }
+  .proto { padding-left: 120px; }
+  .tabs { top: 0; right: auto; width: 96px; grid-template-columns: 1fr; grid-auto-rows: 84px; align-content: start; padding-top: 90px;
+    border-top: 0; border-right: 1px solid var(--border); }
+  .grid.two { grid-template-columns: 1.15fr 1fr; align-items: start; }
+  .quote .jp { font-size: 32px; }
+}
+
+/* Tooltip dùng chung: hiện khi rê chuột (máy tính) hoặc chạm (điện thoại) */
+.tip { position: fixed; z-index: 30; max-width: 260px; background: var(--tip-bg); color: var(--tip-text); font-size: 15px; line-height: 1.45;
+  padding: 8px 12px; border-radius: 12px; white-space: pre-line; pointer-events: none; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
+
+/* Tấm trượt từ dưới lên khi chạm "Tổng giờ tuần này" */
+dialog.sheet { border: 0; padding: 20px; border-radius: 24px 24px 0 0; width: 100%; max-width: 560px; margin: auto auto 0;
+  background: var(--surface); color: var(--text); }
+dialog.sheet::backdrop { background: rgba(10, 12, 20, .5); }
+dialog.sheet[open] { animation: up .25s ease-out; }
+@keyframes up { from { transform: translateY(40%); opacity: 0; } }
+
+/* ---------- Nhân vật cục bột: nhảy lên ---------- */
+.mochi { overflow: visible; }
+.mochi .body-g { transform-box: fill-box; transform-origin: 50% 100%; }
+.jump .body-g { animation: jump .9s cubic-bezier(.3, .7, .4, 1) 1; }
+@keyframes jump {
+  0% { transform: translateY(0) scale(1, 1); }
+  15% { transform: translateY(0) scale(1.15, .82); }
+  45% { transform: translateY(-38%) scale(.92, 1.1); }
+  70% { transform: translateY(0) scale(1.12, .86); }
+  85% { transform: translateY(0) scale(.97, 1.04); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+.pixel { shape-rendering: crispEdges; }
+
+/* ---------- Ăn mừng: hạt pixel bay + kaomoji, tổng ≤ 3 giây (dưới mốc 5 giây của WCAG 2.2.2) ---------- */
+.party { position: fixed; inset: 0; pointer-events: none; z-index: 40; overflow: hidden; }
+.party i { position: absolute; width: 10px; height: 10px; animation: fly 2.4s cubic-bezier(.2, .7, .4, 1) forwards; }
+@keyframes fly { to { transform: translate(var(--dx), var(--dy)) rotate(var(--r)); opacity: 0; } }
+.party .say { position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%) scale(.4); font-family: var(--f-head); font-size: 26px;
+  background: var(--surface); color: var(--text); padding: 12px 18px; border-radius: 18px; box-shadow: var(--shadow); width: max-content; max-width: calc(100vw - 32px);
+  animation: pop 2.6s ease-out forwards; display: flex; align-items: center; gap: 10px; }
+.party .say svg { width: 56px; height: 48px; }
+@keyframes pop { 12% { transform: translate(-50%, -50%) scale(1.08); } 20%, 80% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(-50%, -60%) scale(.9); opacity: 0; } }
+
+/* ---------- Vòng 2: tab Thống kê ---------- */
+:root { --a1: #3F74C2; --a2: #B83D72; --a3: #7A5BC7; --a4: #2E8A75; --a5: #A86F12; --prev: #AAB3C8;
+  --h0: #EBEEF5; --h1: #C9DDF8; --h2: #94BBF0; --h3: #5B92DC; --h4: #2F67B8; --h5: #173F7A; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --a1: #8EBBF3; --a2: #E27FA7; --a3: #B9A3F0; --a4: #6CCFB6; --a5: #E8B661; --prev: #5D6680;
+  --h0: #2E3345; --h1: #4A72BA; --h2: #5F8CD6; --h3: #80A9E9; --h4: #A9C7F3; --h5: #D6E5FB; } }
+:root[data-theme="dark"] { --a1: #8EBBF3; --a2: #E27FA7; --a3: #B9A3F0; --a4: #6CCFB6; --a5: #E8B661; --prev: #5D6680;
+  --h0: #2E3345; --h1: #4A72BA; --h2: #5F8CD6; --h3: #80A9E9; --h4: #A9C7F3; --h5: #D6E5FB; }
+.card > h2 { margin-bottom: 10px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.guess { font-family: var(--f-body); font-size: 16px; font-weight: 800; color: var(--accent-text); }
+.newtag { font-family: var(--f-body); font-size: 16px; font-weight: 700; color: var(--text-2); border: 1px dashed var(--border); border-radius: 8px; padding: 0 8px; }
+.chart { width: 100%; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { font-family: var(--f-body); font-size: 16px; fill: var(--text-2); font-variant-numeric: tabular-nums; }
+.chart .grid-l { stroke: var(--border); stroke-width: 1; }
+.chart .mk { cursor: pointer; outline: none; }
+.chart .mk .hit { fill: transparent; }
+.chart .mk .v { fill: var(--text); font-weight: 800; opacity: 0; transition: opacity .15s; }
+.chart .mk.sel .v { opacity: 1; }
+@media (hover: hover) { .chart .mk:hover .v { opacity: 1; } }
+.chart .mk.sel .b, .chart .mk:focus-visible .b { stroke: var(--text); stroke-width: 2; }
+.grow { transform-box: fill-box; transform-origin: 50% 100%; animation: grow .7s cubic-bezier(.3, 1.3, .5, 1) both; }
+.growx { transform-box: fill-box; transform-origin: 0 50%; animation: growx .7s cubic-bezier(.3, 1.2, .5, 1) both; }
+@keyframes grow { from { transform: scaleY(0); } }
+@keyframes growx { from { transform: scaleX(0); } }
+.big2 { font-family: var(--f-head); font-size: 28px; font-variant-numeric: tabular-nums; }
+.pair { display: grid; gap: 6px; margin: 6px 0 14px; }
+.pair .row { min-height: 44px; cursor: pointer; display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 10px; }
+.pair .lab { font-size: 16px; color: var(--text-2); }
+.pair .track { height: 24px; border-radius: 8px; background: var(--surface-2); overflow: hidden; }
+.pair .fill { height: 100%; border-radius: 8px; }
+.fill.cur { background: var(--a1); } .fill.prev { background: var(--prev); }
+.sub2 { color: var(--text-2); margin: 0; }
+.tagp { display: inline-block; font-size: 16px; font-weight: 700; color: var(--text-2); border: 1px solid var(--border); border-radius: 8px; padding: 0 8px; }
+.pace-wrap { cursor: pointer; padding: 1px 0; }
+.pace { position: relative; height: 34px; border-radius: 10px; background: var(--surface-2); margin: 34px 0 30px; }
+.pace .done { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 10px 0 0 10px; background: var(--a1); }
+.pace .more { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, var(--a1) 0 4px, transparent 4px 9px); border: 2px solid var(--a1); border-left: 0; border-radius: 0 10px 10px 0; }
+.pace .goal { position: absolute; top: -8px; bottom: -8px; width: 3px; background: var(--text); border-radius: 2px; }
+.pace .goal span { position: absolute; top: -26px; transform: translateX(-50%); white-space: nowrap; font-size: 16px; color: var(--text); font-weight: 700; }
+.pace .end { position: absolute; bottom: -28px; transform: translateX(-50%); white-space: nowrap; font-size: 16px; font-weight: 800; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.rows { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 6px; }
+.rows li { display: grid; grid-template-columns: 16px 1fr auto; gap: 10px; align-items: center; }
+.rows i { width: 16px; height: 16px; border-radius: 5px; display: block; }
+.rows b { font-variant-numeric: tabular-nums; }
+.heat-legend { display: flex; align-items: center; gap: 4px; justify-content: flex-end; color: var(--text-2); margin-top: 8px; flex-wrap: wrap; }
+.heat-legend i { width: 18px; height: 18px; border-radius: 5px; display: block; }
+.heat-legend .busy-sw { margin-left: 12px; background: repeating-linear-gradient(45deg, var(--h0) 0 3px, var(--grey-cat) 3px 5px); }
+.inseg { margin-bottom: 10px; }
+.rank { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; counter-reset: r; }
+.rank li { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; min-height: 44px; border-bottom: 1px solid var(--border); }
+.rank li:last-child { border-bottom: 0; }
+.rank .n { font-family: var(--f-head); font-size: 18px; width: 30px; height: 30px; border-radius: 10px; display: grid; place-content: center; background: var(--surface-2); }
+.rank li:first-child .n { background: var(--accent); color: var(--on-accent); }
+.rank .r { font-variant-numeric: tabular-nums; font-weight: 800; }
+.soon .badges { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.badge { aspect-ratio: 1; border: 2px dashed var(--border); border-radius: 14px; display: grid; place-content: center; text-align: center; color: var(--text-2); font-weight: 800; font-size: 16px; line-height: 1.1; }
+.lg { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); margin-right: 12px; }
+.lg i { width: 16px; height: 16px; border-radius: 5px; display: block; }
+.foot { color: var(--text-2); margin: 8px 0 0; }
+.sheet .chart { margin: 8px 0 12px; }
+.sheet h2 { margin-bottom: 4px; }
+.sheet-actions { display: flex; justify-content: flex-end; }
+@media (min-width: 900px) { .st-grid { grid-template-columns: 1fr 1fr; } }
+
+
+/* ---------- Vòng 3: Lịch, form, Cài đặt, trạng thái ---------- */
+:root { --cur-bg: #E3EEFD; --prov-bg: #FFF1D6; --prov-line: #8A5A0B; --final-bg: #ECEEF3; --danger: #B3261E; --on-danger: #FFFFFF; --danger-edge: #7E1A14;
+  --ok: #1D6B3A; --err: #B3261E; --warn: #7A5600; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --cur-bg: #1C3050; --prov-bg: #3A2E12; --prov-line: #E8B661; --final-bg: #2A2E3D;
+  --danger: #F2A29C; --on-danger: #2A0A08; --danger-edge: #B3564F; --ok: #7FD69A; --err: #FF9A8F; --warn: #FFD27A; } }
+:root[data-theme="dark"] { --cur-bg: #1C3050; --prov-bg: #3A2E12; --prov-line: #E8B661; --final-bg: #2A2E3D;
+  --danger: #F2A29C; --on-danger: #2A0A08; --danger-edge: #B3564F; --ok: #7FD69A; --err: #FF9A8F; --warn: #FFD27A; }
+
+.cal-grid { align-items: start; }
+@media (min-width: 900px) { .cal-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); } }
+.signin-card { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 12px 18px; }
+.week-nav { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; }
+.navbtn { width: 44px; height: 44px; border-radius: 14px; border: 0; background: var(--surface-2); font-size: 24px; cursor: pointer; }
+.navbtn:disabled { opacity: .35; cursor: default; }
+.week-title { text-align: center; display: grid; }
+.week-title b { font-family: var(--f-head); font-size: 20px; }
+.state-strip { display: flex; gap: 10px; align-items: flex-start; border-radius: 14px; padding: 10px 14px; margin: 12px 0; }
+.state-strip .kao { font-weight: 800; white-space: nowrap; }
+.state-strip b { display: block; }
+.state-strip.s-cur { background: var(--cur-bg); }
+.state-strip.s-prov { background: var(--prov-bg); box-shadow: inset 4px 0 0 var(--prov-line); }
+.state-strip.s-final { background: var(--final-bg); }
+.day-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 18px 0 6px; font-family: var(--f-head); }
+.day-h span { font-family: var(--f-body); color: var(--text-2); }
+.sess { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; padding: 12px 0; border-top: 1px solid var(--border); }
+.sess .t { font-family: var(--f-head); font-size: 18px; font-variant-numeric: tabular-nums; }
+.sess .t span { font-family: var(--f-body); font-size: 16px; color: var(--text-2); font-weight: 400; }
+.sess .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
+.sess .snote { color: var(--text-2); margin: 4px 0 0; }
+.sess .row-no { color: var(--text-2); }
+.sess .btns { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+.mini { display: inline-block; border-radius: 8px; padding: 0 8px; font-weight: 700; border: 1.5px solid currentColor; }
+.mini.off { color: var(--prov-line); } .mini.open { color: var(--accent-text); }
+.btn3d:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.btn3d.danger { background: var(--danger); color: var(--on-danger); box-shadow: 0 4px 0 var(--danger-edge); }
+.linkbtn { text-decoration: none; }
+.msg { border-radius: 14px; padding: 10px 14px; margin: 10px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.msg.ok { background: var(--cur-bg); }
+.msg.ok .ic { color: var(--ok); font-weight: 800; }
+.msg svg { width: 44px; height: 38px; flex: none; }
+.msg .grow1 { flex: 1; min-width: 160px; }
+.empty-week { text-align: center; color: var(--text-2); padding: 18px 0 6px; }
+.empty-week svg { width: 72px; height: 62px; }
+
+/* Form trong tấm trượt */
+.formsheet { max-height: calc(100dvh - 24px); overflow: auto; }
+@media (min-width: 900px) { dialog.sheet { margin: auto; border-radius: 24px; } }
+.fld { display: grid; gap: 4px; margin-top: 12px; font-weight: 700; }
+.fld input, .fld select, .fld textarea { font: 16px/1.4 var(--f-body); min-height: 48px; padding: 10px 12px; border-radius: 14px; border: 2px solid var(--border);
+  background: var(--bg); color: var(--text); width: 100%; }
+.fld input:focus, .fld select:focus, .fld textarea:focus { border-color: var(--accent-edge); outline: none; }
+.fld input:disabled, .fld select:disabled { opacity: .55; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.hint { font-weight: 400; color: var(--text-2); }
+.dur { margin: 8px 0 0; font-weight: 700; color: var(--accent-text); }
+.why { color: var(--warn); margin: 6px 0 0; }
+.check { display: flex; gap: 10px; align-items: center; min-height: 48px; margin-top: 10px; cursor: pointer; }
+.check input { width: 24px; height: 24px; accent-color: var(--accent-edge); }
+.errors { color: var(--err); padding-left: 20px; margin: 10px 0 0; }
+.errors:empty { display: none; }
+.actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; padding-bottom: 4px; }
+.actions .btn3d { flex: 1; max-width: 220px; }
+.delwhat { background: var(--surface-2); border-radius: 14px; padding: 10px 14px; }
+
+/* Cài đặt */
+.set .set-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 56px; border-top: 1px solid var(--border); padding: 6px 0; }
+.set h2 + .set-row { border-top: 0; }
+.soon { border: 2px dashed var(--border); box-shadow: none; background: transparent; }
+.later { font-family: var(--f-body); font-size: 16px; color: var(--text-2); border: 1px dashed var(--border); border-radius: 8px; padding: 0 8px; }
+.switch { width: 52px; height: 30px; border-radius: 99px; background: var(--surface-2); position: relative; flex: none; border: 2px dashed var(--border); }
+.switch i { position: absolute; width: 22px; height: 22px; border-radius: 50%; background: var(--grey-cat); top: 2px; left: 2px; }
+
+/* Trang trạng thái: đang tải / lỗi / trống / mất mạng */
+.state-page { display: grid; place-items: center; min-height: 60vh; text-align: center; }
+.state-box { max-width: 420px; display: grid; gap: 10px; justify-items: center; }
+.state-mochi svg { width: 120px; height: 104px; }
+.loading .state-mochi svg .body-g { animation: bob 1s ease-in-out 4; transform-box: fill-box; transform-origin: 50% 100%; }
+@keyframes bob { 50% { transform: translateY(-10%) scale(1.04, .96); } }
+.dots::after { content: ''; animation: dots 1.2s steps(4) 4; }
+@keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+
+/* ---------- Khu so sánh 3 biến thể (chỉ có trong bản mẫu) ---------- */
+.compare { max-width: 1180px; margin: 0 auto; padding-block: 8px 120px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+@media (min-width: 900px) { .compare { padding-left: 120px; } }
+.compare > h2 { font-size: 20px; margin: 8px 0 4px; }
+.variants { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 12px; }
+.variant { display: grid; gap: 10px; justify-items: center; text-align: center; }
+.variant .big { width: 160px; border: 0; background: none; padding: 0; cursor: pointer; }
+.variant .big svg { width: 100%; height: auto; }
+.icons { display: flex; gap: 12px; align-items: end; }
+.appicon { display: grid; place-content: center; background: var(--accent); border-radius: 22%; }
+.appicon svg { width: 78%; height: auto; margin: auto; }
+.swatches { display: flex; gap: 4px; flex-wrap: wrap; }
+.swatches i { width: 28px; height: 28px; border-radius: 6px; display: block; }
+.note { font-size: 15px; color: var(--text-2); margin: 4px 0 0; }
+</style>
+
+<details class="proto" id="proto" aria-label="Điều khiển bản mẫu">
+  <summary><b>Bản mẫu vòng 3 · dữ liệu giả</b> · chạm để đổi sáng/tối, ngày, màn hình</summary>
+  <div class="proto-in">
+    <span>Giao diện <span class="seg" id="p-theme"><button data-v="auto">Theo máy</button><button data-v="light">Sáng</button><button data-v="dark">Tối</button></span></span>
+    <span>Hôm nay là <span class="seg" id="p-day"><button data-v="thu">Thứ Năm 26/11</button><button data-v="tue">Thứ Ba 01/12</button></span></span>
+    <span>Cách dự báo xu hướng <span class="seg" id="p-trend"><button data-v="avg">1 · TB 4 tuần</button><button data-v="line">2 · Đường thẳng</button></span></span>
+    <span>Màn hình <span class="seg" id="p-screen"><button data-v="ok">Bình thường</button><button data-v="loading">Đang tải</button><button data-v="error">Lỗi</button><button data-v="empty">Trống</button><button data-v="offline">Mất mạng</button></span></span>
+    <span>Ca đang mở <span class="seg" id="p-open"><button data-v="1">Có</button><button data-v="0">Không</button></span></span>
+    <span>Hôm nay <span class="seg" id="p-min"><button data-v="135">135 phút</button><button data-v="250">250 phút (đạt)</button></span></span>
+  </div>
+</details>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><span id="brand-mochi"></span>time-track</div>
+    <div class="stats">
+      <button class="pill" type="button" data-tip="Chuỗi ngày học · sẽ làm ở L6&#10;Chạm vào sẽ xem hành trình giữ chuỗi." aria-label="Chuỗi ngày học, sắp có">
+        <svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M5 0h1v1h1v1h1v2h1v4h-1v1h-1v1H4V9H3V8H2V5h1V4h1V2h1z"/></svg>—</button>
+      <button class="pill" type="button" data-tip="Kho ngày nghỉ · sẽ làm ở L6&#10;Số ngày nghỉ còn lại và phần đã quy đổi." aria-label="Kho ngày nghỉ, sắp có">
+        <svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M1 4h9v6H1zM2 2h7v2H2zM5 2h1v8H5z" opacity=".9"/></svg>—</button>
+    </div>
+  </header>
+
+  <div id="pg-today" class="page">
+  <div class="hello">
+    <h1>Chào Oriana ヾ(＾∇＾)</h1>
+    <p id="today-line">Thứ Năm, 26/11/2026 · tuần 6</p>
+  </div>
+
+  <div class="grid two">
+    <div class="grid">
+      <section class="card quote" aria-label="Câu khích lệ hôm nay">
+        <span class="tag">Câu của hôm nay</span>
+        <p class="jp" lang="ja"><span>今日の一歩は、</span><span>明日の自分への</span><span>贈り物。</span></p>
+        <p class="vi">Bước đi hôm nay là món quà cho chính mình ngày mai.</p>
+        <p class="src">Câu do Claude viết · mẫu</p>
+        <button class="peek" type="button" id="peek" aria-label="Chạm để nhân vật nhảy"></button>
+      </section>
+      <div class="add-wrap"><button class="btn3d" type="button" id="add">＋ Thêm ca</button></div>
+      <section class="card open" id="open-card" aria-label="Ca đang mở">
+        <h2><span class="dot"></span>Ca đang mở</h2>
+        <div class="open-row">
+          <div>
+            <p class="time">từ 14:50 · <span id="open-dur">44 phút</span></p>
+            <span class="chip c-ba">(•ω•) BA - Thực hành làm ứng dụng cá nhân</span>
+          </div>
+          <button class="btn3d small" type="button">Kết thúc ca</button>
+        </div>
+      </section>
+    </div>
+    <div class="grid">
+      <section class="card ring-card" aria-label="Tiến độ hôm nay">
+        <button class="ring" type="button" id="ring" data-tip="">
+          <svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="50" fill="none" stroke-width="14"/>
+            <circle class="bar" id="ring-bar" cx="60" cy="60" r="50" fill="none" stroke-width="14" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16"/></svg>
+          <span class="mid"><b id="ring-num">0</b><span>trên 4 giờ</span></span>
+        </button>
+        <div class="ring-side">
+          <h2>Hôm nay</h2>
+          <p id="ring-msg" class="muted">Đang học đều tay nè (＾▽＾)</p>
+          <div class="cats" id="cats"></div>
+        </div>
+      </section>
+      <section class="card">
+        <button class="week" type="button" id="week">
+          <span>
+            <h2>Tuần này</h2>
+            <span class="num" id="week-num">6,6 giờ</span>
+            <span class="days" id="days" aria-hidden="true"></span>
+          </span>
+          <span class="chev" aria-hidden="true">›</span>
+        </button>
+      </section>
+    </div>
+  </div>
+  </div>
+  <div id="pg-stats" class="page" hidden>
+    <div class="hello">
+      <h1>Thống kê</h1>
+      <p id="st-sub">Từ 21/10/2026 đến hôm nay</p>
+    </div>
+    <div class="grid two st-grid">
+      <div class="grid">
+        <section class="card">
+          <h2>Tuần này so với tuần trước</h2>
+          <div id="st-cmpweek"></div>
+        </section>
+        <section class="card">
+          <h2>Nhịp độ cuối tuần <span class="guess">[DỰ ĐOÁN]</span></h2>
+          <div id="st-pace"></div>
+        </section>
+        <section class="card">
+          <h2>Tháng này so với tháng trước</h2>
+          <div id="st-month"></div>
+        </section>
+        <section class="card">
+          <h2>Tổng giờ theo tuần</h2>
+          <div class="chart" id="st-weeks"></div>
+        </section>
+        <section class="card">
+          <h2>Xu hướng <span class="guess">[DỰ ĐOÁN]</span></h2>
+          <div class="chart" id="st-trend"></div>
+          <p class="foot" id="st-trend-foot"></p>
+        </section>
+        <section class="card">
+          <h2>Theo nhóm học</h2>
+          <div class="legend" id="st-cat-legend"></div>
+          <div class="chart" id="st-cats"></div>
+        </section>
+      </div>
+      <div class="grid">
+        <section class="card">
+          <h2>Theo hoạt động</h2>
+          <div class="chart" id="st-acts"></div>
+          <ul class="rows" id="st-acts-list"></ul>
+        </section>
+        <section class="card">
+          <h2>Theo thứ trong tuần</h2>
+          <div class="chart" id="st-wd"></div>
+        </section>
+        <section class="card">
+          <h2>Theo khung giờ <span class="newtag">đề xuất mới</span></h2>
+          <div class="chart" id="st-tod"></div>
+        </section>
+        <section class="card">
+          <h2>Xếp hạng</h2>
+          <div class="seg inseg" id="st-rank-tabs"><button data-v="w" aria-pressed="true">Tuần</button><button data-v="t">Chủ đề</button><button data-v="d">Thứ</button></div>
+          <ol class="rank" id="st-rank"></ol>
+        </section>
+        <section class="card soon">
+          <h2>Thành tích</h2>
+          <div class="badges" id="st-badges"></div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="pg-cal" class="page" hidden>
+    <div class="hello">
+      <h1>Lịch</h1>
+      <p>Chạm một ô để xem ca của tuần đó</p>
+    </div>
+    <div class="grid two cal-grid">
+      <div class="grid">
+        <section class="card">
+          <div class="chart" id="cal-heat"></div>
+          <div class="heat-legend" id="cal-heat-legend"></div>
+        </section>
+        <section class="card signin-card">
+          <span class="muted" id="cal-signin">Đã đăng nhập Google · còn khoảng 58 phút</span>
+          <button class="btn3d small ghost" type="button">Đăng nhập lại</button>
+        </section>
+      </div>
+      <div class="grid">
+        <section class="card week-card">
+          <div class="week-nav">
+            <button class="navbtn" type="button" id="cal-prev" aria-label="Tuần trước">‹</button>
+            <div class="week-title"><b id="cal-wtitle">Tuần 6</b><span id="cal-wrange" class="muted">25/11–01/12/2026</span></div>
+            <button class="navbtn" type="button" id="cal-next" aria-label="Tuần sau">›</button>
+          </div>
+          <div class="state-strip" id="cal-strip"></div>
+          <div class="msg" id="cal-result" hidden></div>
+          <div class="add-wrap" id="cal-add-wrap"><button class="btn3d" type="button" id="cal-add">＋ Thêm ca</button></div>
+          <div id="cal-list"></div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="pg-settings" class="page" hidden>
+    <div class="hello"><h1>Cài đặt</h1></div>
+    <div class="grid two">
+      <div class="grid">
+        <section class="card set">
+          <h2>Giao diện</h2>
+          <div class="set-row"><span>Màu nền</span><span class="seg" id="set-theme"><button data-v="auto">Theo máy</button><button data-v="light">Sáng</button><button data-v="dark">Tối</button></span></div>
+          <div class="set-row"><span>Tên hiển thị</span><b>Oriana</b></div>
+        </section>
+        <section class="card set">
+          <h2>Tài khoản và dữ liệu</h2>
+          <div class="set-row"><span>Google<br><span class="muted">Đã đăng nhập · còn khoảng 58 phút</span></span><button class="btn3d small ghost" type="button">Đăng nhập lại</button></div>
+          <div class="set-row"><span>Nguồn dữ liệu<br><span class="muted">Sheet "Dữ liệu học tập" · ghi cột A–F</span></span><a class="btn3d small ghost linkbtn" href="#cai-dat">Mở Sheet</a></div>
+          <div class="set-row"><span>Số liệu<br><span class="muted">Cập nhật lúc 10:24</span></span><button class="btn3d small ghost" type="button">Tải lại</button></div>
+        </section>
+        <section class="card set">
+          <h2>Mục tiêu</h2>
+          <div class="set-row"><span>Mỗi ngày</span><b>4 giờ</b></div>
+          <div class="set-row"><span>Mỗi tuần</span><b>6 ngày · 24 giờ</b></div>
+        </section>
+      </div>
+      <div class="grid">
+        <section class="card set soon">
+          <h2>Ngày nghỉ và tích lũy <span class="later">L6</span></h2>
+          <div class="set-row"><span>Số dư ngày nghỉ</span><b class="muted">—</b></div>
+          <div class="set-row"><span>Đã quy đổi</span><b class="muted">—</b></div>
+          <div class="set-row"><span>Nhắc nghỉ sau 7 ngày học liền</span><span class="switch off" aria-hidden="true"><i></i></span></div>
+        </section>
+        <section class="card set soon">
+          <h2>Chuỗi ngày học <span class="later">L6</span></h2>
+          <div class="set-row"><span>Sửa chuỗi</span><b class="muted">—</b></div>
+        </section>
+        <section class="card set soon">
+          <h2>Câu khích lệ và huy hiệu <span class="later">L5</span></h2>
+          <div class="set-row"><span>Danh sách câu</span><b class="muted">—</b></div>
+        </section>
+        <section class="card set soon">
+          <h2>Bấm giờ học <span class="later">L7</span></h2>
+          <div class="set-row"><span>Nút Bắt đầu / Kết thúc</span><b class="muted">—</b></div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="pg-state" class="page state-page" hidden>
+    <div class="state-box">
+      <div class="state-mochi" id="state-mochi"></div>
+      <h2 id="state-title"></h2>
+      <p id="state-text" class="muted"></p>
+      <div id="state-act"></div>
+    </div>
+  </div>
+
+  <p class="realtag"><span>Đang ghi vào Sheet thật</span></p>
+</div>
+
+
+<nav class="tabs" aria-label="Các trang">
+  <button class="tab" type="button" data-page="today" aria-current="page"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M5 1h1v1h1v1h1v1h1v1h1v1H9v4H6V7H5v3H2V6H1V5h1V4h1V3h1V2h1z"/></svg></span>Hôm nay</button>
+  <button class="tab" type="button" data-page="cal"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M1 2h9v8H1zM2 4v5h7V4zM3 5h1v1H3zm2 0h1v1H5zm2 0h1v1H7zM3 7h1v1H3zm2 0h1v1H5zM3 1h1v2H3zm4 0h1v2H7z"/></svg></span>Lịch</button>
+  <button class="tab" type="button" data-page="stats"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M1 6h2v4H1zm3-3h2v7H4zm3 2h2v5H7zM1 10h9v1H1z"/></svg></span>Thống kê</button>
+  <button class="tab" type="button" data-page="settings"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M4 0h3v2h1l1-1 1 1-1 1v1h2v3H9v1l1 1-1 1-1-1H7v2H4V9H3l-1 1-1-1 1-1V7H0V4h2V3L1 2l1-1 1 1h1zm1 4v3h1V4z"/></svg></span>Cài đặt</button>
+</nav>
+
+<dialog class="sheet" id="sheet">
+  <div id="sheet-body"></div>
+  <div class="sheet-actions"><button class="btn3d small ghost" type="button" id="sheet-close">Đóng</button></div>
+</dialog>
+
+<dialog class="sheet formsheet" id="f-dialog" aria-labelledby="f-title">
+  <form id="ca-form" novalidate>
+    <h2 id="f-title">Thêm ca học</h2>
+    <div class="state-strip" id="f-strip"></div>
+    <label class="fld">Ngày <span class="hint" id="f-date-hint">dd/mm/yyyy</span>
+      <input type="text" id="f-date" inputmode="numeric" placeholder="dd/mm/yyyy" autocomplete="off"></label>
+    <div class="row2">
+      <label class="fld">Bắt đầu <input type="text" id="f-start" inputmode="numeric" placeholder="hh:mm" autocomplete="off"></label>
+      <label class="fld">Kết thúc <input type="text" id="f-end" inputmode="numeric" placeholder="để trống nếu chưa xong" autocomplete="off"></label>
+    </div>
+    <p class="dur" id="f-dur"></p>
+    <p class="why" id="f-time-why" hidden></p>
+    <label class="fld">Chủ đề <select id="f-topic"></select></label>
+    <label class="fld">Hoạt động <select id="f-activity"></select></label>
+    <label class="check"><input type="checkbox" id="f-offset"><span>Đây là ca ghi bù <span class="hint" id="f-offset-why"></span></span></label>
+    <label class="fld">Ghi chú (tùy chọn) <textarea id="f-note" rows="2"></textarea></label>
+    <p class="hint" id="f-note-preview"></p>
+    <ul class="errors" id="f-errors"></ul>
+    <div class="actions">
+      <button type="button" class="btn3d small ghost" id="f-cancel">Đóng</button>
+      <button type="submit" class="btn3d small" id="f-save">Lưu</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="sheet" id="del-dialog" aria-labelledby="del-title">
+  <h2 id="del-title">Xóa ca này?</h2>
+  <p id="del-what" class="delwhat"></p>
+  <p><b>Xóa nội dung dòng, không thể khôi phục từ app.</b> App xóa nội dung cột A–F của dòng này; công thức cột G–K giữ nguyên. Muốn lấy lại, phải mở lịch sử phiên bản (Version history) của Sheet.</p>
+  <div class="actions">
+    <button type="button" class="btn3d small ghost" id="del-cancel">Không xóa</button>
+    <button type="button" class="btn3d small danger" id="del-ok">Xóa nội dung dòng</button>
+  </div>
+</dialog>
+
+<script>
+/* =====================================================================
+   Phần JS của bản mẫu. Toàn bộ số liệu là GIẢ, viết sẵn ở đây.
+   ===================================================================== */
+const CONFIG = { name: 'Oriana', goalMin: 240 };   // tên hiển thị: chỉ sửa 1 chỗ này
+const FAKE = {
+  today: 135,
+  cats: [{ k: 'Ngoại ngữ', c: 'c-nn', kao: '(＾▽＾)', min: 95 }, { k: 'Chuyên môn BA', c: 'c-ba', kao: '(•ω•)', min: 40 }],
+  weekMin: 395, weekDays: [130, 0, 0, 0, 0, 0, 0], todayIdx: 1,   // thứ Tư → thứ Ba; hôm nay = thứ Năm
+};
+const $ = id => document.getElementById(id);
+
+/* ---------- 1. Nhân vật cục bột: 3 biến thể, đều vẽ bằng SVG (không dùng ảnh ngoài) ---------- */
+// Bảng màu lấy từ biến CSS để tự đổi theo sáng/tối
+const COL = { o: 'var(--mochi-line)', w: 'var(--mochi)', s: 'var(--mochi-shade)', e: 'var(--mochi-eye)', h: '#FFFFFF', p: 'var(--mochi-blush)', m: 'var(--mochi-eye)' };
+
+// A. Pixel 16×14 vẽ tay từng ô: mỗi ký tự là một ô vuông
+const MAP_A = [
+  '....oooooooo....',
+  '..oowwwwwwwwoo..',
+  '.owwwwwwwwwwwwo.',
+  'owwwhewwwwhewwwo',
+  'owwweewwwweewwwo',
+  'owwweewwwweewwwo',
+  'owpwpwwwwwwpwpwo',
+  'owwpwwwmmmwwpwwo',
+  'owwwwwwwmwwwwwwo',
+  'oswwwwwwwwwwwwso',
+  '.osswwwwwwwwsso.',
+  '..oossssssssoo..',
+  '....oooooooo....',
+];
+function pixelSvg(map, cls = '') {
+  const w = map[0].length, h = map.length;
+  let r = '';
+  map.forEach((row, y) => [...row].forEach((ch, x) => { if (COL[ch]) r += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${COL[ch]}"/>`; }));
+  return `<svg class="mochi pixel ${cls}" viewBox="-1 -3 ${w + 2} ${h + 5}" aria-hidden="true">
+    <ellipse cx="${w / 2}" cy="${h + .9}" rx="${w * .36}" ry=".8" fill="var(--text)" opacity=".14"/><g class="body-g">${r}</g></svg>`;
+}
+
+// B. Pixel 24×20 tạo bằng công thức: hình bầu dục, viền, phần bóng dưới thân, mắt có đốm sáng, má 3 chấm
+function makeMapB() {
+  const W = 24, H = 20, cx = 11.5, cy = 9.6, rx = 11.6, ry = 9.4;
+  const inside = (x, y) => ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1;
+  const g = Array.from({ length: H }, (_, y) => Array.from({ length: W }, (_, x) => inside(x, y) ? 'w' : '.'));
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (g[y][x] === 'w') {
+    const edge = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => !inside(x + dx, y + dy));
+    if (edge) g[y][x] = 'o';
+    else if (y >= cy + 5 || (y >= cy + 3 && Math.abs(x - cx) > 8)) g[y][x] = 's';
+  }
+  const set = (x, y, c) => { if (g[y] && g[y][x] && g[y][x] !== '.') g[y][x] = c; };
+  for (const ex of [7, 15]) { for (let y = 6; y <= 10; y++) { set(ex, y, 'e'); set(ex + 1, y, 'e'); } set(ex, 6, 'h'); set(ex + 1, 7, 'h'); set(ex, 7, 'e'); }
+  for (const [x, y] of [[3, 12], [5, 12], [4, 13], [18, 12], [20, 12], [19, 13]]) set(x, y, 'p');
+  for (let x = 10; x <= 13; x++) set(x, 13, 'm'); set(11, 14, 'm'); set(12, 14, 'm');
+  return g.map(r => r.join(''));
+}
+const MAP_B = makeMapB();
+
+// C. Nét mượt (không pixel): giữ đúng hình vẽ tay nhưng đường gọn, đều
+function smoothSvg(cls = '') {
+  return `<svg class="mochi ${cls}" viewBox="0 0 120 104" aria-hidden="true">
+    <ellipse cx="60" cy="96" rx="40" ry="5" fill="var(--text)" opacity=".14"/>
+    <g class="body-g">
+      <path d="M60 10C92 10 112 30 112 56c0 24-22 36-52 36S8 80 8 56C8 30 28 10 60 10z" fill="var(--mochi)" stroke="var(--mochi-line)" stroke-width="3.5"/>
+      <path d="M18 72c10 12 26 17 42 17s32-5 42-17c-8 6-24 10-42 10S26 78 18 72z" fill="var(--mochi-shade)"/>
+      <ellipse cx="43" cy="45" rx="7" ry="10.5" fill="var(--mochi-eye)"/><ellipse cx="77" cy="45" rx="7" ry="10.5" fill="var(--mochi-eye)"/>
+      <circle cx="40.5" cy="40" r="3" fill="#fff"/><circle cx="45" cy="49" r="1.4" fill="#fff"/>
+      <circle cx="74.5" cy="40" r="3" fill="#fff"/><circle cx="79" cy="49" r="1.4" fill="#fff"/>
+      <g fill="var(--mochi-blush)"><circle cx="25" cy="62" r="2.6"/><circle cx="31" cy="63" r="2.6"/><circle cx="37" cy="64.5" r="2.6"/>
+        <circle cx="83" cy="64.5" r="2.6"/><circle cx="89" cy="63" r="2.6"/><circle cx="95" cy="62" r="2.6"/></g>
+      <path d="M54.5 63.5h11l-5.5 7z" fill="var(--mochi-eye)" stroke="var(--mochi-eye)" stroke-width="2.4" stroke-linejoin="round"/>
+    </g></svg>`;
+}
+const MOCHI = {
+  a: { name: 'A · Pixel 16 ô', desc: 'Ít chi tiết, nhìn rõ ở cỡ nhỏ (biểu tượng app 48 px).', svg: c => pixelSvg(MAP_A, c) },
+  b: { name: 'B · Pixel 24 ô', desc: 'Nhiều chi tiết hơn: má đúng 3 chấm, mắt có đốm sáng, thân có phần bóng.', svg: c => pixelSvg(MAP_B, c) },
+  c: { name: 'C · Nét mượt', desc: 'Không pixel, gần hình vẽ tay nhất; để so sánh với hai bản pixel.', svg: c => smoothSvg(c) },
+};
+let mochiKey = 'b';   // Oriana chọn B (26/11)
+function jump(el) { const s = el.querySelector('svg.mochi') || el; s.classList.remove('jump'); void s.getBoundingClientRect(); s.classList.add('jump'); }
+function renderMochi() {
+  $('brand-mochi').innerHTML = MOCHI[mochiKey].svg('');
+  $('peek').innerHTML = MOCHI[mochiKey].svg('');
+}
+
+/* ---------- 2. Chọn sáng/tối: mặc định theo điện thoại, nhớ lựa chọn trên máy này ---------- */
+const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+function applyTheme(v) {
+  if (v === 'light' || v === 'dark') document.documentElement.dataset.theme = v; else delete document.documentElement.dataset.theme;
+  store.set('tt-theme', v);
+}
+
+/* ---------- 3. Vòng tiến độ hôm nay ---------- */
+const fmtH = m => `${Math.floor(m / 60)} giờ${m % 60 ? ' ' + (m % 60) : ''}`;
+function renderRing(min, celebrate) {
+  const p = Math.min(1, min / CONFIG.goalMin), C = 314.16;
+  $('ring-bar').style.strokeDashoffset = String(C * (1 - p));
+  $('ring-num').innerHTML = `${Math.floor(min / 60)} giờ<br>${min % 60} phút`;   // Oriana chọn cách ghi "2 giờ 15 phút"
+  $('ring').dataset.tip = `${min} phút / ${CONFIG.goalMin} phút\n` + FAKE.cats.map(c => `${c.k}: ${c.min} phút`).join('\n');
+  $('ring-msg').textContent = p >= 1 ? 'Đủ 4 giờ rồi! Nghỉ ngơi xíu nha (˘ω˘)' : 'Đang học đều tay nè (＾▽＾)';
+  if (celebrate && p >= 1) setTimeout(party, 900);
+}
+function renderCats() {
+  $('cats').innerHTML = FAKE.cats.map(c => `<span class="chip ${c.c}">${c.kao} ${c.k}</span>`).join('');
+}
+function renderWeek() {
+  $('days').innerHTML = FAKE.weekDays.map((m, i) => `<i class="${m >= 240 ? 'full' : m > 0 || i === FAKE.todayIdx ? 'on' : ''} ${i === FAKE.todayIdx ? 'today' : ''}"></i>`).join('');
+}
+
+/* ---------- 4. Ăn mừng: ~40 hạt pixel bay ra + nhân vật nhảy + kaomoji; tự tắt sau 3 giây ---------- */
+function party() {
+  const box = document.createElement('div'); box.className = 'party';
+  const colors = ['var(--accent)', 'var(--accent-edge)', 'var(--pink-l)', 'var(--pink-d)', '#FFD66B'];
+  for (let i = 0; i < 40; i++) {
+    const p = document.createElement('i'), a = Math.random() * Math.PI * 2, d = 120 + Math.random() * 260;
+    p.style.left = '50%'; p.style.top = '38%'; p.style.background = colors[i % colors.length];
+    p.style.setProperty('--dx', `${Math.cos(a) * d}px`); p.style.setProperty('--dy', `${Math.sin(a) * d + 120}px`); p.style.setProperty('--r', `${Math.random() * 540}deg`);
+    box.appendChild(p);
+  }
+  const say = document.createElement('div'); say.className = 'say';
+  say.innerHTML = MOCHI[mochiKey].svg('') + `<span>Giỏi quá, ${CONFIG.name}! (≧▽≦)♪</span>`;
+  box.appendChild(say); document.body.appendChild(box);
+  setTimeout(() => jump(say), 250); jump($('peek')); jump($('brand-mochi'));
+  setTimeout(() => box.remove(), 3000);
+}
+
+/* ---------- 5. Tooltip: rê chuột hiện, chạm thì bật/tắt ---------- */
+const tip = document.createElement('div'); tip.className = 'tip'; tip.hidden = true; document.body.appendChild(tip);
+function showTip(el) {
+  if (!el.dataset.tip) return;
+  const host = el.closest('dialog') || document.body; if (tip.parentNode !== host) host.appendChild(tip);   // trong tấm trượt, tooltip phải nằm trong tấm đó mới hiện lên trên
+  tip.textContent = el.dataset.tip; tip.hidden = false;
+  const r = el.getBoundingClientRect(), bw = tip.offsetWidth, bh = tip.offsetHeight;
+  tip.style.left = `${Math.min(innerWidth - bw - 8, Math.max(8, r.left + r.width / 2 - bw / 2))}px`;
+  tip.style.top = `${r.top - bh - 10 < 8 ? r.bottom + 10 : r.top - bh - 10}px`;
+}
+let tipFor = null;
+document.addEventListener('pointerover', e => { if (e.pointerType !== 'mouse') return; const el = e.target.closest('[data-tip]'); el ? showTip(el) : (tip.hidden = true); });
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-tip]');
+  if (el && el !== tipFor) { tipFor = el; showTip(el); } else { tipFor = null; tip.hidden = true; }
+});
+addEventListener('scroll', () => { tip.hidden = true; tipFor = null; }, { passive: true });
+
+/* ---------- 6. Điều khiển của bản mẫu ---------- */
+function seg(id, value, on) {
+  const el = $(id);
+  const mark = v => el.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+  mark(value);
+  el.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; mark(b.dataset.v); on(b.dataset.v); });
+}
+if (matchMedia('(min-width: 900px)').matches) $('proto').open = true;
+seg('p-theme', store.get('tt-theme') || 'auto', applyTheme);
+applyTheme(store.get('tt-theme') || 'auto');
+seg('p-open', '1', v => { $('open-card').hidden = v === '0'; });
+seg('p-min', '135', v => { FAKE.today = Number(v); FAKE.cats[0].min = v === '250' ? 170 : 95; FAKE.cats[1].min = v === '250' ? 80 : 40; renderRing(FAKE.today, true); });
+
+$('peek').addEventListener('click', () => jump($('peek')));
+$('brand-mochi').addEventListener('click', () => jump($('brand-mochi')));
+$('week').addEventListener('click', () => $('sheet').showModal());
+$('sheet-close').addEventListener('click', () => $('sheet').close());
+$('add').addEventListener('click', () => {});
+
+
+renderMochi(); renderCats(); renderWeek();
+
+/* =====================================================================
+   VÒNG 2 — tab Thống kê + tấm "Tuần này". Số liệu GIẢ, khớp nhau (tổng tuần = tổng các ngày).
+   ===================================================================== */
+// Ngày: dùng số ngày kể từ 21/10/2026 (ngày 0 = thứ Tư 21/10). Không dùng giờ máy để tránh lệch múi giờ.
+const START = { y: 2026, m: 10, d: 21 };
+const MDAYS = { 10: 31, 11: 30, 12: 31 };
+function dateOf(i) { let m = START.m, d = START.d + i; while (d > MDAYS[m]) { d -= MDAYS[m]; m++; } return { m, d }; }
+const dd = i => { const { m, d } = dateOf(i); return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`; };
+const WD = ['Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ nhật', 'Thứ Hai', 'Thứ Ba'];
+const WD_SHORT = ['T4', 'T5', 'T6', 'T7', 'CN', 'T2', 'T3'];
+// Phút mỗi ngày (thứ Tư → thứ Ba). 'B' = ngày có dòng "Bận đi làm" (vẫn có phút ôn ngắn)
+const DAYS = [
+  [240, 210, 250, 180, 230, 200, 220],
+  [260, 240, 300, 210, 250, 225, 230],
+  [200, 0, 180, 240, 'B30', 300, 250],
+  [220, 190, 0, 260, 213, 180, 210],
+  [150, 200, 'B30', 180, 167, 140, 180],
+];
+const W6 = { thu: [260, 135], tue: [260, 215, 240, 180, 0, 200, 195] }; // tuần 6: tới thứ Năm, hoặc trọn tuần (giả lập thứ Ba)
+const CAT = { 1: [1530, 0, 0], 2: [1715, 0, 0], 3: [1170, 0, 30], 4: [1273, 0, 0], 5: [777, 240, 30], 6: [135, 260, 0] };
+const CATS = [{ k: 'Ngoại ngữ', kao: '(＾▽＾)', v: 'var(--pink-l)', c: 'c-nn' }, { k: 'Chuyên môn BA', kao: '(•ω•)', v: 'var(--pink-d)', c: 'c-ba' }, { k: 'Không học', kao: '(˘ω˘)', v: 'var(--grey-cat)', c: 'c-kh' }];
+const ACTS = [['Lý thuyết', 2434], ['Thực hành', 2693], ['Ôn tập', 1284], ['Kiểm tra nhớ', 264], ['Nhờ AI', 485]];
+const TOD = [['Sáng', '05–12 giờ', 2900], ['Chiều', '12–18 giờ', 2600], ['Tối', '18–24 giờ', 1560], ['Khuya', '0–5 giờ', 100]];
+const TOPICS = [['JP - Từ vựng', 1820], ['JP - Ngữ pháp', 1460], ['JP - Bài tập', 1210], ['EN - Nghe', 980], ['BA - Thực hành làm ứng dụng cá nhân', 500]];
+const MILESTONES = [10, 25, 50, 100, 150, 200, 300, 500, 750, 1000];
+
+let dayMode = 'thu';   // 'thu' = hôm nay thứ Năm 26/11 ; 'tue' = giả lập thứ Ba 01/12 (ngày cuối tuần)
+let trendMode = 'avg'; // 'avg' = trung bình 4 tuần ; 'line' = đường thẳng
+const val = x => typeof x === 'string' ? Number(x.slice(1)) : x;
+const isBusy = x => typeof x === 'string';
+function weeks() {
+  const all = [...DAYS, W6[dayMode]];
+  return all.map((days, i) => ({ w: i + 1, start: i * 7, days, min: days.reduce((a, x) => a + val(x), 0),
+    status: i === all.length - 1 ? 'Đang diễn ra' : i === all.length - 2 ? 'Tạm chốt' : 'Chốt hẳn' }));
+}
+const nf1 = new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const nf0 = new Intl.NumberFormat('vi-VN');
+const hrs = m => `${nf1.format(m / 60)} giờ`;
+const hm = m => { const h = Math.floor(m / 60), r = Math.round(m % 60); return h ? `${h} giờ${r ? ` ${r} phút` : ''}` : `${r} phút`; };
+const fmtDiff = d => d === 0 ? 'bằng nhau' : `${d > 0 ? 'nhiều hơn' : 'ít hơn'} ${hm(Math.abs(d))}`;   // không dùng đỏ/xanh, không phán xét
+
+/* ---------- Hàm vẽ cột dùng chung (SVG), chiều rộng theo khung thật ---------- */
+const W = el => Math.max(260, Math.round(el.clientWidth || 320));
+function barChart(el, items, { avg = null, h = 200, unit = m => hrs(m), color = 'var(--a1)' } = {}) {
+  const w = W(el), m = { t: 28, r: avg ? 54 : 8, b: 46, l: 8 }, iw = w - m.l - m.r, ih = h - m.t - m.b;
+  const max = Math.max(...items.map(i => i.v), avg ?? 0) * 1.08 || 1;
+  const band = iw / items.length, bw = Math.min(46, band * .62), y = v => m.t + ih - v / max * ih;
+  let s = `<svg viewBox="0 0 ${w} ${h}" role="img"><defs><pattern id="hp-${el.id}" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="var(--surface)"/><rect width="3" height="7" fill="${color}"/></pattern></defs>`;
+  s += `<line class="grid-l" x1="${m.l}" x2="${w - m.r}" y1="${m.t + ih}" y2="${m.t + ih}"/>`;
+  items.forEach((it, i) => {
+    const cx = m.l + band * i + band / 2, top = y(it.v), bh = Math.max(0, m.t + ih - top), r = Math.min(8, bw / 2, bh);
+    const fill = it.partial ? `url(#hp-${el.id})` : (it.color || color);
+    s += `<g class="mk" tabindex="0" data-tip="${it.tip}"><rect class="hit" x="${cx - band / 2}" y="${m.t - 24}" width="${band}" height="${ih + 24}"/>`;
+    s += `<path class="b grow" style="animation-delay:${i * 60}ms" fill="${fill}" stroke="${it.partial ? color : 'none'}" stroke-width="2" d="M${cx - bw / 2},${m.t + ih}V${top + r}Q${cx - bw / 2},${top} ${cx - bw / 2 + r},${top}H${cx + bw / 2 - r}Q${cx + bw / 2},${top} ${cx + bw / 2},${top + r}V${m.t + ih}Z"/>`;
+    s += `<text class="v" x="${cx}" y="${top - 8}" text-anchor="middle">${it.short ?? nf1.format(it.v / 60)}</text></g>`;
+    s += `<text x="${cx}" y="${h - m.b + 22}" text-anchor="middle">${it.label}</text>`;
+    if (it.sub) s += `<text x="${cx}" y="${h - m.b + 42}" text-anchor="middle">${it.sub}</text>`;
+  });
+  if (avg) { const ya = y(avg); s += `<line x1="${m.l}" x2="${w - m.r}" y1="${ya}" y2="${ya}" stroke="var(--text)" stroke-width="2" stroke-dasharray="6 5"/><text x="${w - m.r + 6}" y="${ya + 5}" fill="var(--text)" style="fill:var(--text);font-weight:800">TB</text>`; }
+  el.innerHTML = s + `</svg>`;
+}
+
+/* ---------- 1. Tuần này so với tuần trước (cùng số ngày đã qua + cả tuần trước) ---------- */
+function pairRows(rows) {
+  const max = Math.max(...rows.map(r => r.v)) || 1;
+  return `<div class="pair">` + rows.map(r => `<div class="row" data-tip="${r.tip}"><span class="lab">${r.lab}</span><span class="track"><span class="fill ${r.cls} growx" style="display:block;width:${r.v / max * 100}%"></span></span></div>`).join('') + `</div>`;
+}
+function renderCmpWeek(ws) {
+  const cur = ws.at(-1), prev = ws.at(-2), n = cur.days.length;
+  const prevSame = prev.days.slice(0, n).reduce((a, x) => a + val(x), 0);
+  const tag = `<span class="tagp">tạm chốt</span>`;
+  let h = '';
+  if (n < 7) h += `<p class="sub2">${n} ngày đầu tuần (${WD[0]} → ${WD[n - 1]})</p>` +
+    pairRows([{ lab: `Tuần ${cur.w}`, v: cur.min, cls: 'cur', tip: `Tuần ${cur.w}: ${hm(cur.min)}` }, { lab: `Tuần ${prev.w}`, v: prevSame, cls: 'prev', tip: `Tuần ${prev.w}, cùng ${n} ngày: ${hm(prevSame)}` }]) +
+    `<p><b class="big2">${fmtDiff(cur.min - prevSame)}</b></p>`;
+  h += `<p class="sub2">So với cả tuần ${prev.w} ${tag}</p>` +
+    pairRows([{ lab: `Tuần ${cur.w}`, v: cur.min, cls: 'cur', tip: `Tuần ${cur.w}${n < 7 ? ' (đến hôm nay)' : ''}: ${hm(cur.min)}` }, { lab: `Tuần ${prev.w}`, v: prev.min, cls: 'prev', tip: `Cả tuần ${prev.w}: ${hm(prev.min)}` }]) +
+    `<p class="sub2">${n < 7 ? 'Tuần này còn ' + (7 - n) + ' ngày nữa' : fmtDiff(cur.min - prev.min)}</p>`;
+  $('st-cmpweek').innerHTML = h;
+}
+
+/* ---------- 2. Nhịp độ cuối tuần [DỰ ĐOÁN]: cùng công thức app đang dùng (L3) ---------- */
+function renderPace(ws) {
+  const cur = ws.at(-1), n = cur.days.length;
+  const base = ws.slice(-5, -1), r = base.reduce((a, w) => a + w.min, 0) / (base.length * 7);
+  const before = cur.days.slice(0, n - 1).reduce((a, x) => a + val(x), 0), today = val(cur.days[n - 1]);
+  const fc = n >= 7 ? cur.min : before + Math.max(today, r) + r * (7 - n);
+  const scale = Math.max(fc, 1440) * 1.1, pc = x => `${x / scale * 100}%`;
+  $('st-pace').dataset.tip = '';
+  $('st-pace').innerHTML = `<div class="pace-wrap" data-tip="Đã học: ${hm(cur.min)}&#10;Dự báo cuối tuần ${cur.w}: khoảng ${hrs(fc)}&#10;Cách tính: các ngày còn lại theo nhịp trung bình mỗi ngày của tuần ${base.map(w => w.w).join(', ')} (${nf0.format(Math.round(r))} phút/ngày)">
+      <div class="pace"><span class="done growx" style="width:${pc(cur.min)}"></span>
+      <span class="more" style="left:${pc(cur.min)};width:${pc(Math.max(0, fc - cur.min))}"></span>
+      <span class="goal" style="left:${pc(1440)}"><span>mục tiêu 24 giờ</span></span>
+      <span class="end" style="left:${pc(fc)}">≈ ${hrs(fc)}</span></div></div>
+    <p class="sub2">Đã học ${hm(cur.min)} · phần sọc là dự báo</p>`;
+}
+
+/* ---------- 3. Tháng này so với tháng trước (cùng số ngày đầu tháng) ---------- */
+function renderMonth(ws) {
+  const flat = ws.flatMap(w => w.days.map(val)), todayIdx = flat.length - 1, { m: tm, d: td } = dateOf(todayIdx);
+  let cur = 0, prev = 0;
+  flat.forEach((v, i) => { const { m, d } = dateOf(i); if (m === tm && d <= td) cur += v; if (m === tm - 1 && d <= td) prev += v; });
+  const notFull = tm - 1 === START.m && START.d > 1;
+  $('st-month').innerHTML = `<p class="sub2">Ngày 1–${td} của tháng ${tm} và tháng ${tm - 1}</p>` +
+    pairRows([{ lab: `Tháng ${tm}`, v: cur, cls: 'cur', tip: `Tháng ${tm}, ngày 1–${td}: ${hm(cur)}` }, { lab: `Tháng ${tm - 1}`, v: prev, cls: 'prev', tip: `Tháng ${tm - 1}, ngày 1–${td}: ${hm(prev)}${notFull ? '\nChỉ có dữ liệu từ 21/10' : ''}` }]) +
+    (notFull ? `<p class="sub2"><span class="tagp">chưa đủ tháng</span> tháng ${tm - 1} chỉ có từ 21/10</p>` : `<p><b class="big2">${fmtDiff(cur - prev)}</b></p>`);
+}
+
+/* ---------- 4. Tổng giờ theo tuần + đường trung bình (không tính tuần đang diễn ra) ---------- */
+function renderWeeks(ws) {
+  const done = ws.slice(0, -1), avg = done.reduce((a, w) => a + w.min, 0) / done.length;
+  barChart($('st-weeks'), ws.map(w => ({ v: w.min, label: `T${w.w}`, sub: w.status === 'Đang diễn ra' ? 'đang' : w.status === 'Tạm chốt' ? 'tạm' : dd(w.start),
+    partial: w.status === 'Đang diễn ra', tip: `Tuần ${w.w} (${dd(w.start)}–${dd(w.start + 6)}) · ${w.status}\n${hm(w.min)}` + (w.status === 'Đang diễn ra' ? `\nMới qua ${w.days.length}/7 ngày` : '') })), { avg });
+}
+
+/* ---------- 5. Xu hướng [DỰ ĐOÁN]: 2 cách để Oriana chọn ---------- */
+function renderTrend(ws) {
+  const done = ws.slice(0, -1), el = $('st-trend'), w = W(el), h = 220, m = { t: 20, r: 12, b: 40, l: 12 };
+  let pred;
+  if (trendMode === 'avg') {
+    const base = done.slice(-4), a = base.reduce((s, x) => s + x.min, 0) / base.length;
+    const lo = Math.min(...base.map(x => x.min)), hi = Math.max(...base.map(x => x.min));
+    pred = [1, 2, 3].map(k => ({ w: done.length + k, v: a, lo, hi }));
+    $('st-trend-foot').textContent = `Nếu giữ nhịp trung bình 4 tuần gần nhất: khoảng ${hrs(a)} mỗi tuần.`;
+  } else {
+    const xs = done.map(x => x.w), ys = done.map(x => x.min), mx = xs.reduce((a, b) => a + b) / xs.length, my = ys.reduce((a, b) => a + b) / ys.length;
+    const slope = xs.reduce((a, x, i) => a + (x - mx) * (ys[i] - my), 0) / xs.reduce((a, x) => a + (x - mx) ** 2, 0);
+    const sd = Math.sqrt(ys.reduce((a, y, i) => a + (y - (my + slope * (xs[i] - mx))) ** 2, 0) / (ys.length - 2));
+    pred = [1, 2, 3].map(k => { const x = done.length + k, v = Math.max(0, my + slope * (x - mx)); return { w: x, v, lo: Math.max(0, v - sd), hi: v + sd }; });
+    $('st-trend-foot').textContent = `Kéo dài đường thẳng qua ${done.length} tuần đã qua: khoảng ${hrs(pred[0].v)} ở tuần ${pred[0].w}.`;
+  }
+  const all = [...done.map(x => ({ w: x.w, v: x.min })), ...pred], max = Math.max(...all.map(p => p.hi ?? p.v)) * 1.1;
+  const X = k => m.l + (k - 1) / (all.length - 1) * (w - m.l - m.r), Y = v => m.t + (h - m.t - m.b) * (1 - v / max);
+  const last = done.at(-1);
+  let s = `<svg viewBox="0 0 ${w} ${h}" role="img"><line class="grid-l" x1="${m.l}" x2="${w - m.r}" y1="${Y(0)}" y2="${Y(0)}"/>`;
+  s += `<path d="M${X(last.w)},${Y(last.min)} ${pred.map(p => `L${X(p.w)},${Y(p.hi)}`).join(' ')} ${[...pred].reverse().map(p => `L${X(p.w)},${Y(p.lo)}`).join(' ')} Z" fill="var(--accent)" opacity=".28"/>`;
+  s += `<path d="M${done.map(x => `${X(x.w)},${Y(x.min)}`).join(' L')}" fill="none" stroke="var(--a1)" stroke-width="3.5" stroke-linejoin="round"/>`;
+  s += `<path d="M${X(last.w)},${Y(last.min)} ${pred.map(p => `L${X(p.w)},${Y(p.v)}`).join(' ')}" fill="none" stroke="var(--a1)" stroke-width="3" stroke-dasharray="7 6"/>`;
+  all.forEach((p, i) => {
+    const guess = i >= done.length;
+    s += `<g class="mk" tabindex="0" data-tip="Tuần ${p.w}${guess ? ' · [DỰ ĐOÁN]' : ''}\n${guess ? 'khoảng ' : ''}${hrs(p.v)}${guess ? `\nkhoảng dao động ${hrs(p.lo)}–${hrs(p.hi)}` : ''}">
+      <rect class="hit" x="${X(p.w) - 22}" y="${m.t}" width="44" height="${h - m.t - m.b}"/>
+      <circle class="b" cx="${X(p.w)}" cy="${Y(p.v)}" r="${guess ? 5 : 6}" fill="${guess ? 'var(--surface)' : 'var(--a1)'}" stroke="var(--a1)" stroke-width="3"/>
+      <text class="v" x="${X(p.w)}" y="${Y(p.v) - 14}" text-anchor="${i === 0 ? 'start' : i === all.length - 1 ? 'end' : 'middle'}">${nf1.format(p.v / 60)}</text></g>
+      <text x="${X(p.w)}" y="${h - 12}" text-anchor="${i === 0 ? 'start' : i === all.length - 1 ? 'end' : 'middle'}">T${p.w}</text>`;
+  });
+  el.innerHTML = s + `</svg>`;
+}
+
+/* ---------- 6. Theo nhóm: cột chồng mỗi tuần (hồng nhạt / hồng đậm / xám) ---------- */
+function renderCatChart(ws) {
+  $('st-cat-legend').innerHTML = CATS.map(c => `<span class="chip ${c.c}">${c.kao} ${c.k}</span>`).join('');
+  const el = $('st-cats'), w = W(el), h = 200, m = { t: 12, b: 30 }, ih = h - m.t - m.b;
+  const max = Math.max(...ws.map(x => x.min)) * 1.05, band = w / ws.length, bw = Math.min(46, band * .62);
+  let s = `<svg viewBox="0 0 ${w} ${h}" role="img"><line class="grid-l" x1="0" x2="${w}" y1="${m.t + ih}" y2="${m.t + ih}"/>`;
+  ws.forEach((wk, i) => {
+    const cx = band * i + band / 2; let y = m.t + ih;
+    const parts = CAT[wk.w], tip = `Tuần ${wk.w}\n` + CATS.map((c, j) => `${c.k}: ${hm(parts[j])}`).join('\n');
+    s += `<g class="mk" tabindex="0" data-tip="${tip}"><rect class="hit" x="${cx - band / 2}" y="${m.t}" width="${band}" height="${ih}"/><g class="grow" style="animation-delay:${i * 60}ms">`;
+    parts.forEach((v, j) => { if (!v) return; const hh = v / max * ih; y -= hh; s += `<rect class="b" x="${cx - bw / 2}" y="${y + 1}" width="${bw}" height="${Math.max(0, hh - 2)}" rx="4" fill="${CATS[j].v}"/>`; });
+    s += `</g></g><text x="${cx}" y="${h - 6}" text-anchor="middle">T${wk.w}</text>`;
+  });
+  el.innerHTML = s + `</svg>`;
+}
+
+/* ---------- 7. Heatmap kiểu GitHub: cột = tuần, hàng = thứ (thứ Tư → thứ Ba) ---------- */
+const HEAT = [[0, '0'], [59, '< 1 giờ'], [119, '1–2 giờ'], [179, '2–3 giờ'], [239, '3–4 giờ'], [Infinity, '≥ 4 giờ']];
+const heatLevel = v => HEAT.findIndex(([mx]) => v <= mx);
+function renderHeat(ws) {
+  const el = $('st-heat'), w = W(el), lab = 40, cols = ws.length;
+  const cell = Math.min(44, Math.floor((w - lab) / cols)), H = 26 + cell * 7;
+  const todayIdx = ws.at(-1).start + ws.at(-1).days.length - 1;
+  let s = `<svg viewBox="0 0 ${lab + cell * cols} ${H}" style="max-width:${lab + cell * cols}px" role="img"><defs><pattern id="busyp" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="var(--h0)"/><rect width="2.5" height="6" fill="var(--grey-cat)"/></pattern></defs>`;
+  ws.forEach((wk, c) => { s += `<text x="${lab + c * cell + cell / 2}" y="16" text-anchor="middle">T${wk.w}</text>`; });
+  WD_SHORT.forEach((d, r) => { s += `<text x="0" y="${26 + r * cell + cell / 2 + 6}">${d}</text>`; });
+  ws.forEach((wk, c) => {
+    for (let r = 0; r < 7; r++) {
+      const i = wk.start + r, x = lab + c * cell, y = 26 + r * cell;
+      if (r >= wk.days.length) { s += `<rect x="${x + 3}" y="${y + 3}" width="${cell - 6}" height="${cell - 6}" rx="6" fill="none" stroke="var(--border)" stroke-dasharray="3 3"/>`; continue; }
+      const raw = wk.days[r], v = val(raw), busy = isBusy(raw);
+      s += `<g class="mk" tabindex="0" data-tip="${WD[r]}, ${dd(i)}${i === todayIdx ? ' · hôm nay' : ''}\n${hm(v)}${busy ? '\nBận đi làm (không tính là ngày có học)' : ''}"><rect class="hit" x="${x}" y="${y}" width="${cell}" height="${cell}"/>
+        <rect class="b" x="${x + 3}" y="${y + 3}" width="${cell - 6}" height="${cell - 6}" rx="6" fill="${busy ? 'url(#busyp)' : `var(--h${heatLevel(v)})`}"/>
+        ${i === todayIdx ? `<rect x="${x + 1}" y="${y + 1}" width="${cell - 2}" height="${cell - 2}" rx="8" fill="none" stroke="var(--text)" stroke-width="2.5"/>` : ''}</g>`;
+    }
+  });
+  el.innerHTML = s + `</svg>`;
+  $('st-heat-legend').innerHTML = `Ít ${HEAT.map((_, k) => `<i style="background:var(--h${k})"></i>`).join('')} Nhiều <i class="busy-sw"></i> Bận`;
+}
+
+/* ---------- 8. Theo hoạt động: thanh 100% + danh sách ---------- */
+function renderActs() {
+  const tot = ACTS.reduce((a, x) => a + x[1], 0), el = $('st-acts'), w = W(el);
+  let x = 0, s = `<svg viewBox="0 0 ${w} 48" role="img">`;
+  ACTS.forEach(([k, v], i) => { const ww = v / tot * (w - 2 * (ACTS.length - 1)); s += `<g class="mk" tabindex="0" data-tip="${k}: ${hm(v)} · ${nf1.format(v / tot * 100)}%"><rect class="b growx" style="animation-delay:${i * 70}ms" x="${x}" y="2" width="${ww}" height="44" rx="8" fill="var(--a${i + 1})"/></g>`; x += ww + 2; });
+  el.innerHTML = s + `</svg>`;
+  $('st-acts-list').innerHTML = ACTS.map(([k, v], i) => `<li><i style="background:var(--a${i + 1})"></i><span>${k}</span><b>${nf1.format(v / tot * 100)}%</b></li>`).join('');
+}
+
+/* ---------- 9. Theo thứ: trung bình mỗi lần thứ đó xuất hiện (kể cả ngày không học) ---------- */
+function renderWeekday(ws) {
+  const sum = Array(7).fill(0), cnt = Array(7).fill(0);
+  ws.forEach(wk => wk.days.forEach((x, r) => { sum[r] += val(x); cnt[r]++; }));
+  barChart($('st-wd'), WD_SHORT.map((d, r) => ({ v: sum[r] / cnt[r], label: d, short: nf1.format(sum[r] / cnt[r] / 60), tip: `${WD[r]}: trung bình ${hm(sum[r] / cnt[r])} mỗi lần\n(${cnt[r]} lần, tổng ${hm(sum[r])})` })), { h: 180, color: 'var(--a3)' });
+}
+
+/* ---------- 10. Theo khung giờ (đề xuất mới: cần phép tính mới ở Phần C) ---------- */
+function renderTod() {
+  barChart($('st-tod'), TOD.map(([k, r, v]) => ({ v, label: k, sub: r.replace(' giờ', 'h'), tip: `${k} (${r}): ${hm(v)}` })), { h: 190, color: 'var(--a4)' });
+}
+
+/* ---------- 11. Xếp hạng (3 bảng hiện có của app, gộp vào 1 thẻ) ---------- */
+let rankTab = 'w';
+function renderRank(ws) {
+  let rows;
+  if (rankTab === 'w') rows = ws.slice(0, -1).map(w => [`Tuần ${w.w}`, `${dd(w.start)}–${dd(w.start + 6)}${w.status === 'Tạm chốt' ? ' · tạm chốt' : ''}`, w.min]).sort((a, b) => b[2] - a[2]);
+  else if (rankTab === 't') rows = TOPICS.map(([k, v]) => [k, '', v]);
+  else { const sum = Array(7).fill(0); ws.forEach(wk => wk.days.forEach((x, r) => { sum[r] += val(x); })); rows = WD.map((d, r) => [d, '', sum[r]]).sort((a, b) => b[2] - a[2]); }
+  $('st-rank').innerHTML = rows.map(([a, b, v], i) => `<li><span class="n">${i + 1}</span><span>${a}${b ? `<br><span class="muted">${b}</span>` : ''}</span><span class="r">${hrs(v)}</span></li>`).join('');
+}
+
+/* ---------- 12. Thành tích: CHỖ TRỐNG cho huy hiệu L5 (chưa có logic) ---------- */
+function renderBadges() {
+  $('st-badges').innerHTML = MILESTONES.map(h => `<span class="badge" data-tip="Huy hiệu ${h} giờ · sẽ làm ở L5">${h}<br>giờ</span>`).join('');
+}
+
+/* ---------- Tấm "Tuần này": thứ Ba so với tuần trước; ngày khác xem 6 tuần ---------- */
+function renderSheet() {
+  const ws = weeks(), cur = ws.at(-1), prev = ws.at(-2);
+  if (dayMode === 'tue') {
+    $('sheet-body').innerHTML = `<h2>Tuần ${cur.w} khép lại hôm nay</h2><p class="sub2">${dd(cur.start)}–${dd(cur.start + 6)}/2026 so với tuần ${prev.w}</p>` +
+      pairRows([{ lab: `Tuần ${cur.w}`, v: cur.min, cls: 'cur', tip: `Tuần ${cur.w}: ${hm(cur.min)}` }, { lab: `Tuần ${prev.w}`, v: prev.min, cls: 'prev', tip: `Tuần ${prev.w}: ${hm(prev.min)}` }]) +
+      `<p><b class="big2">${fmtDiff(cur.min - prev.min)}</b></p><div class="legend"><span class="lg"><i style="background:var(--a1)"></i>Tuần ${cur.w}</span><span class="lg"><i style="background:var(--prev)"></i>Tuần ${prev.w}</span></div><div class="chart" id="sheet-chart"></div>`;
+    const el = $('sheet-chart'), w = W(el), h = 180, m = { t: 10, b: 30 }, ih = h - m.t - m.b, band = w / 7, bw = Math.min(18, band * .3);
+    const max = Math.max(...cur.days.map(val), ...prev.days.map(val)) * 1.08;
+    let s = `<svg viewBox="0 0 ${w} ${h}" role="img"><line class="grid-l" x1="0" x2="${w}" y1="${m.t + ih}" y2="${m.t + ih}"/>`;
+    for (let r = 0; r < 7; r++) {
+      const cx = band * r + band / 2, a = val(cur.days[r]), b = val(prev.days[r]);
+      s += `<g class="mk" tabindex="0" data-tip="${WD[r]}\nTuần ${cur.w}: ${hm(a)}\nTuần ${prev.w}: ${hm(b)}"><rect class="hit" x="${cx - band / 2}" y="${m.t}" width="${band}" height="${ih}"/>
+        <rect class="b grow" x="${cx - bw - 1}" y="${m.t + ih - a / max * ih}" width="${bw}" height="${a / max * ih}" rx="4" fill="var(--a1)"/>
+        <rect class="b grow" x="${cx + 1}" y="${m.t + ih - b / max * ih}" width="${bw}" height="${b / max * ih}" rx="4" fill="var(--prev)"/></g>
+        <text x="${cx}" y="${h - 6}" text-anchor="middle">${WD_SHORT[r]}</text>`;
+    }
+    el.innerHTML = s + `</svg>`;
+  } else {
+    $('sheet-body').innerHTML = `<h2>6 tuần gần nhất</h2><p class="sub2">Tuần ${cur.w} đang diễn ra · mới qua ${cur.days.length}/7 ngày</p><div class="chart" id="sheet-chart"></div>`;
+    barChart($('sheet-chart'), ws.slice(-6).map(w => ({ v: w.min, label: `T${w.w}`, partial: w.status === 'Đang diễn ra', tip: `Tuần ${w.w}: ${hm(w.min)}${w.status === 'Đang diễn ra' ? ' (đến hôm nay)' : ''}` })), { h: 190 });
+  }
+}
+
+/* ---------- Gọi vẽ toàn bộ tab Thống kê ---------- */
+function renderStats() {
+  const ws = weeks();
+  const total = ws.reduce((a, w) => a + w.min, 0);
+  $('st-sub').textContent = `Từ 21/10/2026 đến ${dayMode === 'tue' ? '01/12' : '26/11'}/2026 · ${hrs(total)}`;
+  renderCmpWeek(ws); renderPace(ws); renderMonth(ws); renderWeeks(ws); renderTrend(ws); renderCatChart(ws);
+  renderActs(); renderWeekday(ws); renderTod(); renderRank(ws); renderBadges();
+}
+
+/* Chạm vào cột/điểm: hiện số trên cột đó (chỉ 1 cột một lúc) */
+document.addEventListener('click', e => {
+  const mk = e.target.closest('.chart .mk');
+  document.querySelectorAll('.chart .mk.sel').forEach(x => { if (x !== mk) x.classList.remove('sel'); });
+  if (mk) mk.classList.toggle('sel');
+});
+
+/* Chuyển tab */
+function showPage(p) {
+  document.querySelectorAll('.page').forEach(x => { x.hidden = x.id !== `pg-${p}`; });
+  document.querySelectorAll('.tab').forEach(t => t.toggleAttribute('aria-current', t.dataset.page === p));
+  document.querySelectorAll('.tab').forEach(t => { if (t.dataset.page === p) t.setAttribute('aria-current', 'page'); });
+  if (p === 'stats') renderStats();
+  if (p === 'cal') renderCal();
+  if (p !== 'state') lastPage = p;
+  scrollTo(0, 0);
+}
+document.querySelector('.tabs').addEventListener('click', e => { const t = e.target.closest('.tab'); if (!t || !t.dataset.page) return; showPage(t.dataset.page); });
+$('st-rank-tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; rankTab = b.dataset.v;
+  $('st-rank-tabs').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); renderRank(weeks()); });
+seg('p-day', 'thu', v => { dayMode = v; const ws = weeks(); FAKE.weekDays = [...ws.at(-1).days.map(val), ...Array(7).fill(0)].slice(0, 7); FAKE.todayIdx = ws.at(-1).days.length - 1;
+  $('week-num').textContent = hrs(ws.at(-1).min); $('today-line').textContent = v === 'tue' ? 'Thứ Ba, 01/12/2026 · tuần 6' : 'Thứ Năm, 26/11/2026 · tuần 6';
+  renderWeek(); if (!$('pg-stats').hidden) renderStats(); if (!$('pg-cal').hidden) renderCal(); });
+seg('p-trend', 'avg', v => { trendMode = v; renderTrend(weeks()); });
+$('week').addEventListener('click', () => renderSheet());
+let rs2; addEventListener('resize', () => { clearTimeout(rs2); rs2 = setTimeout(() => { if (!$('pg-stats').hidden) renderStats(); if (!$('pg-cal').hidden) renderCal(); }, 200); });
+
+/* =====================================================================
+   VÒNG 3 — tab Lịch (heatmap + danh sách ca + 3 trạng thái tuần), form, Cài đặt, trạng thái tải/lỗi.
+   Không ghi gì đi đâu: bấm Lưu/Xóa chỉ hiện thông báo mẫu.
+   ===================================================================== */
+const TOPIC_LIST = { 'Ngoại ngữ': ['JP - Từ vựng', 'JP - Ngữ pháp', 'JP - Bài tập', 'EN - Nghe'], 'Chuyên môn BA': ['BA - Thực hành làm ứng dụng cá nhân', 'BA - Lý thuyết'],
+  'Không học': ['Bận đi làm, không học, có ôn tập ngắn', 'Nghỉ ngơi'] };
+const ACT_LIST = ['Lý thuyết', 'Thực hành', 'Ôn tập', 'Kiểm tra nhớ', 'Nhờ AI'];
+const catOf = t => Object.keys(TOPIC_LIST).find(k => TOPIC_LIST[k].includes(t));
+const RULE = {
+  'Đang diễn ra': ['(＾▽＾)', 's-cur', 'Thêm, sửa, xóa được mọi trường (ngày phải nằm trong tuần này, không sau hôm nay).'],
+  'Tạm chốt': ['(•ω•)', 's-prov', 'Chỉ thêm được ca ghi bù (tự gắn nhãn [OFFSET]). Ca thường: chỉ sửa chủ đề, hoạt động, ghi chú. Ca ghi bù: sửa, xóa mọi trường.'],
+  'Chốt hẳn': ['(˘ω˘)', 's-final', 'Tuần này đã chốt hẳn. Muốn sửa, hãy sửa trực tiếp trên Sheet.'],
+};
+const toHM = m => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+
+// Tạo ca giả từ số phút mỗi ngày (tuần 1–5), tuần 6 viết tay. Mỗi ca giữ "dòng" như Sheet thật.
+function buildSessions() {
+  const out = []; let row = 2;
+  const nn = TOPIC_LIST['Ngoại ngữ'];
+  weeks().forEach(wk => wk.days.forEach((raw, r) => {
+    const date = wk.start + r;
+    if (wk.w === 6) return;
+    if (isBusy(raw)) { out.push({ date, s: 19 * 60, e: 19 * 60 + val(raw), topic: 'Bận đi làm, không học, có ôn tập ngắn', act: '', note: 'ôn flashcard trên xe buýt', row: row++ }); return; }
+    let left = val(raw), t = 7 * 60 + (r % 3) * 30, k = 0;
+    while (left > 0) {
+      const len = Math.min(left, left > 150 ? 95 + ((date + k) % 4) * 15 : left);
+      const ba = wk.w === 5 && r === 0;
+      out.push({ date, s: t, e: t + len, topic: ba ? 'BA - Lý thuyết' : nn[(date + k) % nn.length], act: ACT_LIST[(date + k) % 4], note: '', row: row++ });
+      left -= len; t += len + 25 + k * 40; k++;
+    }
+  }));
+  const w5mon = out.find(x => x.date === 4 * 7 + 5);   // thứ Hai tuần 5: thêm 1 ca ghi bù
+  out.push({ date: 4 * 7 + 5, s: 21 * 60, e: 21 * 60 + 40, topic: 'EN - Nghe', act: 'Ôn tập', note: '[OFFSET] nghe podcast, quên ghi hôm đó', row: row++ });
+  if (w5mon) w5mon.e -= 40;
+  const d6 = 5 * 7;
+  out.push({ date: d6, s: 8 * 60 + 40, e: 11 * 60 + 15, topic: 'BA - Thực hành làm ứng dụng cá nhân', act: 'Nhờ AI', note: 'Project: app time-track', row: row++ });
+  out.push({ date: d6, s: 14 * 60 + 15, e: 16 * 60, topic: 'JP - Bài tập', act: 'Ôn tập', note: 'Section 3 Unit 18 + sửa lỗi sai', row: row++ });
+  out.push({ date: d6 + 1, s: 7 * 60, e: 7 * 60 + 30, topic: 'JP - Từ vựng', act: 'Kiểm tra nhớ', note: '', row: row++ });
+  out.push({ date: d6 + 1, s: 13 * 60, e: 14 * 60 + 45, topic: 'BA - Thực hành làm ứng dụng cá nhân', act: 'Thực hành', note: '', row: row++ });
+  out.push({ date: d6 + 1, s: 14 * 60 + 50, e: null, topic: 'BA - Thực hành làm ứng dụng cá nhân', act: 'Nhờ AI', note: 'L4.5 vòng 3', row: row++ });
+  return out;
+}
+let SESS = buildSessions(), calWeek = 6;
+
+/* ---------- Heatmap ở tab Lịch: chạm ô = chọn tuần đó ---------- */
+function renderCalHeat(ws) {
+  const el = $('cal-heat'), w = W(el), lab = 40, cols = ws.length;
+  const cell = Math.min(52, Math.floor((w - lab) / cols)), H = 26 + cell * 7;
+  const todayIdx = ws.at(-1).start + ws.at(-1).days.length - 1;
+  let s = `<svg viewBox="0 0 ${lab + cell * cols} ${H}" style="max-width:${lab + cell * cols}px" role="img"><defs><pattern id="busyp" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="var(--h0)"/><rect width="2.5" height="6" fill="var(--grey-cat)"/></pattern></defs>`;
+  ws.forEach((wk, c) => { s += `<text x="${lab + c * cell + cell / 2}" y="16" text-anchor="middle" style="${wk.w === calWeek ? 'fill:var(--text);font-weight:800' : ''}">T${wk.w}</text>`; });
+  WD_SHORT.forEach((d, r) => { s += `<text x="0" y="${26 + r * cell + cell / 2 + 6}">${d}</text>`; });
+  ws.forEach((wk, c) => {
+    if (wk.w === calWeek) s += `<rect x="${lab + c * cell}" y="22" width="${cell}" height="${cell * 7 + 4}" rx="10" fill="var(--surface-2)"/>`;
+    for (let r = 0; r < 7; r++) {
+      const i = wk.start + r, x = lab + c * cell, y = 26 + r * cell;
+      if (r >= wk.days.length) { s += `<rect x="${x + 4}" y="${y + 4}" width="${cell - 8}" height="${cell - 8}" rx="6" fill="none" stroke="var(--border)" stroke-dasharray="3 3"/>`; continue; }
+      const raw = wk.days[r], v = val(raw), busy = isBusy(raw);
+      s += `<g class="mk calcell" tabindex="0" data-week="${wk.w}" data-tip="${WD[r]}, ${dd(i)}${i === todayIdx ? ' · hôm nay' : ''}\n${hm(v)}${busy ? '\nBận đi làm (không tính là ngày có học)' : ''}"><rect class="hit" x="${x}" y="${y}" width="${cell}" height="${cell}"/>
+        <rect class="b" x="${x + 4}" y="${y + 4}" width="${cell - 8}" height="${cell - 8}" rx="6" fill="${busy ? 'url(#busyp)' : `var(--h${heatLevel(v)})`}"/>
+        ${i === todayIdx ? `<rect x="${x + 2}" y="${y + 2}" width="${cell - 4}" height="${cell - 4}" rx="8" fill="none" stroke="var(--text)" stroke-width="2.5"/>` : ''}</g>`;
+    }
+  });
+  el.innerHTML = s + `</svg>`;
+  $('cal-heat-legend').innerHTML = `Ít ${HEAT.map((_, k) => `<i style="background:var(--h${k})"></i>`).join('')} Nhiều <i class="busy-sw"></i> Bận`;
+}
+
+/* ---------- Danh sách ca của tuần đang chọn ---------- */
+function perm(status, off) {
+  if (status === 'Đang diễn ra') return { edit: true, time: true, del: true };
+  if (status === 'Tạm chốt') return off ? { edit: true, time: true, del: true } : { edit: true, time: false, del: false };
+  return { edit: false, time: false, del: false };
+}
+function renderCalList() {
+  const ws = weeks(), wk = ws.find(x => x.w === calWeek), st = wk.status, [kao, cls, rule] = RULE[st];
+  $('cal-wtitle').textContent = `Tuần ${wk.w}`;
+  $('cal-wrange').textContent = `${dd(wk.start)}–${dd(wk.start + 6)}/2026 · ${st}`;
+  $('cal-prev').disabled = calWeek === 1; $('cal-next').disabled = calWeek === ws.length;
+  $('cal-strip').className = `state-strip ${cls}`;
+  $('cal-strip').innerHTML = `<span class="kao">${kao}</span><span><b>${st}</b>${rule}</span>`;
+  $('cal-add-wrap').hidden = st === 'Chốt hẳn';
+  $('cal-add').textContent = st === 'Tạm chốt' ? '＋ Thêm ca ghi bù' : '＋ Thêm ca';
+  const list = SESS.filter(x => x.date >= wk.start && x.date <= wk.start + 6).sort((a, b) => a.date - b.date || a.s - b.s);
+  if (!list.length) { $('cal-list').innerHTML = `<div class="empty-week">${MOCHI[mochiKey].svg('')}<p>Tuần này chưa có ca nào.</p></div>`; return; }
+  let h = '', lastDay = -1;
+  for (const x of list) {
+    if (x.date !== lastDay) {
+      lastDay = x.date;
+      const dayMin = list.filter(y => y.date === x.date && y.e !== null).reduce((a, y) => a + y.e - y.s, 0);
+      h += `<div class="day-h">${WD[x.date % 7]} ${dd(x.date)}<span>${hm(dayMin)}</span></div>`;
+    }
+    const off = x.note.startsWith('[OFFSET]'), p = perm(st, off), open = x.e === null, ci = Object.keys(TOPIC_LIST).indexOf(catOf(x.topic));
+    const finish = open && st === 'Đang diễn ra';
+    h += `<div class="sess"><div>
+        <div class="t">${toHM(x.s)}–${open ? '…' : toHM(x.e)} ${open ? '' : `<span>${hm(x.e - x.s)}</span>`}</div>
+        <div class="meta"><span class="chip ${CATS[ci].c}">${CATS[ci].kao} ${x.topic}</span>${x.act ? `<span>${x.act}</span>` : ''}${off ? '<span class="mini off">ghi bù</span>' : ''}${open ? '<span class="mini open">đang mở</span>' : ''}</div>
+        ${x.note.replace('[OFFSET]', '').trim() ? `<p class="snote">${x.note.replace('[OFFSET]', '').trim()}</p>` : ''}
+        <span class="row-no">dòng ${x.row}</span></div>
+      <div class="btns">${st === 'Chốt hẳn' ? '' : `
+        ${finish ? `<button class="btn3d small" type="button" data-act="finish" data-row="${x.row}">Kết thúc ca</button>` : ''}
+        <button class="btn3d small ghost" type="button" data-act="edit" data-row="${x.row}">Sửa</button>
+        ${p.del ? `<button class="btn3d small ghost" type="button" data-act="del" data-row="${x.row}">Xóa</button>` : ''}`}</div></div>`;
+  }
+  $('cal-list').innerHTML = h;
+}
+function renderCal() { renderCalHeat(weeks()); renderCalList(); }
+
+/* ---------- Form thêm / sửa (bản mẫu: kiểm tra vài lỗi cơ bản, không ghi) ---------- */
+let formCtx = null;
+function fillSelects(topic, act) {
+  $('f-topic').innerHTML = '<option value="">— chọn chủ đề —</option>' + Object.entries(TOPIC_LIST).map(([c, ts]) =>
+    `<optgroup label="${c}">${ts.map(t => `<option ${t === topic ? 'selected' : ''}>${t}</option>`).join('')}</optgroup>`).join('');
+  $('f-activity').innerHTML = '<option value="">— chọn hoạt động —</option>' + ACT_LIST.map(a => `<option ${a === act ? 'selected' : ''}>${a}</option>`).join('');
+}
+function openForm(mode, x) {
+  const ws = weeks(), wk = ws.find(w => w.w === calWeek), st = wk.status, [kao, cls] = RULE[st];
+  const off = x ? x.note.startsWith('[OFFSET]') : st === 'Tạm chốt', p = perm(st, off);
+  formCtx = { mode, x, st, off };
+  $('f-title').textContent = mode === 'add' ? (st === 'Tạm chốt' ? 'Thêm ca ghi bù' : 'Thêm ca học') : `Sửa ca · dòng ${x.row}`;
+  $('f-strip').className = `state-strip ${cls}`;
+  $('f-strip').innerHTML = `<span class="kao">${kao}</span><span><b>Tuần ${wk.w} · ${st}</b>${mode === 'edit' && !p.time ? 'Ca thường ở tuần tạm chốt: chỉ sửa chủ đề, hoạt động, ghi chú.' : st === 'Tạm chốt' ? 'Ca ghi bù: được thêm, sửa, xóa mọi trường khi tuần còn tạm chốt.' : 'Ngày phải nằm trong tuần này, không sau hôm nay.'}</span>`;
+  const last = wk.start + wk.days.length - 1;
+  $('f-date-hint').textContent = `dd/mm/yyyy, từ ${dd(wk.start)} đến ${dd(Math.min(wk.start + 6, last))}`;
+  $('f-date').value = x ? `${dd(x.date)}/2026` : `${dd(last)}/2026`;
+  $('f-start').value = x ? toHM(x.s) : ''; $('f-end').value = x && x.e !== null ? toHM(x.e) : (mode === 'finish' ? '15:34' : '');
+  ['f-date', 'f-start', 'f-end'].forEach(id => { $(id).disabled = mode !== 'add' && !p.time; });
+  $('f-time-why').hidden = mode === 'add' || p.time;
+  $('f-time-why').textContent = 'Tuần này đang tạm chốt: ca thường chỉ sửa được chủ đề, hoạt động và ghi chú, không sửa ngày giờ.';
+  fillSelects(x?.topic ?? '', x?.act ?? '');
+  $('f-note').value = x ? x.note.replace('[OFFSET]', '').trim() : '';
+  $('f-offset').checked = off; $('f-offset').disabled = mode !== 'add' || st === 'Tạm chốt';
+  $('f-offset-why').textContent = mode !== 'add' ? '(không đổi được khi sửa)' : st === 'Tạm chốt' ? '(bắt buộc ở tuần tạm chốt)' : '(không bắt buộc)';
+  $('f-errors').innerHTML = '';
+  formUpdate();
+  $('f-dialog').showModal();
+  if (mode === 'finish') $('f-end').focus();
+}
+const parseHM = s => { const m = /^(\d{1,2}):(\d{2})$/.exec(s.trim()); return m && +m[1] < 24 && +m[2] < 60 ? +m[1] * 60 + +m[2] : (s.trim() ? NaN : null); };
+function formErrors() {
+  const e = [], st = parseHM($('f-start').value), en = parseHM($('f-end').value);
+  if (!/^\d{2}\/\d{2}\/\d{4}$/.test($('f-date').value.trim())) e.push('Chưa chọn ngày (hoặc ngày không hợp lệ).');
+  if (Number.isNaN(st)) e.push('Giờ bắt đầu chưa đúng dạng hh:mm (24 giờ, ví dụ 08:40).');
+  if (Number.isNaN(en)) e.push('Giờ kết thúc chưa đúng dạng hh:mm (24 giờ, ví dụ 21:15).');
+  if (st === null) e.push('Chưa nhập giờ bắt đầu.');
+  if (!$('f-topic').value) e.push('Chưa chọn chủ đề.');
+  if (!$('f-activity').value && catOf($('f-topic').value) !== 'Không học') e.push('Chưa chọn hoạt động.');
+  return { e, st, en };
+}
+function formUpdate() {
+  const { st, en } = formErrors();
+  $('f-dur').textContent = typeof st === 'number' && typeof en === 'number' ? `Thời lượng: ${hm((en - st + 1440) % 1440)}` : typeof st === 'number' && en === null ? 'Chưa có giờ kết thúc: lưu thành ca đang mở.' : '';
+  const note = ($('f-offset').checked ? '[OFFSET] ' : '') + $('f-note').value.trim();
+  $('f-note-preview').textContent = `Ô "Ghi chú" (cột F) sẽ lưu: ${note.trim() || '(trống)'}`;
+}
+$('ca-form').addEventListener('input', formUpdate);
+$('ca-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const { e: errs } = formErrors();
+  $('f-errors').innerHTML = errs.map(x => `<li>${x}</li>`).join('');
+  if (errs.length) return;
+  $('f-dialog').close();
+  showResult('ok', `Đã lưu vào dòng ${formCtx.x?.row ?? 175} và đọc lại thấy đúng. Số liệu đã làm mới.`);
+});
+$('f-cancel').addEventListener('click', () => $('f-dialog').close());
+
+/* ---------- Xóa: hỏi lại trước, sau đó cho Hoàn tác 5 phút ---------- */
+let delRow = null;
+function openDelete(x) {
+  delRow = x.row;
+  $('del-what').innerHTML = `<b>${WD[x.date % 7]} ${dd(x.date)} · ${toHM(x.s)}–${x.e === null ? '…' : toHM(x.e)}</b><br>${x.topic}${x.act ? ' · ' + x.act : ''}<br><span class="muted">dòng ${x.row}</span>`;
+  $('del-dialog').showModal();
+}
+$('del-cancel').addEventListener('click', () => $('del-dialog').close());
+$('del-ok').addEventListener('click', () => { $('del-dialog').close(); showResult('del', `Đã xóa nội dung dòng ${delRow} (cột A–F; công thức G–K vẫn giữ). Số liệu đã làm mới. Có thể hoàn tác trong 5 phút, nếu chưa tải lại trang.`); });
+
+function showResult(kind, text) {
+  const box = $('cal-result');
+  box.className = `msg ${kind === 'ok' ? 'ok' : 'ok'}`;
+  box.innerHTML = `${MOCHI[mochiKey].svg('')}<span class="grow1">${text}</span>${kind === 'del' ? '<button class="btn3d small ghost" type="button" id="undo">Hoàn tác</button>' : ''}`;
+  box.hidden = false; jump(box);
+  if (kind === 'del') $('undo').addEventListener('click', () => showResult('ok', `Đã hoàn tác: dòng ${delRow} có lại ca cũ. Số liệu đã làm mới.`));
+}
+
+$('cal-list').addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const x = SESS.find(s => s.row === Number(b.dataset.row));
+  if (b.dataset.act === 'del') openDelete(x); else openForm(b.dataset.act === 'finish' ? 'finish' : 'edit', x);
+});
+$('cal-add').addEventListener('click', () => openForm('add', null));
+$('add').addEventListener('click', () => { calWeek = weeks().length; showPage('cal'); openForm('add', null); });
+$('cal-prev').addEventListener('click', () => { calWeek--; renderCal(); });
+$('cal-next').addEventListener('click', () => { calWeek++; renderCal(); });
+$('cal-heat').addEventListener('click', e => { const c = e.target.closest('.calcell'); if (c) { calWeek = Number(c.dataset.week); renderCal(); } });
+
+/* ---------- Cài đặt: chọn sáng/tối đồng bộ với thanh bản mẫu ---------- */
+seg('set-theme', store.get('tt-theme') || 'auto', v => { applyTheme(v); document.querySelectorAll('#p-theme button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v))); });
+
+/* ---------- Màn hình đang tải / lỗi / trống / mất mạng ---------- */
+const STATES = {
+  loading: ['Đang tải dữ liệu', 'Đang đọc tab "Ca học" từ Google Sheet', null],
+  error: ['Chưa tải được dữ liệu', 'Quá 8 giây chưa tải được dữ liệu (mạng chậm hoặc mất kết nối).', 'Tải lại'],
+  empty: ['Chưa có ca nào', 'Tab "Ca học" chưa có dòng nào. Thêm ca đầu tiên nhé.', '＋ Thêm ca'],
+  offline: ['Đang không có mạng', 'App không hiện số liệu cũ để tránh nhầm. Có mạng lại thì bấm Tải lại.', 'Tải lại'],
+};
+let screenMode = 'ok', lastPage = 'today';
+function applyScreen() {
+  if (screenMode === 'ok') { showPage(lastPage); return; }
+  document.querySelectorAll('.page').forEach(x => { x.hidden = x.id !== 'pg-state'; });
+  const [t, txt, act] = STATES[screenMode];
+  $('pg-state').classList.toggle('loading', screenMode === 'loading');
+  $('state-mochi').innerHTML = MOCHI[mochiKey].svg('');
+  $('state-title').innerHTML = screenMode === 'loading' ? `${t}<span class="dots"></span>` : t;
+  $('state-text').textContent = txt;
+  $('state-act').innerHTML = act ? `<button class="btn3d small" type="button">${act}</button>` : '';
+}
+seg('p-screen', 'ok', v => { screenMode = v; applyScreen(); });
+
+const ROUTES = { '#thong-ke': 'stats', '#lich': 'cal', '#cai-dat': 'settings' };
+function route() { if (ROUTES[location.hash]) showPage(ROUTES[location.hash]); }
+addEventListener('hashchange', route); route();
+
+requestAnimationFrame(() => setTimeout(() => renderRing(FAKE.today, false), 150));
+</script>
