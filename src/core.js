@@ -176,8 +176,9 @@ export const monthKey = (y, m) => `${y}-${String(m).padStart(2, '0')}`;
 // 5. Thống kê. today = "hôm nay" (serial, giờ VN); chỉ tính các ca có date <= toDate (mặc định = today).
 // Định nghĩa:
 //   - "ca" (count) = dòng có đủ giờ bắt đầu + kết thúc. Dòng "Bận đi làm" không giờ và ca đang mở không phải ca.
-//   - "ngày có học" (mục 6) = ngày có ≥1 dòng Ca học và KHÔNG có dòng topic "Bận đi làm".
-//     Lưu ý: ca đang mở cũng là 1 dòng -> ngày đó vẫn là ngày có học (xem "Quyết định chưa chốt").
+//   - "ngày có học" = ngày có ≥1 ca ĐÃ ĐÓNG (đủ giờ bắt đầu + kết thúc) và KHÔNG có dòng topic "Bận đi làm".
+//     Quy tắc ca mở (L5, Oriana chốt 26/11/2026): ngày chỉ có ca mở KHÔNG tính là có học; ca mở không tính phút.
+//     Khi ca được đóng (điền giờ kết thúc), lần tải sau tính cả phút lẫn ngày có học.
 // ---------------------------------------------------------------------------------------------
 export function computeStats(sessions, today, { toDate = today, cfg = CONFIG } = {}) {
   const list = sessions.filter(s => typeof s.date === 'number' && s.date >= cfg.startDate && s.date <= toDate);
@@ -203,7 +204,7 @@ export function computeStats(sessions, today, { toDate = today, cfg = CONFIG } =
     bump(g.phase, phase(s.date, cfg), s.duration);
     bump(g.month, monthKey(y, m), s.duration);
   }
-  for (const d of Object.values(days)) d.studyDay = !d.busy; // có dòng (vì nằm trong days) và không có "Bận đi làm"
+  for (const d of Object.values(days)) d.studyDay = !d.busy && d.count > 0; // ≥1 ca đã đóng và không có "Bận đi làm"
   st.groups = g;
   st.days = days;
 
