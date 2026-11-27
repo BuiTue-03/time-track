@@ -9,7 +9,7 @@ const sw = readFileSync(new URL('sw.js', root), 'utf8');
 const STATIC = [...sw.match(/const STATIC = \[([\s\S]*?)\];/)[1].matchAll(/'([^']+)'/g)].map(m => m[1]);
 const VERSION = sw.match(/const VERSION = '([^']+)'/)[1];
 
-test('sw: phiên bản cache của L6 là tt-static-v3', () => assert.equal(VERSION, 'tt-static-v3'));
+test('sw: phiên bản cache của L7 là tt-static-v4', () => assert.equal(VERSION, 'tt-static-v4'));
 test('sw: mọi file .js trong src/, quotes.json, phông, biểu tượng đều có trong STATIC', () => {
   const need = [
     ...readdirSync(new URL('src/', root)).filter(f => f.endsWith('.js')).map(f => `./src/${f}`),
