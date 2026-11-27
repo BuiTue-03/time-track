@@ -3,6 +3,7 @@
 // Quy tắc an toàn (Lệnh L6): hộp xác nhận nói rõ việc sắp làm -> ĐỌC LẠI Sheet ngay trước khi ghi -> khóa nút khi gửi ->
 // quá 8 giây: "chưa chắc đã lưu", phải đọc lại mới cho thử lại (không ghi trùng) -> đặt định dạng ngày cột A -> đọc lại đối chiếu.
 import { WEEK_STATUS, WEEKDAY_NAMES, weekday, weekNo, weekEnd, fmtDate, todaySerial } from './core.js';
+import { isoDate } from './picker.js';
 import { validateRow, weekStatusOfDate, parseDateInput, nowFraction } from './rules.js';
 import { canMarkRest, REST_TOPICS, parseAccrual, restSummary, conversionSuggestion, accrualTag, composeAccrualNote, randomCode, vnClock, fmtVnd } from './rest.js';
 import { serializeRow, snapshotCompare, verifyReadback, isEmptyRow, findFirstEmptyRow, serializeAccrual, findFirstEmptyAccrualRow, verifyAccrualReadback } from './write-core.js';
@@ -66,7 +67,7 @@ export function openMark(date) {
   markPending = null;
   // Mặc định: ngày được chọn, hoặc ngày chưa có ca gần nhất, hoặc hôm nay
   const d = Number.isInteger(date) ? date : m.missed?.at(-1)?.date ?? t;
-  $('mark-date').value = fmtDate(d);
+  $('mark-date').value = isoDate(d); // ô chọn ngày của trình duyệt (type="date"), giá trị yyyy-mm-dd
   showMsg($('mark-msg'), null);
   setBusy(false);
   refreshMark();
@@ -82,7 +83,7 @@ export function defaultMarkDate(week) {
 
 function markInput() {
   const d = parseDateInput($('mark-date').value);
-  const c = d === null ? { ok: false, isOffset: false, errors: ['Ngày chưa đúng dạng dd/mm/yyyy.'] } : canMarkRest(d, today(), app.getModel().sessions);
+  const c = d === null ? { ok: false, isOffset: false, errors: ['Chưa chọn ngày.'] } : canMarkRest(d, today(), app.getModel().sessions);
   return { date: d, check: c, input: { date: d, start: null, end: null, topic: markKind(), activity: '', noteText: '', isOffset: c.isOffset } };
 }
 function refreshMark() {

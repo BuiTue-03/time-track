@@ -279,7 +279,7 @@
 <dialog class="sheet" id="mark-dlg" aria-labelledby="mark-title">
   <h2 id="mark-title">Đánh dấu ngày nghỉ</h2>
   <div class="state-strip" id="mark-strip"></div>
-  <label class="fld" for="mark-date">Ngày <span class="hint">dd/mm/yyyy</span><input id="mark-date" inputmode="numeric" autocomplete="off"></label>
+  <label class="fld" for="mark-date">Ngày <span class="hint">bấm để chọn</span><input type="date" id="mark-date" autocomplete="off"></label>
   <div class="fld" role="radiogroup" aria-label="Loại ngày nghỉ">Loại
     <div class="pick"><label><input type="radio" name="mark-kind" value="Nghỉ ngơi" checked> Nghỉ ngơi</label>
       <label><input type="radio" name="mark-kind" value="Bận đi làm, không học, có ôn tập ngắn"> Bận đi làm, không học, có ôn tập ngắn</label></div></div>
@@ -307,10 +307,10 @@
     <div class="state-strip" id="f-strip"></div>
     <div class="close-info" id="f-close-info" hidden></div>
     <label class="fld not-close">Ngày <span class="hint" id="f-date-hint"></span>
-      <input type="text" id="f-date" inputmode="numeric" placeholder="dd/mm/yyyy" autocomplete="off" required></label>
+      <input type="date" id="f-date" autocomplete="off" required></label>
     <div class="row2">
-      <label class="fld not-close">Bắt đầu <span class="hint">(24 giờ)</span> <input type="text" id="f-start" inputmode="numeric" placeholder="hh:mm" autocomplete="off"></label>
-      <label class="fld">Kết thúc <span class="hint" id="f-end-hint">(trống nếu chưa xong)</span> <input type="text" id="f-end" inputmode="numeric" placeholder="hh:mm" autocomplete="off"></label>
+      <label class="fld not-close">Bắt đầu <span class="hint">(bấm để chọn)</span> <input type="time" id="f-start" autocomplete="off"></label>
+      <label class="fld">Kết thúc <span class="hint" id="f-end-hint">(trống nếu chưa xong)</span> <input type="time" id="f-end" autocomplete="off"></label>
     </div>
     <p class="dur" id="f-dur"></p>
     <p class="why" id="f-time-why" hidden></p>
