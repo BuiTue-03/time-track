@@ -325,6 +325,15 @@ function readForm() {
 function timeField(id) {
   return readPicker($(id), parseTimeInput);
 }
+// Đọc lại ngày, giờ theo dạng dd/mm/yyyy và 24 giờ: ô chọn của trình duyệt hiển thị theo cài đặt máy
+// (có thể là mm/dd/yyyy hay 07:30 SA/CH), dòng này cho thấy app hiểu đúng giờ nào trước khi Lưu.
+function readBack(input) {
+  const ok = x => Number.isFinite(x);
+  const parts = [];
+  if (Number.isInteger(input.date)) parts.push(`${WEEKDAY_NAMES[weekday(input.date)]} ${fmtDate(input.date)}`);
+  if (ok(input.start)) parts.push(ok(input.end) ? `${fmtTime(input.start)}–${fmtTime(input.end)}` : `từ ${fmtTime(input.start)}`);
+  return parts.length ? `Sẽ lưu: ${parts.join(' · ')}. ` : '';
+}
 function context() {
   const m = app.getModel();
   return {
@@ -372,7 +381,7 @@ function refreshForm() {
   // Thời lượng
   const dur = durationMin(input.start, input.end);
   $('f-dur').textContent = editing.closing ? closeSummary(editing.original, input.end, dur)
-    : dur === null ? (input.start !== null && input.end === null ? 'Chưa có giờ kết thúc: lưu thành ca đang mở (không tính phút).' : '') : `Thời lượng: ${dur} phút`;
+    : dur === null ? (input.start !== null && input.end === null ? `${readBack(input)}Chưa có giờ kết thúc: lưu thành ca đang mở (không tính phút).` : '') : `${readBack(input)}Thời lượng: ${dur} phút`;
   // Lỗi / cảnh báo
   const v = validateRow(readFormForValidate(input), context());
   $('f-errors').innerHTML = v.errors.map(e => `<li>${esc(e)}</li>`).join('');
