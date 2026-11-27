@@ -15,10 +15,11 @@ import { esc } from './ui-charts.js';
 import { mochiSvg, jump } from './mochi.js';
 import { catStyle } from './ui-config.js';
 import { fmtHM } from './format.js';
+import { isoDate, readPicker } from './picker.js';
 import { closeAction, closePrefillNow } from './stats-extra.js';
 
 const $ = id => document.getElementById(id);
-const ymdInput = s => fmtDate(s); // ô ngày là ô chữ dd/mm/yyyy
+const ymdInput = s => isoDate(s); // ô ngày là ô chọn của trình duyệt (type="date"), giá trị yyyy-mm-dd
 const timeInput = f => (typeof f === 'number' ? fmtTime(f % 1) : '');
 const err = (code, message, extra) => Object.assign(new Error(message), { code, ...extra });
 
@@ -266,7 +267,7 @@ function openForm({ mode, original = null, finish = false }) {
   $('ca-form').classList.toggle('closing', closing);
   $('f-cancel').textContent = closing ? 'Hủy' : 'Đóng';
   $('f-close-info').hidden = !closing;
-  $('f-end-hint').textContent = closing ? 'hh:mm, 24 giờ. Nhỏ hơn giờ bắt đầu thì tính sang hôm sau.' : '(trống nếu chưa xong)';
+  $('f-end-hint').textContent = closing ? 'Nhỏ hơn giờ bắt đầu thì tính sang hôm sau.' : '(trống nếu chưa xong)';
   if (closing) {
     const cs = catStyle(original.category);
     $('f-close-info').innerHTML = `<span class="t">${WEEKDAY_NAMES[weekday(original.date)]} ${fmtDate(original.date)} · từ ${fmtTime(original.start)}</span>` +
@@ -292,7 +293,9 @@ function openForm({ mode, original = null, finish = false }) {
   }
   // Gợi ý khoảng ngày hợp lệ: trong tuần của ca (sửa) / tuần đang xem (thêm), không sau hôm nay
   const w = mode === 'add' ? wk.week : weekNo(original.date);
-  $('f-date-hint').textContent = `dd/mm/yyyy, từ ${fmtDate(weekStart(w))} đến ${fmtDate(Math.min(weekEnd(w), today))}`;
+  $('f-date-hint').textContent = `từ ${fmtDate(weekStart(w))} đến ${fmtDate(Math.min(weekEnd(w), today))}`;
+  // Lịch của trình duyệt làm mờ ngày ngoài khoảng này (app vẫn tự kiểm tra lại khi Lưu)
+  $('f-date').min = isoDate(weekStart(w)); $('f-date').max = isoDate(Math.min(weekEnd(w), today));
   showMsg($('ca-msg'), null);
   setBusy(false);
   refreshForm();
@@ -318,11 +321,9 @@ function readForm() {
     isOffset: $('f-offset').checked,
   };
 }
-// Ô giờ: trống -> null; gõ sai -> NaN (để báo lỗi "không hợp lệ" thay vì coi như trống)
+// Ô giờ (type="time"): trống -> null; điền dở hoặc sai -> NaN (để báo lỗi "không hợp lệ" thay vì coi như trống)
 function timeField(id) {
-  const v = $(id).value.trim();
-  if (!v) return null;
-  return parseTimeInput(v) ?? NaN;
+  return readPicker($(id), parseTimeInput);
 }
 function context() {
   const m = app.getModel();
