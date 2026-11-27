@@ -2,10 +2,14 @@
 // L4: thêm form thêm/sửa/xóa (form.js). App đọc số liệu từ CHÍNH Sheet mà nó ghi vào (config.SPREADSHEET_ID),
 // để số dòng và số liệu luôn cùng một Sheet. Không lưu số liệu vào localStorage/IndexedDB/service worker:
 // mỗi lần tải là đọc mới từ Sheet (fetch cache: 'no-store').
-import { buildModel, todaySerial, serialFromYMD, fmtDate } from './core.js';
-import { gvizUrl, parseGvizText, TAB_SESSIONS, TAB_TOPICS } from './gviz.js';
+import { buildModel, todaySerial, serialFromYMD, fmtDate, weekNo } from './core.js';
+import { gvizUrl, parseGvizText, TAB_SESSIONS, TAB_TOPICS, TAB_SETTINGS, TAB_ACCRUAL } from './gviz.js';
+import { parseSettings, parseAccrual, DEFAULT_SETTINGS } from './rest.js';
 import { SPREADSHEET_ID, REAL_SPREADSHEET_ID, ALLOW_WRITE_TO_REAL_SHEET } from './config.js';
-import { initForm, onModel, openAddCurrentWeek, openFinish, formEnabled, getListWeek, setListWeek } from './form.js';
+import { initForm, onModel, openAddCurrentWeek, openAddForDate, openFinish, formEnabled, getListWeek, setListWeek, refreshSignin, showResult } from './form.js';
+import { initRestUi, openMark, openConv, defaultMarkDate } from './rest-ui.js';
+import { initL6, computeL6, renderL6, renderCalMiss, checkStreakCelebration } from './l6-view.js';
+import { vnClock } from './rest.js';
 import { initCal, renderCal, onWeek } from './page-cal.js';
 import { initToday, renderToday } from './page-today.js';
 import { clockNow, fmtHM } from './format.js';
@@ -60,10 +64,47 @@ async function fetchText(url) {
 async function loadRaw() {
   if (USE_FIXTURE) {
     const fx = JSON.parse(await fetchText('test/fixtures/sheet-to-2026-11-23.json'));
-    return { caRows: fx.caHoc, cdRows: fx.chuDe, source: 'values', label: `dữ liệu mẫu (chụp ${fx.meta.capturedAt}, đến ${fx.meta.cutoff})` };
+    return { caRows: fx.caHoc, cdRows: fx.chuDe, source: 'values', label: `dữ liệu mẫu (chụp ${fx.meta.capturedAt}, đến ${fx.meta.cutoff})`,
+      l6: { settings: { ...DEFAULT_SETTINGS }, warnings: [], fromSheet: false, accrual: { entries: [], issues: [] }, accrualOk: true } };
   }
-  const [ca, cd] = await Promise.all([fetchText(gvizUrl(TAB_SESSIONS, 'A1:F', DATA_SHEET_ID)), fetchText(gvizUrl(TAB_TOPICS, 'A1:B', DATA_SHEET_ID))]);
-  return { caRows: parseGvizText(ca), cdRows: parseGvizText(cd), source: 'gviz', label: null };
+  // L6: Cài đặt + Tích lũy đọc song song nhưng KHÔNG chặn trang: lỗi -> giá trị mặc định + cảnh báo (allSettled)
+  const [ca, cd, st, tl] = await Promise.allSettled([
+    fetchText(gvizUrl(TAB_SESSIONS, 'A1:F', DATA_SHEET_ID)), fetchText(gvizUrl(TAB_TOPICS, 'A1:B', DATA_SHEET_ID)),
+    fetchText(gvizUrl(TAB_SETTINGS, 'A1:C', DATA_SHEET_ID)), fetchText(gvizUrl(TAB_ACCRUAL, 'A1:D', DATA_SHEET_ID)),
+  ]);
+  if (ca.status === 'rejected') throw ca.reason;
+  if (cd.status === 'rejected') throw cd.reason;
+  return { caRows: parseGvizText(ca.value), cdRows: parseGvizText(cd.value), source: 'gviz', label: null, l6: await loadL6(st, tl) };
+}
+// Đọc tab Cài đặt (5 khóa) và Tích lũy. Trả { settings, warnings, accrual:{entries,issues}, accrualOk }.
+async function loadL6(st, tl) {
+  const warnings = [];
+  let set = { settings: { ...DEFAULT_SETTINGS }, warnings: [], fromSheet: false, rowOf: {} };
+  if (st.status === 'fulfilled') {
+    try {
+      const rows = parseGvizText(st.value);
+      set = parseSettings(rows, 'gviz');
+      // gviz đoán kiểu theo cả cột C (đa số là số) -> ô ngày rest_accrual_start có thể về null. Đọc lại riêng ô đó.
+      const r = set.rowOf.restAccrualStart;
+      if (r && set.warnings.some(w => w.includes('rest_accrual_start'))) {
+        const one = parseGvizText(await fetchText(gvizUrl(TAB_SETTINGS, `A${r}:C${r}`, DATA_SHEET_ID, 0)));
+        const fixed = parseSettings([rows[0], ...rows.slice(1).map((x, i) => (i + 2 === r ? one[1] ?? x : x))], 'gviz');
+        if (!fixed.warnings.some(w => w.includes('rest_accrual_start'))) set = fixed;
+      }
+    } catch (e) { warnings.push(`Không đọc được tab Cài đặt (${e.message}): đang dùng giá trị mặc định.`); }
+  } else warnings.push(`Không tải được tab Cài đặt (${st.reason?.message}): đang dùng giá trị mặc định.`);
+  let accrual = { entries: [], issues: [] }, accrualOk = false;
+  if (tl.status === 'fulfilled') {
+    try { accrual = parseAccrual(parseGvizText(tl.value), 'gviz'); accrualOk = true; }
+    catch (e) { warnings.push(`Không đọc được tab Tích lũy (${e.message}): số dư ngày nghỉ có thể chưa đúng.`); }
+  } else warnings.push(`Không tải được tab Tích lũy (${tl.reason?.message}): số dư ngày nghỉ có thể chưa đúng.`);
+  return { settings: set.settings, warnings: [...set.warnings, ...warnings], fromSheet: set.fromSheet, accrual, accrualOk };
+}
+// Mục tiêu hiển thị lấy từ Cài đặt (mục tiêu tuần = phút/ngày × số ngày); thiếu -> hằng số ui-config.js
+function applySettings(s) {
+  UI.goalDayMin = s.goalMinPerDay; UI.goalWeekDays = s.goalDaysPerWeek; UI.goalWeekMin = s.goalWeekMin;
+  $('set-goal-day').textContent = fmtHM(UI.goalDayMin);
+  $('set-goal-week').textContent = `${UI.goalWeekDays} ngày · ${fmtHM(UI.goalWeekMin)}`;
 }
 function today() {
   if (TODAY_OVERRIDE) { const [y, m, d] = TODAY_OVERRIDE.split('-').map(Number); return serialFromYMD(y, m, d); }
@@ -85,6 +126,9 @@ async function load() {
     const raw = await loadRaw();
     model = buildModel({ ...raw, today: today() });
     model.label = raw.label;
+    model.l6 = raw.l6; // L6: settings, warnings, accrual (Tích lũy), accrualOk
+    applySettings(raw.l6.settings);
+    computeL6(model, TODAY_OVERRIDE ? null : vnClock().nowMin); // L6: loại ngày, chuỗi, số dư, gợi ý quy đổi, ngày bỏ lỡ
     const head = raw.caRows[0]; // dữ liệu mẫu (fixture) lưu dòng dạng { rowNumber, cells }
     model.headers = ((Array.isArray(head) ? head : head?.cells) ?? []).map(c => (c && typeof c === 'object' && 'v' in c ? c.v : c)); // tiêu đề A1:F1
     $('updated').textContent = `Cập nhật lúc ${clockNow()}`;
@@ -92,7 +136,10 @@ async function load() {
     setState('ready');
     render();
     onModel();
-    if (!USE_FIXTURE && !TODAY_OVERRIDE) checkCelebration(model); // L5: mốc huy hiệu mới -> ăn mừng 1 lần trên máy này
+    if (!USE_FIXTURE && !TODAY_OVERRIDE) {
+      const h = checkCelebration(model); // L5: mốc huy hiệu mới -> ăn mừng 1 lần trên máy này
+      checkStreakCelebration(model, h ? 3800 : 1200); // L6: mốc chuỗi mới; nếu vừa ăn mừng huy hiệu giờ thì chờ xong (3 giây)
+    }
   } catch (e) {
     setState('error', e.message);
   }
@@ -112,6 +159,8 @@ function render() {
   else renderBadges(model); // L5: số huy hiệu ở Cài đặt luôn đúng (thẻ Thành tích vẽ sẵn, ẩn)
 
   renderCal(model);
+  renderL6(model); // sau renderToday: thanh báo ngày chưa có ca nhường chỗ cho thanh "ca chưa đóng"
+  renderCalMiss(getListWeek() ?? weekNo(t));
 }
 
 // ---------- Gắn sự kiện ----------
@@ -148,5 +197,13 @@ $('set-sheet').href = `https://docs.google.com/spreadsheets/d/${DATA_SHEET_ID}/e
 $('set-google').hidden = !FORM_ENABLED;
 $('set-signin').addEventListener('click', () => $('ca-signin').click());
 renderBanner();
-initForm({ getModel: () => model, reload: load, onListWeek: onWeek }, { enabled: FORM_ENABLED, disabledReason: FORM_DISABLED_REASON });
+initL6({
+  canWrite: () => formEnabled(),
+  onFixAdd: d => { showPage('cal'); openAddForDate(d); },
+  onFixRest: d => { showPage('cal'); setListWeek(weekNo(d)); openMark(d); },
+  onConv: () => { if (formEnabled()) openConv(); },
+});
+initRestUi({ getModel: () => model, reload: load, onSignin: refreshSignin, showResult });
+$('mark-btn').addEventListener('click', () => { if (formEnabled()) openMark(defaultMarkDate(getListWeek())); });
+initForm({ getModel: () => model, reload: load, onListWeek: w => { onWeek(w); renderCalMiss(w); } }, { enabled: FORM_ENABLED, disabledReason: FORM_DISABLED_REASON });
 load();

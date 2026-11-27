@@ -66,9 +66,10 @@ export function checkCelebration(m) {
   const reached = p.list.filter(x => x.reached).map(x => x.hours);
   const plan = celebrationPlan(reached, store.get());
   store.set(plan.seen);
-  if (!plan.celebrate.length) return;
+  if (!plan.celebrate.length) return null;
   const h = plan.celebrate[0], when = p.list.find(x => x.hours === h).date;
   fresh = h;
   setTimeout(() => party([$('peek'), $('brand-mochi')],
     `<span class="row"><span class="bdg-big">${badgeSvg(h, true)}</span>${mochiSvg()}</span><span>${h} giờ rồi đó, ${esc(UI.name)}! <span class="nw">${KAO[h]}</span></span><small>Huy hiệu mới · ${fmtDate(when)}</small>`), 600);
+  return h; // L6: app.js dời ăn mừng mốc chuỗi ra sau, không chồng 2 lần ăn mừng
 }

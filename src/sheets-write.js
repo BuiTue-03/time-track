@@ -2,9 +2,12 @@
 // Token chỉ nằm trong biến bộ nhớ `token` bên dưới: tải lại trang là mất, không lưu localStorage, không gửi đi đâu ngoài Google.
 import {
   SPREADSHEET_ID, REAL_SPREADSHEET_ID, ALLOW_WRITE_TO_REAL_SHEET,
-  OAUTH_CLIENT_ID, OAUTH_SCOPE, SHEET_CA_HOC, LAST_FORMULA_ROW,
+  OAUTH_CLIENT_ID, OAUTH_SCOPE, SHEET_CA_HOC, LAST_FORMULA_ROW, SHEET_TICH_LUY, ACCRUAL_LAST_ROW,
 } from './config.js';
-import { buildWriteRange, assertWriteRange, findFirstEmptyRow as pickEmptyRow, buildFormatRequests } from './write-core.js';
+import {
+  buildWriteRange, assertWriteRange, findFirstEmptyRow as pickEmptyRow, buildFormatRequests,
+  buildAccrualRanges, assertAccrualRange, buildAccrualFormatRequests,
+} from './write-core.js';
 
 const API = 'https://sheets.googleapis.com/v4/spreadsheets';
 let token = null;        // { access_token, expiresAt } — chỉ trong bộ nhớ
@@ -131,16 +134,45 @@ export async function clearRow(rowNumber) {
 
 // L4.5: đặt định dạng ngày/giờ cho A–C của 1 dòng (xem write-core B7). sheetId của tab "Ca học" đọc từ Google
 // (không ghi cứng: bản sao và Sheet thật có sheetId khác nhau), nhớ trong bộ nhớ trang.
-let sheetIdCache = null;
-async function caHocSheetId() {
-  if (sheetIdCache !== null) return sheetIdCache;
+// L6: dùng chung cho tab "Tích lũy" (nhớ sheetId theo tên tab).
+const sheetIdCache = {};
+async function sheetIdOf(title) {
+  if (sheetIdCache[title] !== undefined) return sheetIdCache[title];
   const j = await api('GET', `?fields=${encodeURIComponent('sheets.properties(sheetId,title)')}`);
-  const s = (j.sheets ?? []).find(x => x.properties?.title === SHEET_CA_HOC);
-  if (!s) throw err('RANGE', `Không thấy tab "${SHEET_CA_HOC}" trong Sheet`);
-  return (sheetIdCache = s.properties.sheetId);
+  const s = (j.sheets ?? []).find(x => x.properties?.title === title);
+  if (!s) throw err('RANGE', `Không thấy tab "${title}" trong Sheet`);
+  return (sheetIdCache[title] = s.properties.sheetId);
 }
+const caHocSheetId = () => sheetIdOf(SHEET_CA_HOC);
 export async function formatRow(rowNumber) {
   assertWritable();
   const requests = buildFormatRequests(await caHocSheetId(), rowNumber);
   return api('POST', ':batchUpdate', { requests });
+}
+
+// ---------- 5. L6: tab "Tích lũy" (chỉ thêm dòng; không sửa, không xóa) ----------
+// Đọc A2:D60 (giá trị thô; cột C là công thức, chỉ để đối chiếu)
+export async function readAccrualRows() {
+  return readRange(`A2:D${ACCRUAL_LAST_ROW}`, SHEET_TICH_LUY);
+}
+// Đọc lại 1 dòng: A:D thô + chữ hiển thị của cột A
+export async function readAccrualRow(n) {
+  buildAccrualRanges(n); // cùng kiểm tra số dòng 2..60
+  const [raw, fa] = await Promise.all([readRange(`A${n}:D${n}`, SHEET_TICH_LUY), readRange(`A${n}:A${n}`, SHEET_TICH_LUY, 'FORMATTED_VALUE')]);
+  return { raw: raw[0] ?? [], formattedA: fa[0]?.[0] ?? '' };
+}
+// Ghi A:B + D của 1 dòng trong MỘT lệnh values:batchUpdate (RAW). Cột C không bao giờ nằm trong lệnh.
+// Ngay trước khi ghi: đọc lại dòng, A/B/D phải còn trống (dòng vừa được dùng ở nơi khác -> NOT_EMPTY).
+export async function writeAccrualRow(n, sent) {
+  assertWritable();
+  const r = buildAccrualRanges(n);
+  const cur = (await readRange(`A${n}:D${n}`, SHEET_TICH_LUY))[0] ?? [];
+  if ([cur[0], cur[1], cur[3]].some(v => v !== '' && v != null)) throw err('NOT_EMPTY', `Dòng ${n} của tab Tích lũy không còn trống, không ghi đè`);
+  const data = [{ range: r.ab, values: [sent.ab] }, { range: r.d, values: [sent.d] }];
+  data.forEach(x => assertAccrualRange(x.range));
+  return api('POST', '/values:batchUpdate', { valueInputOption: 'RAW', data });
+}
+export async function formatAccrualRow(n) {
+  assertWritable();
+  return api('POST', ':batchUpdate', { requests: buildAccrualFormatRequests(await sheetIdOf(SHEET_TICH_LUY), n) });
 }

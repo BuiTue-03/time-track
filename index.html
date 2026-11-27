@@ -22,11 +22,9 @@
   <header class="topbar">
     <button class="brand" type="button" id="brand" aria-label="time-track"><span id="brand-mochi"></span>time-track</button>
     <div class="stats">
-      <!-- CHỖ TRỐNG cho L6 (chuỗi ngày + kho ngày nghỉ): chưa có logic -->
-      <button class="pill" type="button" data-tip="Chuỗi ngày học · sẽ làm ở L6&#10;Chạm vào sẽ xem hành trình giữ chuỗi." aria-label="Chuỗi ngày học, sắp có">
-        <svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M5 0h1v1h1v1h1v2h1v4h-1v1h-1v1H4V9H3V8H2V5h1V4h1V2h1z"/></svg>—</button>
-      <button class="pill" type="button" data-tip="Kho ngày nghỉ · sẽ làm ở L6&#10;Số ngày nghỉ còn lại và phần đã quy đổi." aria-label="Kho ngày nghỉ, sắp có">
-        <svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M1 4h9v6H1zM2 2h7v2H2zM5 2h1v8H5z" opacity=".9"/></svg>—</button>
+      <!-- L6: chuỗi ngày học + số dư ngày nghỉ (chạm để xem chi tiết) -->
+      <button class="pill" type="button" id="pill-streak" aria-label="Chuỗi ngày học">—</button>
+      <button class="pill" type="button" id="pill-rest" aria-label="Số dư ngày nghỉ">—</button>
     </div>
   </header>
   <p class="notice" id="notice" hidden></p>
@@ -39,8 +37,12 @@
     </div>
     <!-- L5: thanh báo "ca chưa đóng" (ca mở của ngày trước, từ 06:00) -->
     <div id="alert" class="alert" role="status" hidden></div>
+    <!-- L6: thanh báo ngày chưa có ca (chỉ ngày còn sửa được; không hiện khi đang có thanh "ca chưa đóng") -->
+    <div id="alert-miss" class="alert soft" role="status" hidden></div>
     <div class="grid two">
       <div class="grid">
+        <section class="card conv" id="conv-card" aria-label="Gợi ý quy đổi ngày nghỉ" hidden></section>
+        <section class="card note-card" id="remind-card" aria-label="Nhắc nghỉ" hidden></section>
         <section class="card quote" aria-label="Câu khích lệ hôm nay">
           <span class="tag" id="q-tag">Câu của hôm nay</span>
           <div id="q-body"></div>
@@ -112,7 +114,10 @@
           <div class="msg" id="ca-result" hidden></div>
           <div class="add-wrap" id="ca-add-wrap"><button class="btn3d" type="button" id="ca-add">＋ Thêm ca</button></div>
           <p class="why" id="ca-add-why" hidden></p>
+          <!-- L6: đánh dấu ngày nghỉ (ghi 1 dòng không giờ vào tab Ca học) -->
+          <div class="add-wrap" id="mark-wrap"><button class="btn3d ghost" type="button" id="mark-btn">Đánh dấu ngày nghỉ</button></div>
         </div>
+        <div class="miss6" id="cal-miss" hidden></div>
         <div id="ca-list"></div>
         <details class="week-break" id="cal-break"></details>
       </section>
@@ -181,17 +186,26 @@
           <div class="set-row"><span>Mỗi tuần</span><b id="set-goal-week"></b></div>
         </section>
       </div>
-      <!-- CHỖ TRỐNG cho L5–L7: chỉ hiển thị, chưa có logic, không bấm được -->
+      <!-- L6: ngày nghỉ, chuỗi. CHỖ TRỐNG cho L7: chỉ hiển thị, chưa có logic, không bấm được -->
       <div class="grid">
-        <section class="card set soon">
-          <h2>Ngày nghỉ và tích lũy <span class="later">L6</span></h2>
-          <div class="set-row"><span>Số dư ngày nghỉ</span><b class="muted">—</b></div>
-          <div class="set-row"><span>Đã quy đổi</span><b class="muted">—</b></div>
-          <div class="set-row"><span>Nhắc nghỉ sau 7 ngày học liền</span><span class="switch" aria-hidden="true"><i></i></span></div>
+        <section class="card set" aria-label="Ngày nghỉ và tích lũy">
+          <h2>Ngày nghỉ và tích lũy</h2>
+          <div class="set-row"><span>Số dư ngày nghỉ</span><b id="set-bal">—</b></div>
+          <div class="set-row"><span>Đã quy đổi</span><b id="set-conv">—</b></div>
+          <div class="set-row"><span>Hạn mức<br><span class="muted" id="set-quota"></span></span></div>
+          <div class="set-row"><span id="lb-remind">Nhắc nghỉ sau 7 ngày học liền<br><span class="muted">Một câu nhẹ ở trang Hôm nay</span></span>
+            <button class="sw" type="button" role="switch" aria-checked="true" aria-labelledby="lb-remind" id="sw-remind"><span class="trk"><i></i></span></button></div>
+          <div class="set-row"><span id="lb-miss">Báo ngày chưa có ca<br><span class="muted">Chỉ những ngày còn ghi bù được</span></span>
+            <button class="sw" type="button" role="switch" aria-checked="true" aria-labelledby="lb-miss" id="sw-miss"><span class="trk"><i></i></span></button></div>
+          <div class="set-row"><span class="muted">Số tiền chỉ để ghi nhận. App không chuyển tiền, không kết nối ngân hàng.</span></div>
+          <div class="set-row" id="set-l6-warn" hidden><span class="muted" id="set-l6-warn-txt"></span></div>
         </section>
-        <section class="card set soon">
-          <h2>Chuỗi ngày học <span class="later">L6</span></h2>
-          <div class="set-row"><span>Sửa chuỗi</span><b class="muted">—</b></div>
+        <section class="card set" aria-label="Chuỗi ngày học">
+          <h2>Chuỗi ngày học</h2>
+          <div class="set-row"><span>Chuỗi hiện tại</span><b id="set-cur">—</b></div>
+          <div class="set-row"><span>Dài nhất</span><b id="set-long">—</b></div>
+          <div class="set-row"><span>Mốc chuỗi<br><span class="muted" id="set-miles"></span></span></div>
+          <div class="set-row"><span>Sửa chuỗi<br><span class="muted">Ghi bù ca đã học, hoặc đánh dấu nghỉ cho ngày trống, trong tuần đang diễn ra và tuần tạm chốt</span></span></div>
         </section>
         <section class="card set soon">
           <h2>Bấm giờ học <span class="later">L7</span></h2>
@@ -225,6 +239,39 @@
 <dialog class="sheet" id="sheet" aria-label="Tuần này">
   <div id="sheet-body"></div>
   <div class="sheet-actions"><button class="btn3d small ghost" type="button" id="sheet-close">Đóng</button></div>
+</dialog>
+
+<!-- L6: tấm chi tiết chuỗi + ngày nghỉ (chạm nút tròn góc trên) -->
+<dialog class="sheet" id="detail" aria-labelledby="detail-title">
+  <h2 id="detail-title">Chuỗi và ngày nghỉ</h2>
+  <div id="detail-body"></div>
+  <div class="sheet-actions"><button class="btn3d small ghost" type="button" id="detail-close">Đóng</button></div>
+</dialog>
+
+<!-- L6: hộp đánh dấu ngày nghỉ -->
+<dialog class="sheet" id="mark-dlg" aria-labelledby="mark-title">
+  <h2 id="mark-title">Đánh dấu ngày nghỉ</h2>
+  <div class="state-strip" id="mark-strip"></div>
+  <label class="fld" for="mark-date">Ngày <span class="hint">dd/mm/yyyy</span><input id="mark-date" inputmode="numeric" autocomplete="off"></label>
+  <div class="fld" role="radiogroup" aria-label="Loại ngày nghỉ">Loại
+    <div class="pick"><label><input type="radio" name="mark-kind" value="Nghỉ ngơi" checked> Nghỉ ngơi</label>
+      <label><input type="radio" name="mark-kind" value="Bận đi làm, không học, có ôn tập ngắn"> Bận đi làm, không học, có ôn tập ngắn</label></div></div>
+  <div class="confirm" id="mark-confirm"></div>
+  <ul class="errors" id="mark-err"></ul>
+  <div class="msg" id="mark-msg" hidden></div>
+  <div class="actions"><button class="btn3d small ghost" type="button" id="mark-cancel">Hủy</button><button class="btn3d small" type="button" id="mark-save">Ghi ngày nghỉ</button></div>
+</dialog>
+
+<!-- L6: hộp quy đổi ngày nghỉ (ghi 1 dòng vào tab Tích lũy: cột A, B, D) -->
+<dialog class="sheet" id="conv-dlg" aria-labelledby="conv-title">
+  <h2 id="conv-title">Quy đổi ngày nghỉ</h2>
+  <p class="muted" id="conv-sub" style="margin:0"></p>
+  <div class="fld">Số ngày quy đổi
+    <div class="stepper"><button type="button" id="st-minus" aria-label="Bớt 1 ngày">−</button><output id="st-val" aria-live="polite"></output><button type="button" id="st-plus" aria-label="Thêm 1 ngày">＋</button></div></div>
+  <label class="fld" for="conv-note">Ghi chú <span class="hint">không bắt buộc</span><input id="conv-note" autocomplete="off" maxlength="200" placeholder="ví dụ: bỏ ống heo"></label>
+  <div class="confirm" id="conv-confirm"></div>
+  <div class="msg" id="conv-msg" hidden></div>
+  <div class="actions"><button class="btn3d small ghost" type="button" id="conv-cancel">Hủy</button><button class="btn3d small" type="button" id="conv-save">Ghi nhận</button></div>
 </dialog>
 
 <dialog class="sheet formsheet" id="f-dialog" aria-labelledby="f-title">

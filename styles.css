@@ -272,7 +272,6 @@ div.chart text { font-family: var(--f-body); font-size: 16px; fill: var(--text-2
 .cal-grid { align-items: start; }
 .heat-legend { display: flex; align-items: center; gap: 4px; justify-content: flex-end; color: var(--text-2); margin-top: 8px; flex-wrap: wrap; }
 .heat-legend i { width: 18px; height: 18px; border-radius: 5px; display: block; }
-.heat-legend .busy-sw { margin-left: 12px; background: repeating-linear-gradient(45deg, var(--h0) 0 3px, var(--grey-cat) 3px 5px); }
 .signin-card { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 12px 18px; }
 details.card summary, .week-break summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 700; color: var(--text); }
 details.issues ul { margin: 6px 0 10px; padding-left: 20px; }
@@ -403,3 +402,80 @@ details.issues ul { margin: 6px 0 10px; padding-left: 20px; }
 .sw i { position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--text-2); transition: transform .2s; }
 .sw[aria-checked="true"] .trk { background: var(--accent-edge); border-color: var(--accent-edge); }
 .sw[aria-checked="true"] i { transform: translateX(22px); background: #FFFFFF; }
+
+/* ============================================================
+   L6: chuỗi ngày học, ngày nghỉ, quy đổi (chuyển từ design/vong-l6.html đã duyệt 26/11/2026)
+   ============================================================ */
+:root { --streak: #A86F12; --streak-on: #F2C14E; --slot-on: #8A90A0; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --streak: #E8B661; } }
+:root[data-theme="dark"] { --streak: #E8B661; }
+/* Nút tròn góc trên: đã có số -> viền liền, chữ đậm */
+.pill.live { border-style: solid; color: var(--text); background: var(--surface); }
+.pill b { font-family: var(--f-head); font-variant-numeric: tabular-nums; }
+.pill .ic-streak { color: var(--streak); display: inline-flex; }
+/* Thanh báo ngày bỏ lỡ: màu trung tính, không đỏ */
+.alert.soft { background: var(--surface-2); box-shadow: inset 4px 0 0 var(--border); }
+.alert .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+/* Thẻ nhắc nghỉ + thẻ gợi ý quy đổi */
+.note-card { display: flex; gap: 14px; align-items: center; }
+.note-card .mo { width: 72px; flex: none; }
+.note-card .mo svg { width: 100%; height: auto; display: block; }
+.note-card p { margin: 0; }
+.note-card .big { font-family: var(--f-head); font-size: 19px; line-height: 1.45; }
+.conv .amt { font-family: var(--f-head); font-size: 26px; font-variant-numeric: tabular-nums; }
+.conv .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+/* Tấm chi tiết: chuỗi + ngày nghỉ */
+.kpi { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.kpi .n { font-family: var(--f-head); font-size: 40px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.kpi .u { font-size: 18px; }
+.sub-line { margin: 4px 0 0; color: var(--text-2); }
+.mrow { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--border); }
+.mrow .mk { font-family: var(--f-head); }
+.slots { display: flex; flex-wrap: wrap; gap: 6px; }
+.slot { width: 32px; height: 32px; border-radius: 9px; border: 2px solid var(--border); display: grid; place-items: center; background: var(--surface); }
+.slot.used { background: var(--surface-2); border-color: var(--slot-on); }
+.slot.used svg, .slot.over svg { width: 20px; height: 20px; color: var(--text); }
+.slot.over { border-style: dashed; border-color: var(--text-2); }
+.slot.conv { background: var(--surface); border-color: var(--text-2); }
+.slot.conv svg { width: 18px; height: 18px; color: var(--text-2); }
+.mtxt { grid-column: 2; margin: 4px 0 0; color: var(--text-2); }
+.legend6 { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0 0; color: var(--text-2); align-items: center; }
+.legend6 .slot { width: 24px; height: 24px; display: inline-grid; vertical-align: middle; margin-right: 4px; }
+.legend6 .slot svg { width: 14px; height: 14px; }
+/* Mốc chuỗi: 5 huy hiệu ngọn lửa pixel (thiết kế gốc) */
+.smiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.smile { border: 0; background: none; padding: 6px 0 4px; border-radius: 14px; cursor: pointer; color: var(--text); display: grid; justify-items: center; gap: 2px; min-height: 44px; font: inherit; }
+.smile svg { width: 100%; max-width: 44px; height: auto; }
+.smile b { font-family: var(--f-head); font-size: 17px; line-height: 1.1; }
+.smile span { color: var(--text-2); line-height: 1.1; }
+.smile.lock b { color: var(--text-2); }
+.next6 { margin: 12px 0 0; display: grid; gap: 6px; }
+.next6 .bar { height: 14px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.next6 .bar i { display: block; height: 100%; background: var(--accent-edge); border-radius: 99px; }
+.next6 .row { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+/* Heatmap: chú thích ngày nghỉ (trăng khuyết) và chờ đóng ca (3 chấm) */
+.heat-legend .lg6 { display: inline-flex; align-items: center; gap: 4px; margin-left: 12px; }
+.heat-legend .lg6 svg { width: 22px; height: 22px; }
+/* Tab Lịch: ngày chưa có ca (còn sửa được) */
+.miss6 { margin: 12px 0 0; }
+.miss6 h3 { margin: 0 0 4px; font-size: 18px; }
+.drow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--border); }
+.drow .d { font-family: var(--f-head); }
+.drow .k { color: var(--text-2); margin: 2px 0 0; }
+.drow .btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.tool-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.tool-row .btn3d { flex: 1 1 180px; }
+/* Hộp xác nhận (đánh dấu nghỉ, quy đổi) */
+.confirm { background: var(--surface-2); border-radius: 14px; padding: 12px 14px; margin: 12px 0 0; }
+.confirm b { display: block; font-family: var(--f-head); font-size: 18px; line-height: 1.45; }
+.stepper { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.stepper button { width: 48px; height: 48px; border-radius: 14px; border: 2px solid var(--border); background: var(--surface); color: var(--text); font-size: 22px; font-weight: 800; cursor: pointer; }
+.stepper button:disabled { opacity: .45; cursor: not-allowed; }
+.stepper output { font-family: var(--f-head); font-size: 26px; min-width: 3ch; text-align: center; font-variant-numeric: tabular-nums; }
+.pick { display: grid; gap: 8px; margin-top: 8px; }
+.pick label { display: flex; gap: 10px; align-items: center; min-height: 48px; padding: 6px 12px; border: 2px solid var(--border); border-radius: 14px; cursor: pointer; font-weight: 700; }
+.pick input { width: 22px; height: 22px; accent-color: var(--accent-edge); }
+.pick label:has(input:checked) { border-color: var(--accent-edge); background: var(--cur-bg); }
+/* Ăn mừng mốc chuỗi */
+.party .say .row { display: flex; align-items: center; gap: 10px; }
+.party .say .fl svg { width: 52px; height: 64px; }

@@ -108,6 +108,20 @@ export function openAddCurrentWeek() {
   openForm({ mode: 'add' });
   return true;
 }
+// L6 "sửa chuỗi": mở form thêm ca cho một ngày chưa có ca (tuần Tạm chốt -> tự tick ghi bù, như nút thêm của tuần đó).
+// Chỉ MỞ form; luồng lưu, kiểm tra và khóa tuần giữ nguyên như L5.
+export function openAddForDate(date) {
+  if (!formEnabled() || busy) return false;
+  listWeek = weekNo(date);
+  onModel();
+  openForm({ mode: 'add' });
+  $('f-date').value = ymdInput(date);
+  refreshForm();
+  return true;
+}
+// L6: rest-ui.js dùng chung dòng trạng thái đăng nhập và ô kết quả của tab Lịch
+export const refreshSignin = () => { if (enabled) renderSignin(); };
+export const showResult = (kind, text) => showMsg($('ca-result'), kind, text);
 export function openFinish(rowNumber) {
   if (!formEnabled() || busy) return false;
   const s = app.getModel().sessions.find(x => x.rowNumber === rowNumber);
