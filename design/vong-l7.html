@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="vi">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>time-track bản mẫu L7</title>
+<link rel="stylesheet" href="../styles.css">
+<style>
+/* ============================================================
+   BẢN MẪU L7 (vòng 1) — nút Bắt đầu / Kết thúc / Đổi ca, đồng hồ đang chạy, Mochi "đang học".
+   Không đọc / ghi Google Sheet, không đăng nhập. Số liệu = dữ liệu mẫu (test/fixtures, tới 23/11) + 1 dòng giả theo
+   từng tình huống. Đồng hồ, chủ đề gần nhất, lý do chặn... tính bằng ĐÚNG hàm của src/timer.js đã duyệt ở Phần B.
+   Dùng lại styles.css của app thật; quy tắc mới ở dưới (Phần D sẽ chuyển vào styles.css).
+   ============================================================ */
+:root { --proto-bg: #E9ECF5; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --proto-bg: #0D0F15; } }
+:root[data-theme="dark"] { --proto-bg: #0D0F15; }
+.proto { background: var(--proto-bg); border-bottom: 1px solid var(--border); padding-block: 4px 10px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.proto summary { max-width: 1180px; margin: 0 auto; cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 6px; color: var(--text-2); }
+.proto b { color: var(--text); }
+.proto-in { max-width: 1180px; margin: 8px auto 0; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; color: var(--text-2); }
+.proto-in > span { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; max-width: 100%; }
+.proto .seg { flex-wrap: wrap; max-width: 100%; }
+.proto .seg button { white-space: normal; text-align: left; }
+
+/* ---------- Thẻ Bắt đầu ---------- */
+.start-card h2 { margin-bottom: 4px; }
+.lab { margin: 14px 0 6px; font-weight: 700; }
+.pick { display: grid; gap: 8px; }
+.pick label { display: flex; gap: 10px; align-items: center; min-height: 48px; padding: 6px 12px; border: 2px solid var(--border); border-radius: 14px; cursor: pointer; font-weight: 700; }
+.pick input { width: 22px; height: 22px; accent-color: var(--accent-edge); flex: none; margin: 0; }
+.pick label:has(input:checked) { border-color: var(--accent-edge); background: var(--cur-bg); }
+.pick .rc { color: var(--text-2); font-weight: 400; margin-left: auto; white-space: nowrap; }
+.acts5 { display: flex; flex-wrap: wrap; gap: 8px; }
+.acts5 label { min-height: 48px; padding: 0 14px; border: 2px solid var(--border); border-radius: 14px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 700; }
+.acts5 input { width: 20px; height: 20px; accent-color: var(--accent-edge); margin: 0; }
+.acts5 label:has(input:checked) { border-color: var(--accent-edge); background: var(--cur-bg); }
+.fld select { width: 100%; }
+.go { margin-top: 18px; }
+.go .btn3d { font-size: 21px; min-height: 64px; }
+.hint2 { margin: 10px 0 0; color: var(--text-2); }
+.add-wrap .btn3d.ghost { min-height: 52px; font-size: 17px; }
+
+/* ---------- Thẻ đang học ---------- */
+.run { position: relative; overflow: hidden; background: linear-gradient(150deg, var(--surface) 50%, var(--cur-bg)); }
+.run h2 { display: flex; align-items: center; gap: 8px; }
+.run .clock { font-family: var(--f-head); font-size: 52px; line-height: 1.05; margin: 10px 0 4px; font-variant-numeric: tabular-nums; letter-spacing: .5px; }
+.run .clock.pend { color: var(--text-2); }
+.run .clock.over { font-size: 34px; }
+.run .from { margin: 0 0 8px; font-size: 17px; }
+.run .meta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.run .muted { margin: 10px 0 0; max-width: 30em; }
+.run .mo { position: absolute; right: 8px; top: 8px; width: 112px; }
+.run .mo svg { width: 100%; height: auto; display: block; }
+.run .txt { padding-right: 116px; }
+@media (max-width: 440px) { .run .mo { width: 92px; } .run .txt { padding-right: 0; } .run .clock { font-size: 46px; padding-right: 96px; } .run .from { padding-right: 96px; } }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+.btn-row .btn3d { flex: 2 1 160px; width: auto; }
+.btn-row .btn3d.ghost { flex: 1 1 120px; }
+.blocked { margin: 12px 0 0; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); }
+.blocked p { margin: 0 0 10px; }
+.msg .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Mochi đang học: lớp phủ pixel nằm TRONG nhóm thân (nhảy cùng nhân vật). Chuyển động ≤ 3 lần lặp (dưới 5 giây, WCAG 2.2.2) */
+.mochi .ov-note { animation: note 1.6s ease-in-out 3; transform-box: fill-box; }
+@keyframes note { 50% { transform: translateY(-1.2px); opacity: .55; } }
+.mochi.bob .body-g { animation: bob 1.2s ease-in-out 3; }
+.mochi .ov-sweat { animation: drip 1.2s ease-in 3; transform-box: fill-box; }
+@keyframes drip { 70% { transform: translateY(1.5px); opacity: 1; } 100% { transform: translateY(2px); opacity: 0; } }
+.variants { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.variants figure { margin: 0; display: grid; justify-items: center; gap: 4px; text-align: center; }
+.variants button { border: 2px solid var(--border); background: var(--surface); border-radius: 16px; padding: 10px; width: 100%; cursor: pointer; }
+.variants button[aria-pressed="true"] { border-color: var(--accent-edge); background: var(--cur-bg); }
+.variants svg { width: 100%; max-width: 110px; height: auto; }
+.variants figcaption { color: var(--text-2); }
+
+/* Hộp xác nhận */
+.sum { background: var(--surface-2); border-radius: 14px; padding: 12px 14px; margin: 12px 0 0; }
+.sum b { display: block; font-family: var(--f-head); font-size: 20px; line-height: 1.45; font-variant-numeric: tabular-nums; }
+.sum p { margin: 4px 0 0; }
+.sheet-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; margin-top: 16px; }
+.state-box .msg { text-align: left; }
+.fld textarea { width: 100%; box-sizing: border-box; }
+</style>
+
+<details class="proto" id="proto" open>
+  <summary><b>Bản mẫu L7</b> · dữ liệu mẫu + dòng giả, không ghi Sheet · chạm để ẩn/hiện</summary>
+  <div class="proto-in">
+    <span>Giao diện <span class="seg" id="p-theme"><button data-v="auto">Theo máy</button><button data-v="light">Sáng</button><button data-v="dark">Tối</button></span></span>
+    <span>Trang <span class="seg" id="p-page"><button data-v="today">Hôm nay</button><button data-v="settings">Cài đặt</button></span></span>
+    <span>Tình huống <span class="seg" id="p-scn">
+      <button data-v="idle">1. Chưa có ca</button>
+      <button data-v="run">2. Đang học</button>
+      <button data-v="night">3. Học qua nửa đêm + giờ máy lệch</button>
+      <button data-v="unsaved">4. Bắt đầu chưa lưu được</button>
+      <button data-v="login">5. Kết thúc: cần đăng nhập lại</button>
+      <button data-v="offline">6. Mất mạng</button>
+      <button data-v="staleY">7. Ca hôm qua chưa đóng</button>
+      <button data-v="staleOld">8. Ca 2 ngày trước chưa đóng</button>
+      <button data-v="over">9. Ca quá 24 giờ</button></span></span>
+    <span>Mochi đang học <span class="seg" id="p-mochi"><button data-v="A">A. Kính + sách</button><button data-v="B">B. Tai nghe</button><button data-v="C">C. Khăn trán</button></span></span>
+  </div>
+</details>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><span id="brand-mochi"></span>time-track</div>
+    <div class="stats"><span class="pill" aria-hidden="true"><b>22</b></span><span class="pill" aria-hidden="true"><b>−1</b></span></div>
+  </header>
+  <p class="notice" id="notice"></p>
+
+  <!-- ===== Hôm nay ===== -->
+  <div id="pg-today" class="page">
+    <div class="hello"><h1>Chào Oriana ヾ(＾∇＾)</h1><p id="today-line"></p></div>
+    <div id="alert" class="alert" role="status" hidden></div>
+    <div class="grid two">
+      <div class="grid" id="left"></div>
+      <div class="grid">
+        <section class="card ring-card" aria-label="Tiến độ hôm nay">
+          <div class="ring">
+            <svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="50" fill="none" stroke-width="14"/>
+              <circle class="bar" cx="60" cy="60" r="50" fill="none" stroke-width="14" stroke-linecap="round" stroke-dasharray="314.16" id="ring-bar"/></svg>
+            <span class="mid"><b id="ring-num"></b><span>trên 4 giờ</span></span>
+          </div>
+          <div class="ring-side"><h2>Hôm nay</h2><p class="muted" id="ring-msg"></p></div>
+        </section>
+        <section class="card" aria-label="Mochi đang học: 3 biến thể">
+          <h2>Mochi "đang học" · chọn 1</h2>
+          <div class="variants" id="variants"></div>
+          <p class="hint2">Chạm để xem chuyển động (3 lần, dưới 5 giây). Chỉ hiện khi đang có ca mở.</p>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Cài đặt (chỉ thẻ L7) ===== -->
+  <div id="pg-settings" class="page" hidden>
+    <div class="hello"><h1>Cài đặt</h1><p>Chỉ hiện thẻ mới của L7; các thẻ khác giữ nguyên như app thật.</p></div>
+    <div class="grid two">
+      <section class="card set" aria-label="Bấm giờ học">
+        <h2>Bấm giờ học</h2>
+        <div class="set-row"><span id="lb-wake">Giữ màn hình sáng khi đang học<br><span class="muted">Chỉ khi app đang mở trên màn hình. Tốn pin hơn.</span></span>
+          <button class="sw" type="button" role="switch" aria-checked="false" aria-labelledby="lb-wake" id="sw-wake"><span class="trk"><i></i></span></button></div>
+        <div class="set-row"><span id="lb-vib">Rung nhẹ khi Bắt đầu / Kết thúc<br><span class="muted">Chỉ điện thoại Android</span></span>
+          <button class="sw" type="button" role="switch" aria-checked="false" aria-labelledby="lb-vib" id="sw-vib"><span class="trk"><i></i></span></button></div>
+        <div class="set-row"><span class="muted">Giờ ghi vào Sheet làm tròn xuống phút (10:15:40 thành 10:15). Lần bấm chưa lưu được giữ tạm trên máy này cho tới khi ghi xong.</span></div>
+        <div class="set-row"><span>Lần bấm chưa lưu</span><b id="set-pend">Không có</b></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<nav class="tabs" aria-label="Các trang">
+  <button class="tab" type="button" data-page="today"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M5 1h1v1h1v1h1v1h1v1h1v1H9v4H6V7H5v3H2V6H1V5h1V4h1V3h1V2h1z"/></svg></span>Hôm nay</button>
+  <button class="tab" type="button" disabled><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M1 2h9v8H1zM2 4v5h7V4zM3 5h1v1H3zm2 0h1v1H5zm2 0h1v1H7zM3 7h1v1H3zm2 0h1v1H5zM3 1h1v2H3zm4 0h1v2H7z"/></svg></span>Lịch</button>
+  <button class="tab" type="button" disabled><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M1 6h2v4H1zm3-3h2v7H4zm3 2h2v5H7zM1 10h9v1H1z"/></svg></span>Thống kê</button>
+  <button class="tab" type="button" data-page="settings"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M4 0h3v2h1l1-1 1 1-1 1v1h2v3H9v1l1 1-1 1-1-1H7v2H4V9H3l-1 1-1-1 1-1V7H0V4h2V3L1 2l1-1 1 1h1zm1 4v3h1V4z"/></svg></span>Cài đặt</button>
+</nav>
+
+<!-- Hộp Kết thúc -->
+<dialog class="sheet" id="end-dlg" aria-labelledby="end-title">
+  <h2 id="end-title">Kết thúc ca</h2>
+  <div class="sum" id="end-sum"></div>
+  <label class="fld" for="end-note">Ghi chú <span class="hint">không bắt buộc</span><textarea id="end-note" rows="2" maxlength="300" placeholder="ví dụ: Mina bài 12"></textarea></label>
+  <div id="end-msg"></div>
+  <div class="sheet-actions"><button class="btn3d small ghost" type="button" data-close>Học tiếp</button><button class="btn3d small" type="button" id="end-save" autofocus>Lưu giờ kết thúc</button></div>
+</dialog>
+<!-- Hộp Đổi ca -->
+<dialog class="sheet" id="sw-dlg" aria-labelledby="sw-title">
+  <h2 id="sw-title">Đổi ca</h2>
+  <div class="sum" id="sw-sum"></div>
+  <div id="sw-pick"></div>
+  <div id="sw-msg"></div>
+  <div class="sheet-actions"><button class="btn3d small ghost" type="button" data-close>Thôi</button><button class="btn3d small" type="button" id="sw-save" autofocus>Đổi ca</button></div>
+</dialog>
+<!-- Hộp ca dưới 1 phút -->
+<dialog class="sheet" id="zero-dlg" aria-labelledby="zero-title">
+  <h2 id="zero-title">Ca chưa được 1 phút</h2>
+  <div class="sum" id="zero-sum"></div>
+  <p class="muted">Sheet tính giờ theo phút, nên ca này sẽ thành 0 phút và chưa đóng được. Bạn muốn làm gì?</p>
+  <div class="sheet-actions"><button class="btn3d small danger" type="button" id="zero-del">Hủy ca (xóa dòng)</button><button class="btn3d small" type="button" data-close autofocus>Tiếp tục học</button></div>
+</dialog>
+<div class="tip" id="tip" role="tooltip" hidden></div>
+
+<script type="module">
+import { buildModel, serialFromYMD as D, fmtDate, weekNo, weekday, WEEKDAY_NAMES, ACTIVITIES } from '../src/core.js';
+import { clockFromMs, sessionStartMs, elapsed, fmtElapsed, startBlock, planEnd, recentTopics, defaultChoice, clockSkew } from '../src/timer.js';
+import { mochiSvg, jump } from '../src/mochi.js';
+import { fmtHM, fmtDayShort, fmtTime } from '../src/format.js';
+import { catStyle } from '../src/ui-config.js';
+import { esc } from '../src/ui-charts.js';
+const $ = id => document.getElementById(id);
+const H = (h, m = 0) => (h * 60 + m) / 1440;
+const VN = (y, mo, d, h, mi = 0, s = 0) => Date.UTC(y, mo - 1, d, h - 7, mi, s);
+const chip = (cat, text) => { const c = catStyle(cat); return `<span class="chip ${c.cls}">${c.kao ? `${c.kao} ` : ''}${esc(text)}</span>`; };
+const q = new URLSearchParams(location.search);
+const FROZEN = q.has('dongbang'); // chụp màn hình: đồng hồ đứng yên
+// Ảnh chụp cả trang (điện thoại): đặt thanh tab ở cuối trang thay vì dính đáy màn hình, để không che nội dung trong ảnh
+if (FROZEN) document.head.insertAdjacentHTML('beforeend', '<style>@media (max-width: 899px) { .tabs { position: static; } .app { padding-bottom: 16px; } }</style>');
+
+// ---------- Mochi "đang học": 3 biến thể, lớp phủ pixel trên lưới 24×20 của nhân vật (thiết kế gốc) ----------
+const px = (pts, fill, cls = '') => `<g class="${cls}">${pts.map(([x, y, w = 1, h = 1]) => `<rect x="${x}" y="${y}" width="${w + .02}" height="${h + .02}" fill="${fill}"/>`).join('')}</g>`;
+const OVERLAY = {
+  // A. Kính tròn vuông + quyển sách mở trước bụng
+  A: px([[6, 5, 4], [6, 11, 4], [6, 5, 1, 7], [9, 5, 1, 7], [14, 5, 4], [14, 11, 4], [14, 5, 1, 7], [17, 5, 1, 7], [10, 7, 4]], 'var(--mochi-line)') +
+     px([[5, 15, 14, 5]], 'var(--mochi-line)') + px([[6, 16, 5, 3], [13, 16, 5, 3]], '#FFFFFF') + px([[11, 15, 2, 5]], 'var(--accent-edge)') +
+     px([[7, 17, 3], [14, 17, 3]], 'var(--border)'),
+  // B. Tai nghe + nốt nhạc bay
+  B: px([[6, -2, 12], [4, -1, 2], [18, -1, 2], [3, 0], [20, 0], [2, 1, 1, 4], [21, 1, 1, 4]], 'var(--accent-edge)') +
+     px([[0, 5, 3, 6], [21, 5, 3, 6]], 'var(--mochi-line)') + px([[1, 6, 1, 4], [22, 6, 1, 4]], 'var(--accent)') +
+     px([[23, -3, 2], [24, -3, 1, 3], [23, -1, 2]], 'var(--pink-d)', 'ov-note'),
+  // C. Khăn buộc trán (kiểu ôn thi) + giọt mồ hôi, thân nhấp nhô
+  C: px([[3, 3, 18, 2], [2, 4, 1, 1], [21, 4, 1, 1]], 'var(--pink-d)') + px([[21, 2, 2, 2], [23, 1, 1, 2], [22, 4, 2, 1]], 'var(--pink-d)') +
+     px([[4, 5, 1, 1]], 'var(--accent)', 'ov-sweat'),
+};
+const studySvg = v => mochiSvg(v === 'C' ? 'bob' : '').replace('</g></svg>', `${OVERLAY[v]}</g></svg>`);
+const replay = el => { const s = el?.querySelector('svg.mochi'); if (!s) return; const h = s.outerHTML; s.outerHTML = h; };
+
+// ---------- Tình huống ----------
+let FX = null;
+const JP = 'JP - Từ vựng', LN = 'JP - Luyện nghe';
+const SCN = {
+  idle:    { now: VN(2026, 11, 26, 14, 5, 12), label: 'Giả: 26/11 14:05, chưa có ca mở.' },
+  run:     { now: VN(2026, 11, 26, 15, 7, 35), open: [D(2026, 11, 26), H(14, 5), null, LN, 'Thực hành', ''], label: 'Giả: ca mở từ 14:05, bây giờ 15:07.' },
+  night:   { now: VN(2026, 11, 27, 0, 42, 8), open: [D(2026, 11, 26), H(23, 30), null, JP, 'Ôn tập', ''], skew: 3 * 60_000, label: 'Giả: ca từ 23:30 hôm qua, bây giờ 00:42; điện thoại nhanh hơn giờ Google 3 phút.' },
+  unsaved: { now: VN(2026, 11, 26, 14, 9, 40), pend: { kind: 'start', ms: VN(2026, 11, 26, 14, 5, 12), topic: LN, activity: 'Thực hành' }, label: 'Giả: bấm Bắt đầu lúc 14:05 nhưng mạng chập chờn (quá 8 giây).' },
+  login:   { now: VN(2026, 11, 26, 16, 1, 0), open: [D(2026, 11, 26), H(14, 5), null, LN, 'Thực hành', ''], pend: { kind: 'end', ms: VN(2026, 11, 26, 15, 52, 30) }, label: 'Giả: bấm Kết thúc lúc 15:52, phiên đăng nhập Google đã hết hạn.' },
+  offline: { now: VN(2026, 11, 26, 14, 20), pend: { kind: 'start', ms: VN(2026, 11, 26, 14, 5, 12), topic: LN, activity: 'Thực hành' }, offline: true, label: 'Giả: mở lại app khi không có mạng, còn 1 lần bấm chưa lưu.' },
+  staleY:  { now: VN(2026, 11, 26, 8, 15), open: [D(2026, 11, 25), H(22, 10), null, JP, 'Lý thuyết', ''], label: 'Giả: 26/11 08:15, ca 25/11 từ 22:10 chưa đóng.' },
+  staleOld:{ now: VN(2026, 11, 26, 9, 0), open: [D(2026, 11, 24), H(20, 0), null, JP, 'Lý thuyết', ''], row: 164, label: 'Giả: 26/11, ca 24/11 chưa đóng (2 ngày trước, như dòng 164 của bản sao).' },
+  over:    { now: VN(2026, 11, 26, 9, 30), open: [D(2026, 11, 25), H(8, 0), null, JP, 'Lý thuyết', ''], label: 'Giả: ca từ 08:00 hôm qua, bây giờ 09:30 (hơn 24 giờ).' },
+};
+let scn = 'idle', mvar = 'A', M = null, base = 0, t0 = 0, pick = { topic: null, activity: null };
+const nowMs = () => base + (FROZEN ? 0 : Date.now() - t0);
+
+function build() {
+  const sc = SCN[scn];
+  base = sc.now; t0 = Date.now();
+  const rows = [...FX.caHoc.map(r => ({ ...r }))];
+  if (sc.open) rows.push({ rowNumber: sc.row ?? 900, cells: sc.open });
+  M = buildModel({ caRows: rows, cdRows: FX.chuDe, source: 'values', today: clockFromMs(sc.now).date });
+  const d = defaultChoice(M.sessions, M.topics);
+  pick = { topic: d?.topic ?? null, activity: d?.activity ?? null };
+  $('notice').textContent = `Bản mẫu · ${sc.label}`;
+  render();
+}
+
+// ---------- Vẽ trang Hôm nay ----------
+function topicPicker(name, sel) {
+  const recent = recentTopics(M.sessions, M.topics);
+  const all = [...M.topics.keys()].filter(t => M.topics.get(t) !== 'Không học');
+  const lastUse = t => { const s = M.sessions.filter(x => x.topic === t && typeof x.start === 'number').at(-1); return s ? fmtDayShort(s.date) : ''; };
+  const other = !recent.includes(sel);
+  const groups = [...new Set(all.map(t => M.topics.get(t)))];
+  return `<p class="lab" id="${name}-lt">Chủ đề <span class="muted" style="font-weight:400">· 3 chủ đề gần nhất</span></p>
+    <div class="pick" role="radiogroup" aria-labelledby="${name}-lt">${recent.map(t => `<label><input type="radio" name="${name}-t" value="${esc(t)}" ${t === sel ? 'checked' : ''}>${esc(t)}<span class="rc">${lastUse(t)}</span></label>`).join('')}
+    <label><input type="radio" name="${name}-t" value="__other" ${other ? 'checked' : ''}>Chủ đề khác</label></div>
+    <div class="fld" ${other ? '' : 'hidden'} id="${name}-other-w"><select id="${name}-other" aria-label="Chọn chủ đề khác">${groups.map(g => `<optgroup label="${esc(g)}">${all.filter(t => M.topics.get(t) === g).map(t => `<option ${t === sel ? 'selected' : ''}>${esc(t)}</option>`).join('')}</optgroup>`).join('')}</select></div>`;
+}
+const actPicker = (name, sel) => `<p class="lab" id="${name}-la">Hoạt động</p><div class="acts5" role="radiogroup" aria-labelledby="${name}-la">${ACTIVITIES.map(a => `<label><input type="radio" name="${name}-a" value="${a}" ${a === sel ? 'checked' : ''}>${a}</label>`).join('')}</div>`;
+
+function render() {
+  const sc = SCN[scn], c = clockFromMs(nowMs()), t = c.date;
+  $('today-line').textContent = `${WEEKDAY_NAMES[weekday(t)]}, ${fmtDate(t)} · tuần ${weekNo(t)} · ${fmtTime(c.frac)}`;
+  const min = M.stats.days[t]?.min ?? 0;
+  $('ring-num').innerHTML = `${Math.floor(min / 60)} giờ<br>${min % 60} phút`;
+  $('ring-bar').style.strokeDashoffset = String(314.16 * (1 - Math.min(1, min / 240)));
+  $('ring-msg').textContent = M.stats.openSessions.length ? 'Phút của ca đang mở chưa cộng vào vòng, Kết thúc rồi mới tính (•ω•)' : min ? 'Đang học đều tay nè (＾▽＾)' : 'Hôm nay mình bắt đầu nhé, Oriana (•ω•)';
+  $('variants').innerHTML = ['A', 'B', 'C'].map(v => `<figure><button type="button" data-var="${v}" aria-pressed="${v === mvar}" aria-label="Biến thể ${v}">${studySvg(v)}</button><figcaption>${{ A: 'A. Kính + sách', B: 'B. Tai nghe', C: 'C. Khăn trán, nhấp nhô' }[v]}</figcaption></figure>`).join('');
+
+  // Màn hình mất mạng (app không hiện số liệu cũ) + lần bấm chưa lưu
+  if (sc.offline) {
+    $('alert').hidden = true;
+    $('left').parentElement.hidden = true;
+    let box = $('offline-box');
+    if (!box) { box = document.createElement('div'); box.id = 'offline-box'; box.className = 'state-page'; $('pg-today').appendChild(box); }
+    const p = sc.pend, pc = clockFromMs(p.ms);
+    box.hidden = false;
+    box.innerHTML = `<div class="state-box"><div class="state-mochi">${mochiSvg()}</div><h2>Đang không có mạng</h2>
+      <p class="muted">App không hiện số liệu cũ để tránh nhầm. Có mạng lại thì bấm Tải lại.</p>
+      <div class="msg warn"><span class="ic" aria-hidden="true">(・・?)</span><p class="grow1"><b>Còn 1 lần bấm chưa lưu trên máy này:</b> Bắt đầu lúc <b>${fmtTime(pc.frac)}</b> ngày ${fmtDayShort(pc.date)} · ${esc(p.topic)} · ${esc(p.activity)}. Giờ này đã được giữ lại; có mạng, app đọc Sheet rồi mới ghi, không ghi trùng.</p></div>
+      <button class="btn3d small" type="button">Tải lại</button></div>`;
+    return;
+  }
+  $('left').parentElement.hidden = false;
+  if ($('offline-box')) $('offline-box').hidden = true;
+
+  const blk = startBlock(M.stats);
+  const s = blk?.session;
+  // Thanh báo L5 (ca của ngày trước, từ 06:00)
+  const stale = s && s.date < t && c.minOfDay >= 360;
+  $('alert').hidden = !stale;
+  if (stale) $('alert').innerHTML = `<span class="kao">(・・?)</span><p class="txt"><b>Có 1 ca chưa đóng</b>${WEEKDAY_NAMES[weekday(s.date)]} ${fmtDayShort(s.date)}, từ ${fmtTime(s.start)} · ${esc(s.topic)}. Ca chưa đóng thì chưa tính giờ.${blk.action === 'sheet' ? ' Ca này từ 2 ngày trước trở lên. Muốn sửa, hãy sửa trực tiếp trên Sheet.' : ''}</p>` +
+    (blk.action === 'close' ? '<button class="btn3d small" type="button" data-end>Đóng ca</button>' : '<a class="btn3d small ghost" href="#" onclick="return false">Mở Sheet</a>');
+
+  let html = '';
+  const pend = sc.pend;
+  if (!s && pend?.kind !== 'start') {
+    // 1. Chưa có ca: chọn chủ đề + hoạt động, nút Bắt đầu
+    html = `<section class="card start-card" aria-label="Bắt đầu học"><h2>Bắt đầu học</h2><p class="muted" style="margin:0">Mặc định theo ca gần nhất</p>
+      ${topicPicker('st', pick.topic)}${actPicker('st', pick.activity)}
+      <div class="go"><button class="btn3d" type="button" id="go">▶ Bắt đầu</button></div>
+      <p class="hint2">Giờ bắt đầu là lúc bấm (làm tròn xuống phút). Học xong bấm Kết thúc; đổi chủ đề, đổi hoạt động hay nghỉ hơn 10 phút thì Đổi ca hoặc Kết thúc.</p></section>
+      <div class="add-wrap"><button class="btn3d ghost" type="button">＋ Thêm ca (nhập tay)</button></div>`;
+  } else if (pend?.kind === 'start') {
+    // 4. Bắt đầu chưa lưu được: đồng hồ chạy theo GIỜ BẤM, ghi rõ chưa vào Sheet
+    const pc = clockFromMs(pend.ms), e = { ms: nowMs() - Math.floor(pend.ms / 60000) * 60000 }; // tính từ phút sẽ ghi (cắt giây), khớp khi đã lưu
+    html = `<section class="card run" aria-label="Ca vừa bấm, chưa lưu"><div class="mo" id="run-mo">${studySvg(mvar)}</div>
+      <h2><span class="dot"></span>Đang học · chưa lưu</h2>
+      <p class="clock pend" id="clock" aria-live="off">${fmtElapsed(e.ms)}</p>
+      <p class="from">từ ${fmtTime(pc.frac)} · chưa vào Sheet</p><div class="meta">${chip(M.topics.get(pend.topic), pend.topic)}<span>${esc(pend.activity)}</span></div>
+      <div class="msg warn"><span class="ic" aria-hidden="true">(・・?)</span><p class="grow1"><b>Chưa lưu được vào Sheet; giờ thật là ${fmtTime(pc.frac)}.</b> Google chưa trả lời sau 8 giây nên chưa chắc đã lưu. Giờ bấm đã được giữ trên máy này. Bấm Thử lại: app đọc Sheet trước, nếu dòng đã vào thì không ghi nữa.</p>
+        <span class="acts"><button class="btn3d small" type="button">Thử lại</button><button class="btn3d small ghost" type="button">Bỏ lần bấm này</button></span></div></section>
+      <div class="add-wrap"><button class="btn3d ghost" type="button">＋ Thêm ca (nhập tay)</button></div>`;
+  } else {
+    // 2/3/5/7/8/9. Có ca mở
+    const e = elapsed(s, nowMs()), isToday = s.date === t;
+    const pe = planEnd(s, clockFromMs(nowMs()));
+    const fromTxt = isToday ? `từ ${fmtTime(s.start)}` : `từ ${fmtTime(s.start)} ${s.date === t - 1 ? 'hôm qua' : ''} (${WEEKDAY_NAMES[weekday(s.date)]} ${fmtDayShort(s.date)})`;
+    let body = '', btns = '';
+    if (blk.action === 'sheet' || pe.kind === 'sheet') {
+      body = `<div class="blocked"><p><b>${pe.reason === 'over24h' ? 'Ca này đã chạy từ 24 giờ trở lên.' : 'Ca này từ 2 ngày trước trở lên.'}</b> App không ghi được giờ kết thúc (${pe.reason === 'over24h' ? 'Sheet sẽ tính thành 0 phút' : 'luật đóng ca L5'}). Hãy điền giờ kết thúc thật ở dòng ${s.rowNumber} trong Sheet, rồi bấm Tải lại. Trong lúc đó chưa Bắt đầu ca mới được, vì mỗi lúc chỉ có một ca mở.</p>
+        <span class="acts" style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn3d small" href="#" onclick="return false">Mở Sheet (dòng ${s.rowNumber})</a><button class="btn3d small ghost" type="button">Tải lại</button></span></div>`;
+    } else {
+      if (pend?.kind === 'end') {
+        const pc = clockFromMs(pend.ms);
+        body = `<div class="msg info"><span class="ic" aria-hidden="true">(・ω・)</span><p class="grow1"><b>Cần đăng nhập lại Google. Giờ kết thúc đã chốt: ${fmtTime(pc.frac)}</b> (lúc bạn bấm). Đăng nhập xong app ghi đúng ${fmtTime(pc.frac)}, không lấy giờ lúc đăng nhập.</p>
+          <span class="acts"><button class="btn3d small" type="button">Đăng nhập và lưu</button><button class="btn3d small ghost" type="button">Bỏ lần bấm này</button></span></div>`;
+      }
+      // Ca của hôm qua, đã qua 06:00: có thể Oriana quên bấm Kết thúc từ tối qua -> KHÔNG lấy giờ lúc bấm,
+      // mà mở luồng đóng ca L5 (ô giờ kết thúc để trống, tự điền giờ thật).
+      if (stale) body += `<div class="blocked"><p><b>Ca của hôm qua chưa đóng.</b> Nếu đã học xong từ tối qua, hãy nhập giờ kết thúc thật (app không lấy giờ bây giờ). Đóng ca này xong mới Bắt đầu ca mới được.</p>
+        <button class="btn3d small" type="button">Đóng ca (nhập giờ thật)</button></div>`;
+      btns = pend?.kind === 'end' || stale ? '' : `<div class="btn-row"><button class="btn3d" type="button" data-end>■ Kết thúc</button><button class="btn3d ghost" type="button" id="swb">⇄ Đổi ca</button></div>`;
+    }
+    const sk = sc.skew ? clockSkew({ dateHeader: new Date(nowMs() - sc.skew).toUTCString(), sentMs: nowMs() - 150, recvMs: nowMs() + 150 }) : null;
+    const skewMsg = sk?.warn ? `<div class="msg warn"><span class="ic" aria-hidden="true">(・・?)</span><p class="grow1">Giờ điện thoại đang ${sk.skewMs > 0 ? 'nhanh' : 'chậm'} hơn giờ Google khoảng ${Math.round(Math.abs(sk.skewMs) / 60000)} phút. App vẫn ghi theo giờ điện thoại; hãy bật "Giờ tự động" trong cài đặt máy.</p></div>` : '';
+    html = `<section class="card run" aria-label="Ca đang mở"><div class="mo" id="run-mo">${studySvg(mvar)}</div>
+      <h2><span class="dot"></span>${pend?.kind === 'end' ? 'Đã bấm Kết thúc · chưa lưu' : 'Đang học'}</h2>
+      ${pend?.kind === 'end' ? `<p class="clock pend">${fmtElapsed((clockFromMs(pend.ms).minute - clockFromMs(sessionStartMs(s)).minute) * 60000)}</p>` : e.overDay ? '<p class="clock over">hơn 24 giờ</p>' : `<p class="clock" id="clock" aria-live="off">${fmtElapsed(e.ms)}</p>`}
+      <p class="from">${fromTxt}</p>
+      <div class="meta">${chip(s.category, s.topic)}<span>${esc(s.activity)}</span></div>
+      <p class="muted">Chưa cộng vào tổng giờ, vòng tiến độ và huy hiệu. Bấm Kết thúc thì mới tính.</p>
+      ${skewMsg}${body}${btns}</section>
+      ${blk.action === 'sheet' || pe.kind === 'sheet' || stale ? '' : '<div class="add-wrap"><button class="btn3d ghost" type="button">＋ Thêm ca (nhập tay)</button></div>'}`;
+  }
+  $('left').innerHTML = html;
+  $('set-pend').textContent = pend ? `${pend.kind === 'start' ? 'Bắt đầu' : 'Kết thúc'} lúc ${fmtTime(clockFromMs(pend.ms).frac)}` : 'Không có';
+}
+// Đồng hồ: mỗi giây tính lại từ giờ bắt đầu (không cộng dồn)
+setInterval(() => {
+  const el = $('clock'); if (!el || !M) return;
+  const sc = SCN[scn], s = startBlock(M.stats)?.session;
+  if (sc.pend?.kind === 'end') return; // đã chốt giờ kết thúc: đồng hồ đứng yên
+  const ms = sc.pend?.kind === 'start' ? nowMs() - Math.floor(sc.pend.ms / 60000) * 60000 : s ? elapsed(s, nowMs()) : null;
+  if (ms === null) return;
+  el.textContent = fmtElapsed(typeof ms === 'number' ? ms : ms.ms);
+}, 1000);
+
+// ---------- Hộp Kết thúc / Đổi ca / dưới 1 phút ----------
+let endAt = null;
+function openEnd() {
+  const s = startBlock(M.stats).session; endAt = clockFromMs(nowMs()); // giờ kết thúc chốt NGAY lúc bấm
+  const p = planEnd(s, endAt);
+  if (p.kind === 'zero') { $('zero-sum').innerHTML = `<b>${fmtTime(s.start)} → ${fmtTime(endAt.frac)}</b><p>mới được ${Math.floor((nowMs() - sessionStartMs(s)) / 1000)} giây · ${esc(s.topic)}</p>`; return $('zero-dlg').showModal(); }
+  if (p.kind !== 'close') return;
+  $('end-sum').innerHTML = `<b>${fmtTime(s.start)} → ${fmtTime(endAt.frac)}${p.nextDay ? ' (hôm sau)' : ''} · ${fmtHM(p.durMin)}</b><p>Giờ kết thúc = lúc bạn bấm Kết thúc. ${chip(s.category, s.topic)} ${esc(s.activity)}</p>`;
+  $('end-note').closest('.fld').hidden = !p.noteAllowed;
+  $('end-msg').innerHTML = p.noteAllowed ? '' : '<p class="muted">Tuần của ca này đang tạm chốt: chỉ điền giờ kết thúc, không thêm ghi chú.</p>';
+  $('end-dlg').showModal();
+}
+function openSwitch() {
+  const s = startBlock(M.stats).session, at = clockFromMs(nowMs());
+  $('sw-sum').innerHTML = `<b>${fmtTime(at.frac)}: ca cũ kết thúc, ca mới bắt đầu</b><p>Ca cũ: ${chip(s.category, s.topic)} ${esc(s.activity)} · ${fmtHM(planEnd(s, at).durMin ?? 0)}</p>`;
+  $('sw-pick').innerHTML = topicPicker('sw', recentTopics(M.sessions, M.topics).find(x => x !== s.topic) ?? s.topic) + actPicker('sw', s.activity); // mặc định: chủ đề gần nhất KHÁC ca đang học
+  $('sw-msg').innerHTML = '<p class="hint2">Ca mới phải khác chủ đề hoặc khác hoạt động.</p>';
+  $('sw-dlg').showModal();
+}
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-end]')) openEnd();
+  if (e.target.closest('#swb')) openSwitch();
+  if (e.target.closest('[data-close]')) e.target.closest('dialog').close();
+  const v = e.target.closest('[data-var]'); if (v) { mvar = v.dataset.var; mark('p-mochi', mvar); render(); replay(document.querySelector(`[data-var="${mvar}"]`)); }
+  if (e.target.closest('#run-mo')) replay($('run-mo'));
+  if (e.target.closest('#go')) { SCN.run.now = nowMs() + 62 * 60_000; scn = 'run'; mark('p-scn', 'run'); build(); }
+});
+document.addEventListener('change', e => {
+  const m = /^(st|sw)-t$/.exec(e.target.name ?? ''); if (m) $(`${m[1]}-other-w`).hidden = e.target.value !== '__other';
+});
+for (const id of ['sw-wake', 'sw-vib']) $(id).addEventListener('click', () => $(id).setAttribute('aria-checked', String($(id).getAttribute('aria-checked') !== 'true')));
+
+// ---------- Khung bản mẫu ----------
+function show(p) {
+  document.querySelectorAll('.page').forEach(x => { x.hidden = x.id !== `pg-${p}`; });
+  document.querySelectorAll('.tab').forEach(t => t.dataset.page === p ? t.setAttribute('aria-current', 'page') : t.removeAttribute('aria-current'));
+  mark('p-page', p);
+}
+document.querySelectorAll('.tab[data-page]').forEach(t => t.addEventListener('click', () => show(t.dataset.page)));
+function mark(id, v) { $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v))); }
+function seg(id, v, on) { mark(id, v); $(id).addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; mark(id, b.dataset.v); on(b.dataset.v); }); }
+seg('p-theme', 'auto', v => { if (v === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = v; });
+seg('p-page', 'today', show);
+seg('p-scn', 'idle', v => { scn = v; build(); });
+seg('p-mochi', 'A', v => { mvar = v; render(); });
+$('brand-mochi').innerHTML = mochiSvg();
+
+// Tham số địa chỉ để chụp: ?tinhhuong=run&mochi=B&trang=settings&mo=end|switch|zero&dongbang=1
+if (SCN[q.get('tinhhuong')]) { scn = q.get('tinhhuong'); mark('p-scn', scn); }
+if (OVERLAY[q.get('mochi')]) { mvar = q.get('mochi'); mark('p-mochi', mvar); }
+if (q.get('mo') === 'zero') SCN.run.now = VN(2026, 11, 26, 14, 5, 35);
+FX = await (await fetch('../test/fixtures/sheet-to-2026-11-23.json')).json();
+build();
+if (q.get('trang')) show(q.get('trang')); else show('today');
+if (q.get('mo') === 'end' || q.get('mo') === 'zero') openEnd();
+if (q.get('mo') === 'switch') openSwitch();
+</script>
