@@ -1,8 +1,9 @@
-// page-today.js — Trang "Hôm nay" (L4.5): câu khích lệ, nút Thêm ca, ca đang mở, vòng tiến độ, ô Tuần này.
+// page-today.js — Trang "Hôm nay" (L4.5): câu khích lệ, nút Thêm ca, vòng tiến độ, ô Tuần này.
+// L7: thẻ "Ca đang mở" cũ được thay bằng thẻ bấm giờ (src/timer-ui.js).
 // Chỉ vẽ. Số liệu lấy từ core.js / insights.js / stats-extra.js. Nút chỉ MỞ form (luồng ghi vẫn ở form.js).
 import { WEEK_STATUS, WEEKDAY_NAMES, weekday, weekNo, fmtDate } from './core.js';
 import { breakdown } from './insights.js';
-import { dayMinutes, weekDays, weekVsPrevByDay, latestOpen, staleOpen, closeAction, weekRing, avg4Marker } from './stats-extra.js';
+import { dayMinutes, weekDays, weekVsPrevByDay, staleOpen, weekRing, avg4Marker } from './stats-extra.js';
 import { fmtH1, fmtHM, fmtDiff, fmtTime, fmtDayShort } from './format.js';
 import { UI, catStyle } from './ui-config.js';
 import { setQuoteModel } from './quote-card.js';
@@ -22,10 +23,6 @@ export function initToday({ onAdd, onFinish }) {
   $('peek').innerHTML = mochiSvg();
   $('peek').addEventListener('click', () => jump($('peek')));
   $('add').addEventListener('click', onAdd);
-  $('open-card').addEventListener('click', e => {
-    const b = e.target.closest('button[data-finish]');
-    if (b) onFinish(Number(b.dataset.finish));
-  });
   $('alert').addEventListener('click', e => {
     const b = e.target.closest('button[data-finish]');
     if (b) onFinish(Number(b.dataset.finish));
@@ -45,19 +42,7 @@ export function renderToday(m, { nowMin, canFinish, sheetUrl }) {
   renderAlert(stats, nowMin, canFinish, sheetUrl);
   setQuoteModel(m); // L5: câu của ngày theo nhóm (cố gắng / nghỉ ngơi)
 
-  // --- Ca đang mở (mới nhất) ---
-  const o = latestOpen(stats, nowMin);
-  $('open-card').hidden = !o;
-  if (o) {
-    const s = o.session, closable = closeAction(s, t) === 'close';
-    $('open-body').innerHTML = `<div>
-        <p class="time">${s.date === t ? '' : `${fmtDayShort(s.date)} · `}từ ${fmtTime(s.start)}${o.runningMin !== null ? ` · ${fmtHM(o.runningMin)}` : ''}</p>
-        ${chip(s.category, s.topic ?? '')}
-        <p class="muted">Ca chưa đóng thì chưa tính giờ: phút đang chạy chưa cộng vào tổng, vòng và huy hiệu.</p>
-        ${o.others ? `<p class="muted">Còn ${o.others} ca đang mở khác, xem ở tab Lịch.</p>` : ''}
-      </div>
-      ${canFinish && closable ? `<button class="btn3d small" type="button" data-finish="${s.rowNumber}">Kết thúc ca</button>` : ''}`;
-  }
+  // --- Ca đang mở: L7 vẽ ở thẻ bấm giờ (timer-ui.js), thay thẻ "Ca đang mở" cũ ---
 
   // --- Vòng tiến độ hôm nay ---
   const min = dayMinutes(stats, t), p = Math.min(1, min / UI.goalDayMin);
@@ -65,7 +50,8 @@ export function renderToday(m, { nowMin, canFinish, sheetUrl }) {
   $('ring-num').innerHTML = `${Math.floor(min / 60)} giờ<br>${Math.round(min % 60)} phút`;
   $('ring-goal').textContent = `trên ${fmtHM(UI.goalDayMin)}`;
   $('ring').dataset.tip = [`${Math.round(min)} phút / ${UI.goalDayMin} phút`, ...cats.map(c => `${c.key}: ${fmtHM(c.min)}`)].join('\n');
-  $('ring-msg').textContent = p >= 1 ? 'Đủ mục tiêu rồi! Nghỉ ngơi xíu nha (˘ω˘)' : min > 0 ? 'Đang học đều tay nè (＾▽＾)' : `Hôm nay mình bắt đầu nhé, ${UI.name} (•ω•)`;
+  const openToday = stats.openSessions.some(x => x.date === t || x.date === t - 1);
+  $('ring-msg').textContent = openToday && p < 1 ? 'Phút của ca đang mở chưa cộng vào vòng, Kết thúc rồi mới tính (•ω•)' : p >= 1 ? 'Đủ mục tiêu rồi! Nghỉ ngơi xíu nha (˘ω˘)' : min > 0 ? 'Đang học đều tay nè (＾▽＾)' : `Hôm nay mình bắt đầu nhé, ${UI.name} (•ω•)`;
   $('cats').innerHTML = cats.map(c => chip(c.key)).join('');
   requestAnimationFrame(() => { $('ring-bar').style.strokeDashoffset = String(RING_C * (1 - p)); });
   // --- Tuần này (L5): vòng tuần + vạch "trung bình 4 tuần gần nhất" + 7 ô ngày ---
