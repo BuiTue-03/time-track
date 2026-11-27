@@ -132,6 +132,18 @@ export function openFinish(rowNumber) {
   return true;
 }
 
+// L7 "Hủy ca" (ca dưới 1 phút): chỉ MỞ hộp xác nhận xóa có sẵn cho đúng dòng đó. Luật xóa (checkDelete) và luồng xóa
+// (đọc lại, so ảnh chụp, xóa nội dung A:F, Hoàn tác 5 phút) giữ nguyên như L4.
+export function openDeleteRow(rowNumber) {
+  if (!formEnabled() || busy) return false;
+  const s = app.getModel().sessions.find(x => x.rowNumber === rowNumber);
+  if (!s) return false;
+  listWeek = weekNo(s.date);
+  onModel();
+  openDelete(s);
+  return true;
+}
+
 // ---------------------------------------------------------------------------------------------
 // Đăng nhập
 // ---------------------------------------------------------------------------------------------

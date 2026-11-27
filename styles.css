@@ -479,3 +479,50 @@ details.issues ul { margin: 6px 0 10px; padding-left: 20px; }
 /* Ăn mừng mốc chuỗi */
 .party .say .row { display: flex; align-items: center; gap: 10px; }
 .party .say .fl svg { width: 52px; height: 64px; }
+
+/* ============================================================
+   L7: bấm giờ học (chuyển từ design/vong-l7.html đã duyệt 27/11/2026; Mochi bản B)
+   ============================================================ */
+.lab { margin: 14px 0 6px; font-weight: 700; }
+.pick .rc { color: var(--text-2); font-weight: 400; margin-left: auto; white-space: nowrap; }
+.pick input { flex: none; margin: 0; }
+.acts5 { display: flex; flex-wrap: wrap; gap: 8px; }
+.acts5 label { min-height: 48px; padding: 0 14px; border: 2px solid var(--border); border-radius: 14px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 700; }
+.acts5 input { width: 20px; height: 20px; accent-color: var(--accent-edge); margin: 0; }
+.acts5 label:has(input:checked) { border-color: var(--accent-edge); background: var(--cur-bg); }
+.start-card h2 { margin-bottom: 4px; }
+.start-card .fld select { width: 100%; }
+.go { margin-top: 18px; }
+.go .btn3d { font-size: 21px; min-height: 64px; }
+.hint2 { margin: 10px 0 0; color: var(--text-2); }
+.add-wrap .btn3d.ghost { min-height: 52px; font-size: 17px; }
+/* Ô "đăng nhập trước" (Oriana góp ý ở bản mẫu: nút đăng nhập nổi bật, đặt đầu tiên) */
+.signin-first { background: var(--cur-bg); border-radius: 16px; padding: 12px 14px 14px; margin: 0 0 14px; box-shadow: inset 4px 0 0 var(--accent-edge); }
+.signin-first p { margin: 0 0 10px; }
+/* Thẻ đang học */
+.run { position: relative; overflow: hidden; background: linear-gradient(150deg, var(--surface) 50%, var(--cur-bg)); }
+.run h2 { display: flex; align-items: center; gap: 8px; }
+.run .clock { font-family: var(--f-head); font-size: 52px; line-height: 1.05; margin: 10px 0 4px; font-variant-numeric: tabular-nums; letter-spacing: .5px; }
+.run .clock.pend { color: var(--text-2); }
+.run .clock.over { font-size: 34px; }
+.run .from { margin: 0 0 8px; font-size: 17px; }
+.run .meta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.run .note0 { margin: 10px 0 0; max-width: 30em; }
+.run .mo { position: absolute; right: 8px; top: 8px; width: 112px; border: 0; background: none; padding: 0; cursor: pointer; }
+.run .mo svg { width: 100%; height: auto; display: block; }
+@media (max-width: 440px) { .run .mo { width: 92px; } .run .clock { font-size: 46px; padding-right: 96px; } .run .from { padding-right: 96px; } }
+.run .signin-first { margin: 12px 0 0; }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+.btn-row .btn3d { flex: 2 1 160px; width: auto; }
+.btn-row .btn3d.ghost { flex: 1 1 120px; }
+.blocked { margin: 12px 0 0; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); }
+.blocked p { margin: 0 0 10px; }
+.msg .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.mochi .ov-note { animation: note 1.6s ease-in-out 3; transform-box: fill-box; }
+@keyframes note { 50% { transform: translateY(-1.2px); opacity: .55; } }
+.sum { background: var(--surface-2); border-radius: 14px; padding: 12px 14px; margin: 12px 0 0; }
+.sum b { display: block; font-family: var(--f-head); font-size: 20px; line-height: 1.45; font-variant-numeric: tabular-nums; }
+.sum p { margin: 4px 0 0; }
+.fld textarea { width: 100%; box-sizing: border-box; }
+.state-box .msg { text-align: left; }
+.t-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; margin-top: 16px; }

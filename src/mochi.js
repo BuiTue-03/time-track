@@ -79,3 +79,17 @@ export function party(alsoJump = [], html = null) {
   alsoJump.forEach(jump);
   setTimeout(() => box.remove(), 3000);
 }
+
+// L7: Mochi "đang học" — bản B (Oriana chọn 27/11/2026): tai nghe + nốt nhạc. Thiết kế gốc, vẽ đè lên lưới 24×20 ở trên,
+// nằm TRONG nhóm thân (.body-g) để nhảy cùng nhân vật. Nốt nhạc nhấp nháy 3 lần (dưới 5 giây, WCAG 2.2.2); chạm để chạy lại.
+const px = (pts, fill, cls = '') => `<g${cls ? ` class="${cls}"` : ''}>${pts.map(([x, y, w = 1, h = 1]) => `<rect x="${x}" y="${y}" width="${w + 0.02}" height="${h + 0.02}" fill="${fill}"/>`).join('')}</g>`;
+const STUDY_OVERLAY =
+  px([[6, -2, 12], [4, -1, 2], [18, -1, 2], [3, 0], [20, 0], [2, 1, 1, 4], [21, 1, 1, 4]], 'var(--accent-edge)') + // vòng tai nghe
+  px([[0, 5, 3, 6], [21, 5, 3, 6]], 'var(--mochi-line)') + px([[1, 6, 1, 4], [22, 6, 1, 4]], 'var(--accent)') +      // 2 bên tai
+  px([[23, -3, 2], [24, -3, 1, 3], [23, -1, 2]], 'var(--pink-d)', 'ov-note');                                          // nốt nhạc
+export const mochiStudySvg = () => mochiSvg('study').replace('</g></svg>', `${STUDY_OVERLAY}</g></svg>`);
+// Chạy lại chuyển động của nốt nhạc (vẽ lại SVG)
+export function replayStudy(el) {
+  const s = el?.querySelector('svg.mochi');
+  if (s) s.outerHTML = mochiStudySvg();
+}

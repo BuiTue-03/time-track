@@ -6,7 +6,7 @@ import { buildModel, todaySerial, serialFromYMD, fmtDate, weekNo } from './core.
 import { gvizUrl, parseGvizText, TAB_SESSIONS, TAB_TOPICS, TAB_SETTINGS, TAB_ACCRUAL } from './gviz.js';
 import { parseSettings, parseAccrual, DEFAULT_SETTINGS } from './rest.js';
 import { SPREADSHEET_ID, REAL_SPREADSHEET_ID, ALLOW_WRITE_TO_REAL_SHEET } from './config.js';
-import { initForm, onModel, openAddCurrentWeek, openAddForDate, openFinish, formEnabled, getListWeek, setListWeek, refreshSignin, showResult } from './form.js';
+import { initForm, onModel, openAddCurrentWeek, openAddForDate, openFinish, openDeleteRow, formEnabled, getListWeek, setListWeek, refreshSignin, showResult } from './form.js';
 import { initRestUi, openMark, openConv, defaultMarkDate } from './rest-ui.js';
 import { initL6, computeL6, renderL6, renderCalMiss, checkStreakCelebration } from './l6-view.js';
 import { vnClock } from './rest.js';
@@ -20,6 +20,7 @@ import { UI } from './ui-config.js';
 import { checkCelebration, renderBadges } from './badges.js';
 import { initQuoteCard, getShowJapanese, setShowJapanese } from './quote-card.js';
 import { eligible } from './quotes.js';
+import { initTimer, renderTimer, renderStatePending } from './timer-ui.js';
 
 const TIMEOUT_MS = 8000;
 const params = new URLSearchParams(location.search);
@@ -119,6 +120,8 @@ function setState(state, msg = '') {
   screen = state === 'error' && navigator.onLine === false ? 'offline' : state === 'ready' ? 'ok' : state;
   $('reload').disabled = state === 'loading';
   setScreen(screen, screen === 'error' ? msg : '');
+  // L7: màn hình lỗi / mất mạng / chưa có ca vẫn nói còn lần bấm giờ chưa lưu (giờ bấm không bị mất)
+  renderStatePending(screen === 'error' || screen === 'offline' || screen === 'empty');
 }
 async function load() {
   setState('loading');
@@ -152,6 +155,7 @@ function render() {
   const t = stats.today;
   const nowMin = (() => { const [h, mm] = clockNow().split(':').map(Number); return h * 60 + mm; })();
   renderToday(model, { nowMin: TODAY_OVERRIDE ? null : nowMin, canFinish: formEnabled(), sheetUrl: `https://docs.google.com/spreadsheets/d/${DATA_SHEET_ID}/edit` });
+  renderTimer(); // L7: thẻ Bắt đầu / đang học ở đầu trang Hôm nay
   $('notice').hidden = !(model.label || TODAY_OVERRIDE);
   $('notice').textContent = [model.label && `Đang xem ${model.label}.`, TODAY_OVERRIDE && `Đang giả lập hôm nay = ${fmtDate(t)}.`].filter(Boolean).join(' ');
 
@@ -205,5 +209,12 @@ initL6({
 });
 initRestUi({ getModel: () => model, reload: load, onSignin: refreshSignin, showResult });
 $('mark-btn').addEventListener('click', () => { if (formEnabled()) openMark(defaultMarkDate(getListWeek())); });
+// L7: bấm giờ học. Dùng chung đăng nhập, luật và quy trình ghi của form; đóng ca hôm qua / hủy ca dưới 1 phút đi qua form L4–L5.
+initTimer({
+  getModel: () => model, reload: load, canWrite: () => formEnabled(), realClock: () => !TODAY_OVERRIDE,
+  onFinish: row => { showPage('cal'); openFinish(row); },
+  onDelete: row => { showPage('cal'); openDeleteRow(row); },
+  onSignin: refreshSignin, sheetUrl: `https://docs.google.com/spreadsheets/d/${DATA_SHEET_ID}/edit`,
+});
 initForm({ getModel: () => model, reload: load, onListWeek: w => { onWeek(w); renderCalMiss(w); } }, { enabled: FORM_ENABLED, disabledReason: FORM_DISABLED_REASON });
 load();

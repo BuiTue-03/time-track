@@ -41,6 +41,9 @@
     <div id="alert-miss" class="alert soft" role="status" hidden></div>
     <div class="grid two">
       <div class="grid">
+        <!-- L7: thẻ bấm giờ (Bắt đầu / đang học / chưa lưu) — vẽ bởi src/timer-ui.js -->
+        <div id="timer-box" class="grid"></div>
+        <div class="add-wrap"><button class="btn3d ghost" type="button" id="add">＋ Thêm ca (nhập tay)</button></div>
         <section class="card conv" id="conv-card" aria-label="Gợi ý quy đổi ngày nghỉ" hidden></section>
         <section class="card note-card" id="remind-card" aria-label="Nhắc nghỉ" hidden></section>
         <section class="card quote" aria-label="Câu khích lệ hôm nay">
@@ -48,11 +51,6 @@
           <div id="q-body"></div>
           <div class="qbar"><button class="btn3d small ghost" type="button" id="q-other">Xem câu khác</button><button class="linkbtn" type="button" id="q-back" hidden>Về câu hôm nay</button></div>
           <button class="peek" type="button" id="peek" aria-label="Chạm để nhân vật nhảy"></button>
-        </section>
-        <div class="add-wrap"><button class="btn3d" type="button" id="add">＋ Thêm ca</button></div>
-        <section class="card open" id="open-card" aria-label="Ca đang mở" hidden>
-          <h2><span class="dot"></span>Ca đang mở</h2>
-          <div class="open-row" id="open-body"></div>
         </section>
       </div>
       <div class="grid">
@@ -207,9 +205,14 @@
           <div class="set-row"><span>Mốc chuỗi<br><span class="muted" id="set-miles"></span></span></div>
           <div class="set-row"><span>Sửa chuỗi<br><span class="muted">Ghi bù ca đã học, hoặc đánh dấu nghỉ cho ngày trống, trong tuần đang diễn ra và tuần tạm chốt</span></span></div>
         </section>
-        <section class="card set soon">
-          <h2>Bấm giờ học <span class="later">L7</span></h2>
-          <div class="set-row"><span>Nút Bắt đầu / Kết thúc</span><b class="muted">—</b></div>
+        <section class="card set" aria-label="Bấm giờ học">
+          <h2>Bấm giờ học</h2>
+          <div class="set-row"><span id="lb-wake">Giữ màn hình sáng khi đang học<br><span class="muted">Chỉ khi app đang mở trên màn hình. Tốn pin hơn.</span></span>
+            <button class="sw" type="button" role="switch" aria-checked="false" aria-labelledby="lb-wake" id="sw-wake"><span class="trk"><i></i></span></button></div>
+          <div class="set-row"><span id="lb-vib">Rung nhẹ khi Bắt đầu / Kết thúc<br><span class="muted">Chỉ điện thoại Android</span></span>
+            <button class="sw" type="button" role="switch" aria-checked="false" aria-labelledby="lb-vib" id="sw-vib"><span class="trk"><i></i></span></button></div>
+          <div class="set-row"><span class="muted">Giờ ghi vào Sheet làm tròn xuống phút (10:15:40 thành 10:15). Lần bấm chưa lưu được giữ tạm trên máy này cho tới khi ghi xong.</span></div>
+          <div class="set-row"><span>Lần bấm chưa lưu</span><b id="set-pend">Không có</b></div>
         </section>
       </div>
     </div>
@@ -223,6 +226,8 @@
       <p id="state-text" class="muted"></p>
       <button class="btn3d small" type="button" id="state-retry" hidden>Tải lại</button>
       <button class="btn3d small" type="button" id="state-add" hidden>＋ Thêm ca</button>
+      <!-- L7: lần bấm giờ chưa lưu (giữ trên máy này) vẫn hiện khi mất mạng -->
+      <div id="state-pend" hidden></div>
     </div>
   </div>
 
@@ -235,6 +240,28 @@
   <button class="tab" type="button" data-page="stats"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M1 6h2v4H1zm3-3h2v7H4zm3 2h2v5H7zM1 10h9v1H1z"/></svg></span>Thống kê</button>
   <button class="tab" type="button" data-page="settings"><span class="ico"><svg viewBox="0 0 11 11" class="pixel" aria-hidden="true"><path fill="currentColor" d="M4 0h3v2h1l1-1 1 1-1 1v1h2v3H9v1l1 1-1 1-1-1H7v2H4V9H3l-1 1-1-1 1-1V7H0V4h2V3L1 2l1-1 1 1h1zm1 4v3h1V4z"/></svg></span>Cài đặt</button>
 </nav>
+
+<!-- L7: Kết thúc / Đổi ca / ca dưới 1 phút -->
+<dialog class="sheet" id="t-end" aria-labelledby="t-end-title">
+  <h2 id="t-end-title">Kết thúc ca</h2>
+  <div class="sum" id="t-end-sum"></div>
+  <label class="fld" for="t-end-note" id="t-end-note-w">Ghi chú <span class="hint">không bắt buộc</span><textarea id="t-end-note" rows="2" maxlength="300" placeholder="ví dụ: Mina bài 12"></textarea></label>
+  <div id="t-end-msg"></div>
+  <div class="t-actions"><button class="btn3d small ghost" type="button" data-tclose>Học tiếp</button><button class="btn3d small" type="button" id="t-end-save" autofocus>Lưu giờ kết thúc</button></div>
+</dialog>
+<dialog class="sheet" id="t-sw" aria-labelledby="t-sw-title">
+  <h2 id="t-sw-title">Đổi ca</h2>
+  <div class="sum" id="t-sw-sum"></div>
+  <div id="t-sw-pick"></div>
+  <div id="t-sw-msg"><p class="hint2">Ca mới phải khác chủ đề hoặc khác hoạt động.</p></div>
+  <div class="t-actions"><button class="btn3d small ghost" type="button" data-tclose>Thôi</button><button class="btn3d small" type="button" id="t-sw-save" autofocus>Đổi ca</button></div>
+</dialog>
+<dialog class="sheet" id="t-zero" aria-labelledby="t-zero-title">
+  <h2 id="t-zero-title">Ca chưa được 1 phút</h2>
+  <div class="sum" id="t-zero-sum"></div>
+  <p class="muted">Sheet tính giờ theo phút, nên ca này sẽ thành 0 phút và chưa đóng được. Bạn muốn làm gì?</p>
+  <div class="t-actions"><button class="btn3d small danger" type="button" id="t-zero-del">Hủy ca (xóa dòng)</button><button class="btn3d small" type="button" data-tclose autofocus>Tiếp tục học</button></div>
+</dialog>
 
 <dialog class="sheet" id="sheet" aria-label="Tuần này">
   <div id="sheet-body"></div>
